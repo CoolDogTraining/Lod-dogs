@@ -291,14 +291,14 @@ const G={
   },
   mission:0,
   missions:[
-    'דבר עם בלה הזקנה בשוק 🗣️',
-    'אסוף 3 מנות אוכל מהרחוב 🍖',
-    'כנס לשכונת רמת אשכול וסמן שטח 🏴',
-    'תקוף את חברי כנופיית "כלבי הגשר" ⚔️',
-    'גייס 2 כלבים לכנופייה (עם מומו) 🐾',
-    'כבוש 4 שטחים בסך הכל 🏴',
-    'הגבר על הבוס — "ג\'ק הרוטווילר" 👹',
-    '🏆 לוד שייכת לכלבים!',
+    '1️⃣ דבר עם בלה הזקנה ליד השוק 🗣️',
+    '2️⃣ אסוף 3 מנות אוכל מהרחוב 🍖',
+    '3️⃣ כנס לאזור רמת אשכול וסמן שטח 🏴',
+    '4️⃣ הכנע 3 אויבים מכנופיית "כלבי הגשר" ⚔️',
+    '5️⃣ גייס 2 כלבים — החלף למומו ודבר איתם 🐾',
+    '6️⃣ כבוש 4 שטחים בסה"כ ברחבי לוד 🏴',
+    '7️⃣ הגיע הזמן — מצא את ג\'ק הרוטווילר והכנע אותו! 👹',
+    '🏆 לוד שייכת לכלבים! כבשתם את העיר!',
   ],
   terrs:[],terrCount:0,
   enemies:[],bosses:[],pickups:[],npcs:[],particles:[],
@@ -387,7 +387,9 @@ function init(){
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
   buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();
-  setupInput();setMission(0);
+  setupInput();
+  G.enemiesDefeated=0;
+  setMission(0);
   showCutscene('ch1',()=>{});
   loop();
 }
@@ -418,15 +420,38 @@ function d2(ax,az,bx,bz){return Math.sqrt((ax-bx)**2+(az-bz)**2);}
 function buildWorld(){
   const gnd=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshLambertMaterial({color:0x5a8a3a}));
   gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
-  mkRoad(0,0,400,14,false);mkRoad(0,0,14,400,true);
-  mkRoad(-60,0,14,400,true);mkRoad(60,0,14,400,true);
-  mkRoad(0,80,400,14,false);mkRoad(0,-80,400,14,false);
-  [[-80,-50,28,18,16],[-45,-50,20,14,13],[-10,-50,24,16,18],[25,-50,18,12,11],[58,-50,22,15,14],
-   [-80,20,26,10,8],[-48,20,20,14,10],[-15,20,22,16,13],[18,20,18,12,9],[50,20,20,13,11],[82,20,18,10,7]
-  ].forEach(a=>bldBlock(...a));
-  for(let x=-110;x<=110;x+=28)for(let z=-160;z>=-235;z-=26){if(Math.abs(x)<12)continue;bldHouse(x,z,5+Math.random()*3);}
-  for(let x=-110;x<=110;x+=28)for(let z=110;z<=200;z+=26){if(Math.abs(x)<12)continue;bldHouse(x,z,4+Math.random()*3);}
-  bldPark(105,-10);bldMarket(-135,-15);bldStation(0,-230);bldGarage(90,90);
+
+  // === רחובות לוד האמיתיים ===
+  // רחוב הרצל — ציר ראשי E-W
+  mkRoad(0,0,400,16,false);
+  // שדרות ירושלים — ציר ראשי N-S
+  mkRoad(0,0,16,400,true);
+  // רחובות משניים
+  mkRoad(-55,0,16,400,true);  // רחוב הגפן
+  mkRoad(55,0,16,400,true);   // רחוב הדקל
+  mkRoad(0,75,400,12,false);  // רחוב וייצמן
+  mkRoad(0,-75,400,12,false); // רחוב בן גוריון
+
+  // === מרכז העיר — בלוקים בצידי הרחובות (לא על הרחוב עצמו) ===
+  // צפון-מערב לרחוב הרצל (בין רחוב הרצל לרחוב בן גוריון, מצד שמאל לשד' ירושלים)
+  [[-80,-40,26,16,15],[-48,-40,20,14,12],[-12,-40,22,16,17],[58,-40,20,14,13]].forEach(a=>bldBlock(...a));
+  // דרום-מערב
+  [[-80,10,24,10,9],[-50,10,18,14,10],[-14,10,20,16,12],[18,10,17,12,8],[52,10,19,13,10],[82,10,16,10,7]].forEach(a=>bldBlock(...a));
+
+  // === שכונות ===
+  // רמת אשכול — צפון
+  for(let x=-110;x<=110;x+=28)for(let z=-110;z>=-220;z-=26){if(Math.abs(x)<18)continue;bldHouse(x,z,5+Math.random()*3);}
+  // גני אביב — דרום
+  for(let x=-110;x<=110;x+=28)for(let z=100;z<=200;z+=26){if(Math.abs(x)<18)continue;bldHouse(x,z,4+Math.random()*3);}
+
+  // === מקומות מפתח ===
+  // לוד אמיתית: מרכז — רחוב הרצל (E-W), שדרות ירושלים (N-S)
+  // צפון: רמת אשכול | דרום: גני אביב | מערב: שכונת הרכבת | מזרח: עיר עתיקה
+  bldPark(100,30);           // גן ציבורי ממזרח
+  bldMarket(-95,60);         // שוק לוד — דרום מרכז, רחוק מבניינים
+  bldStation(-5,-210);       // תחנת רכבת לוד — מערב
+  bldGarage(115,-75);        // אזור תעשייה מזרחי
+  bldMosque(-55,95);         // מסגד ג'מעה — עיר עתיקה
   addTerrs();addStreetProps();
 }
 function mkRoad(x,z,w,d,vert){
@@ -450,12 +475,30 @@ function bldPark(x,z){
   addTerr(x,z,22,'הפארק המרכזי');
 }
 function bldMarket(x,z){
+  // שוק לוד — קומפלקס דוכנים בשטח פתוח
   const cols=[0xe74c3c,0x3498db,0x2ecc71,0xe67e22,0x9b59b6];
   for(let i=0;i<5;i++){mkBox(4,2.5,3,0xF5DEB3,x+i*7,1.25,z);mkBox(5,0.2,4,cols[i],x+i*7,2.8,z);}
-  buildings.push({x:x+14,z,w:38,d:8});addTerr(x+14,z,28,'שוק לוד');
+  // NO buildings.push — market is open, not a collision box
+  addTerr(x+14,z,28,'שוק לוד');
 }
-function bldStation(x,z){mkBox(45,9,22,0xc8c0b0,x,4.5,z);mkBox(55,0.8,3,0x555555,x,0.4,z-13);mkBox(55,0.8,3,0x555555,x,0.4,z+13);mkBox(4,12,4,0x888888,x-20,6,z);buildings.push({x,z,w:45,d:22});addTerr(x,z,30,'תחנה מרכזית');}
-function bldGarage(x,z){mkBox(25,6,18,0x888880,x,3,z);mkBox(6,5,0.3,0x555550,x-8,2.5,z-9);mkBox(6,5,0.3,0x555550,x+1,2.5,z-9);buildings.push({x,z,w:25,d:18});addTerr(x,z,20,'המוסך');}
+function bldStation(x,z){
+  mkBox(45,9,22,0xc8c0b0,x,4.5,z);mkBox(55,0.8,3,0x555555,x,0.4,z-13);mkBox(55,0.8,3,0x555555,x,0.4,z+13);mkBox(4,12,4,0x888888,x-20,6,z);
+  buildings.push({x,z,w:45,d:22});addTerr(x,z,30,'תחנת רכבת לוד');
+}
+function bldGarage(x,z){
+  mkBox(25,6,18,0x888880,x,3,z);mkBox(6,5,0.3,0x555550,x-8,2.5,z-9);mkBox(6,5,0.3,0x555550,x+1,2.5,z-9);
+  buildings.push({x,z,w:25,d:18});addTerr(x,z,20,'אזור התעשייה');
+}
+function bldMosque(x,z){
+  // מסגד ג'מעה — כיפה + מינרט
+  mkBox(18,8,18,0xd4c4a8,x,4,z);
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(8,10,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0x2e8b57}));
+  dome.position.set(x,8.5,z);scene.add(dome);
+  mkBox(2.5,18,2.5,0xd4c4a8,x+11,9,z); // מינרט
+  const cap=new THREE.Mesh(new THREE.ConeGeometry(2,4,8),new THREE.MeshLambertMaterial({color:0x2e8b57}));
+  cap.position.set(x+11,19.5,z);scene.add(cap);
+  buildings.push({x,z,w:18,d:18});addTerr(x,z,22,'העיר העתיקה');
+}
 function bldTree(x,z){mkBox(0.5,4,0.5,0x4a3000,x,2,z);const l=new THREE.Mesh(new THREE.SphereGeometry(2.5,6,6),new THREE.MeshLambertMaterial({color:0x2d6a2d}));l.position.set(x,5.2,z);scene.add(l);}
 function addTerr(x,z,r,name){
   mkBox(0.3,5,0.3,0x888888,x,2.5,z);
@@ -463,7 +506,12 @@ function addTerr(x,z,r,name){
   flag.position.set(x+1.1,5.8,z);scene.add(flag);
   G.terrs.push({x,z,r,name,cap:false,flag,defTimer:0});
 }
-function addTerrs(){addTerr(-80,-50,28,'מרכז העיר');addTerr(0,-195,28,'רמת אשכול');}
+function addTerrs(){
+  // מרכז העיר — כיכר רחוב הרצל
+  addTerr(0,-5,28,'מרכז העיר — רחוב הרצל');
+  // רמת אשכול — צפון
+  addTerr(0,-180,28,'רמת אשכול');
+}
 function addStreetProps(){
   for(let i=-180;i<200;i+=25){mkBox(0.2,5,0.2,0x444444,i,2.5,8);const lp=new THREE.Mesh(new THREE.SphereGeometry(0.3,5,5),new THREE.MeshLambertMaterial({color:0xffffaa,emissive:0x444400}));lp.position.set(i,5.3,8);scene.add(lp);}
 }
@@ -588,11 +636,11 @@ function buildEnemies(){
   });
 }
 function buildBoss(){
-  const bg=mkDogMesh(0x1a1a1a,1.7);bg.position.set(-80,-50,0);scene.add(bg);
+  // ג'ק הרוטווילר — שומר על כיכר המרכז, בשטח פתוח ברחוב הרצל
+  const bg=mkDogMesh(0x1a1a1a,1.7);bg.position.set(35,0,35);scene.add(bg);
   const cr=new THREE.Mesh(new THREE.ConeGeometry(0.8,0.9,5),new THREE.MeshLambertMaterial({color:0xf5c518}));cr.position.set(0,3.2,0);bg.add(cr);
   const bar=addHPBar(bg,2.5,0.25,4);
-  // Boss phases
-  G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:25,atk:3.5,atkT:0,bar,name:"ג'ק הרוטווילר",dead:false,phase:1,dashTimer:0,dashActive:false,dashVx:0,dashVz:0});
+  G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:25,atk:3.5,atkT:0,bar,name:"ג'ק הרוטווילר",dead:false,phase:1,dashTimer:4,dashActive:false,dashVx:0,dashVz:0});
 }
 
 // ══════════════════════════════════════════════════
@@ -609,11 +657,11 @@ function buildPickups(){
 // NPCs
 // ══════════════════════════════════════════════════
 function buildNPCs(){
-  [{x:-130,z:-15,name:'בלה הזקנה',col:0xC8A87A,type:'quest',avatar:'🐕‍🦺'},
-   {x:40,z:-45,name:'שוקי',col:0xE8B870,type:'recruit',avatar:'🐶'},
-   {x:-20,z:130,name:'בוקסר',col:0xB08040,type:'recruit',avatar:'🐶'},
-   {x:100,z:88,name:'לולה',col:0xD4B090,type:'recruit',avatar:'🐩'},
-   {x:5,z:-165,name:'פישקה',col:0x909090,type:'recruit',avatar:'🐕'},
+  [{x:-70,z:72,name:'בלה הזקנה',col:0xC8A87A,type:'quest',avatar:'🐕‍🦺'},  // ליד השוק, ברחוב
+   {x:40,z:-45,name:'שוקי',col:0xE8B870,type:'recruit',avatar:'🐶'},       // שכונה מרכזית
+   {x:-20,z:130,name:'בוקסר',col:0xB08040,type:'recruit',avatar:'🐶'},      // דרום
+   {x:100,z:40,name:'לולה',col:0xD4B090,type:'recruit',avatar:'🐩'},        // ליד הפארק
+   {x:5,z:-165,name:'פישקה',col:0x909090,type:'recruit',avatar:'🐕'},       // רמת אשכול
   ].forEach(n=>{
     const ng=mkDogMesh(n.col,0.85);ng.position.set(n.x,0,n.z);scene.add(ng);
     const ind=new THREE.Mesh(new THREE.SphereGeometry(0.35,6,6),new THREE.MeshLambertMaterial({color:0xf5c518,emissive:0x443300}));
@@ -732,33 +780,53 @@ function updatePlayer(dt){
 // ATTACK
 // ══════════════════════════════════════════════════
 function attack(){
-  const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;let hit=false;
+  const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
   playBark();
-  // Visual swing
   PB.rotation.z=0.22;setTimeout(()=>PB.rotation.z=0,180);
-  // Particles on attack
   spawnParticles(px,1,pz,0xf5c518,5);
-  [...G.enemies,...G.bosses].forEach(e=>{
-    if(e.hp<=0||e.dead)return;
-    if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.5){
-      const dmg=dog.pow*10*(1+dog.level*0.1);e.hp-=dmg;hit=true;
-      playHit();flash(e.mesh.children[0]);
-      spawnParticles(e.mesh.position.x,1,e.mesh.position.z,0xe74c3c,6);
-      if(e.hp<=0){
-        if(e.name){
-          e.dead=true;scene.remove(e.mesh);G.score+=300;
-          spawnParticles(e.mesh.position.x,1,e.mesh.position.z,0xf5c518,20);
-          playCapture();addXP(80);
-          showCutscene('win',()=>{setMission(7);});
-        } else {
-          scene.remove(e.mesh);G.score+=50;playEnemyDie();
-          addXP(20);showN('+50 ניקוד 🐾');
-          if(G.mission===3)setMission(4);
+
+  // אויבים רגילים — רק משלב 3
+  if(G.mission>=3){
+    G.enemies.forEach(e=>{
+      if(e.hp<=0||!e.mesh.visible)return;
+      if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.5){
+        const dmg=dog.pow*10*(1+dog.level*0.1);e.hp-=dmg;
+        playHit();flash(e.mesh.children[0]);
+        spawnParticles(e.mesh.position.x,1,e.mesh.position.z,0xe74c3c,6);
+        if(e.hp<=0){
+          e.hp=0;e.mesh.visible=false;
+          G.score+=50;playEnemyDie();addXP(20);
+          G.enemiesDefeated=(G.enemiesDefeated||0)+1;
+          showN(`+50 ניקוד 🐾 הובסת ${G.enemiesDefeated}/3 אויבים`);
+          if(G.enemiesDefeated>=3&&G.mission===3)setMission(4);
         }
       }
-    }
-  });
-  if(!hit){}
+    });
+  } else if(G.mission<3){
+    // טרם הגיע הזמן להילחם
+    showN('עדיין לא הגיע הזמן להילחם!\nקודם השלם את המשימה הנוכחית.');
+    return;
+  }
+
+  // בוס — רק בשלב 6
+  if(G.mission===6){
+    G.bosses.forEach(b=>{
+      if(b.dead||!b.mesh.visible)return;
+      if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.5){
+        const dmg=dog.pow*10*(1+dog.level*0.1);b.hp-=dmg;
+        playHit();flash(b.mesh.children[0]);
+        spawnParticles(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,8);
+        if(b.hp<=0){
+          b.dead=true;b.mesh.visible=false;
+          G.score+=300;playCapture();addXP(80);
+          spawnParticles(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,25);
+          setTimeout(()=>showCutscene('win',()=>{setMission(7);}),500);
+        }
+      }
+    });
+  } else if(G.mission<6&&G.bosses.length&&!G.bosses[0].dead){
+    // ג'ק נראה אבל עדיין לא הגיע הזמן — הוא מזהיר
+  }
 }
 function flash(m){if(!m||!m.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
 
@@ -822,58 +890,62 @@ function switchDog(){
 }
 
 // ══════════════════════════════════════════════════
-// ENEMIES — STATE MACHINE
+// ENEMIES — gated by mission stage
 // ══════════════════════════════════════════════════
 function updateEnemies(dt){
   const px=PB.position.x,pz=PB.position.z;
-  G.enemies.forEach(e=>{
-    if(e.hp<=0)return;
-    const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
-    if(dd<e.alert){
-      // Chase
-      e.state='chase';
-      const dx=px-e.mesh.position.x,dz=pz-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
-      e.mesh.position.x+=dx/l*e.spd*dt;e.mesh.position.z+=dz/l*e.spd*dt;e.mesh.rotation.y=Math.atan2(dx,dz);
-      if(dd<e.atk){e.atkT-=dt;if(e.atkT<=0){e.atkT=1.2;playerTakeDamage(8);}}
-    } else {
-      // Patrol
-      e.state='patrol';e.patrolTimer-=dt;
-      if(e.patrolTimer<=0){e.patrolAngle=Math.random()*Math.PI*2;e.patrolTimer=2+Math.random()*3;}
-      const patX=e.homeX+Math.sin(e.patrolAngle)*8,patZ=e.homeZ+Math.cos(e.patrolAngle)*8;
-      const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
-      if(l>1){e.mesh.position.x+=dx/l*(e.spd*0.4)*dt;e.mesh.position.z+=dz/l*(e.spd*0.4)*dt;e.mesh.rotation.y=Math.atan2(dx,dz);}
-    }
-    if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.hp/e.mhp>0.5?0xe74c3c:0xffff00);}
-  });
 
-  // Boss — 2 phase with dash
-  G.bosses.forEach(b=>{
-    if(b.dead)return;
-    const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
-    // Phase 2 at 50% HP
-    if(b.hp<b.mhp*0.5&&b.phase===1){b.phase=2;b.spd=6.5;showN("⚠️ ג'ק כועס! מהירות הוכפלה!");if(!G.cutscenePlayed.boss){G.cutscenePlayed.boss=true;showCutscene('boss',()=>{});}}
-    if(dd<b.alert){
-      // Dash attack
-      b.dashTimer-=dt;
-      if(b.dashTimer<=0&&!b.dashActive&&dd<20){
-        b.dashActive=true;b.dashTimer=b.phase===2?2.5:4;
-        const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
-        b.dashVx=dx/l*18;b.dashVz=dz/l*18;
-        showN(`👹 ג'ק돌진!`);
-      }
-      if(b.dashActive){
-        b.mesh.position.x+=b.dashVx*dt;b.mesh.position.z+=b.dashVz*dt;
-        b.dashVx*=0.9;b.dashVz*=0.9;
-        if(Math.abs(b.dashVx)<0.5&&Math.abs(b.dashVz)<0.5)b.dashActive=false;
-        if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<b.atk)playerTakeDamage(20);
+  // אויבים רגילים — רק משלב 3
+  if(G.mission>=3){
+    G.enemies.forEach(e=>{
+      if(e.hp<=0||!e.mesh.visible)return;
+      const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
+      if(dd<e.alert){
+        const dx=px-e.mesh.position.x,dz=pz-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+        e.mesh.position.x+=dx/l*e.spd*dt;e.mesh.position.z+=dz/l*e.spd*dt;e.mesh.rotation.y=Math.atan2(dx,dz);
+        if(dd<e.atk){e.atkT-=dt;if(e.atkT<=0){e.atkT=1.2;playerTakeDamage(8);}}
       } else {
-        const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
-        b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;b.mesh.rotation.y=Math.atan2(dx,dz);
-        if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=1.0;playerTakeDamage(15);}}
+        e.patrolTimer-=dt;
+        if(e.patrolTimer<=0){e.patrolAngle=Math.random()*Math.PI*2;e.patrolTimer=2+Math.random()*3;}
+        const patX=e.homeX+Math.sin(e.patrolAngle)*8,patZ=e.homeZ+Math.cos(e.patrolAngle)*8;
+        const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+        if(l>1){e.mesh.position.x+=dx/l*(e.spd*0.4)*dt;e.mesh.position.z+=dz/l*(e.spd*0.4)*dt;e.mesh.rotation.y=Math.atan2(dx,dz);}
       }
-    }
-    if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);b.bar.material.color.setHex(b.phase===2?0xff6600:0xff0000);}
-  });
+      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.hp/e.mhp>0.5?0xe74c3c:0xffff00);}
+    });
+  }
+
+  // בוס — רק בשלב 6
+  if(G.mission===6){
+    G.bosses.forEach(b=>{
+      if(b.dead||!b.mesh.visible)return;
+      const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
+      if(b.hp<b.mhp*0.5&&b.phase===1){
+        b.phase=2;b.spd=6.5;
+        showN("⚠️ ג'ק כועס! הוא מואץ!");
+      }
+      if(dd<b.alert){
+        b.dashTimer-=dt;
+        if(b.dashTimer<=0&&!b.dashActive&&dd<20){
+          b.dashActive=true;b.dashTimer=b.phase===2?2.5:4;
+          const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+          b.dashVx=dx/l*18;b.dashVz=dz/l*18;
+          showN(`👹 ג'ק돌진!`);
+        }
+        if(b.dashActive){
+          b.mesh.position.x+=b.dashVx*dt;b.mesh.position.z+=b.dashVz*dt;
+          b.dashVx*=0.9;b.dashVz*=0.9;
+          if(Math.abs(b.dashVx)<0.5&&Math.abs(b.dashVz)<0.5)b.dashActive=false;
+          if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<b.atk)playerTakeDamage(20);
+        } else {
+          const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+          b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;b.mesh.rotation.y=Math.atan2(dx,dz);
+          if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=1.0;playerTakeDamage(15);}}
+        }
+      }
+      if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);b.bar.material.color.setHex(b.phase===2?0xff6600:0xff0000);}
+    });
+  }
 }
 function playerTakeDamage(dmg){
   const dog=G.dogs[G.dog];dog.hp=Math.max(0,dog.hp-dmg);
@@ -915,21 +987,65 @@ function updateTerrs(dt){
       showN(`🏴 "${t.name}" עכשיו שלנו!`);
       if(G.mission===2)setMission(3);
       if(G.terrCount>=3&&!G.cutscenePlayed.ch3){G.cutscenePlayed.ch3=true;showCutscene('ch3',()=>{});}
-      if(G.terrCount>=4&&G.mission===5)setMission(6);
+      if(G.terrCount>=4&&G.mission===5){
+        if(!G.cutscenePlayed.boss){G.cutscenePlayed.boss=true;showCutscene('boss',()=>{setMission(6);});}
+        else setMission(6);
+      }
     }
   });
   document.getElementById('terr-count').textContent=G.terrCount;
 }
 
 // ══════════════════════════════════════════════════
-// MISSION
+// MISSION SYSTEM — strict linear gate
 // ══════════════════════════════════════════════════
+// שלב 0: דבר עם בלה
+// שלב 1: אסוף 3 מנות אוכל
+// שלב 2: כנס לרמת אשכול (כיבוש שטח ראשון)
+// שלב 3: הכנע 3 אויבים מהכנופייה
+// שלב 4: גייס 2 כלבים (עם מומו בלבד)
+// שלב 5: כבוש 4 שטחים סה"כ
+// שלב 6: הכנע את ג'ק הרוטווילר
+// שלב 7: ניצחון!
+
 function setMission(idx){
   if(idx<=G.mission&&idx!==0)return;
   G.mission=Math.min(idx,G.missions.length-1);
   document.getElementById('mission-txt').textContent=G.missions[G.mission];
+  updateMissionGates();
   if(idx>0)showN(`📋 משימה חדשה:\n${G.missions[G.mission]}`);
 }
+
+// מנגנון gates — מה פעיל בכל שלב
+function updateMissionGates(){
+  const m=G.mission;
+
+  // אויבים רגילים — פעילים רק משלב 3
+  G.enemies.forEach(e=>{
+    const shouldBeActive=m>=3;
+    if(e.mesh){
+      e.mesh.visible=shouldBeActive;
+      if(!shouldBeActive){e.hp=e.mhp;} // איפוס HP כשנסתרים
+    }
+  });
+
+  // ג'ק — פעיל רק בשלב 6
+  G.bosses.forEach(b=>{
+    if(b.mesh){
+      b.mesh.visible=m>=6;
+      if(m<6){b.hp=b.mhp;b.dead=false;}
+    }
+  });
+
+  // NPC גיוס — פעיל רק משלב 4
+  G.npcs.forEach(n=>{
+    if(n.type==='recruit'&&n.ind){
+      n.ind.visible=m>=4;
+    }
+  });
+}
+
+
 
 // ══════════════════════════════════════════════════
 // CAMERA
@@ -964,7 +1080,7 @@ function drawMM(){
   ctx.fillStyle='#3a3a3a';ctx.fillRect(0,H/2-3,W,6);ctx.fillRect(W/2-3,0,6,H);ctx.fillRect(W/2-3-60*sc,0,6,H);ctx.fillRect(W/2-3+60*sc,0,6,H);
   G.terrs.forEach(t=>{ctx.fillStyle=t.cap?'#f5c518':'#9b59b6';ctx.beginPath();ctx.arc(cx+t.x*sc,cy+t.z*sc,5,0,Math.PI*2);ctx.fill();});
   ctx.fillStyle='#e74c3c';G.enemies.forEach(e=>{if(e.hp>0)ctx.fillRect(cx+e.mesh.position.x*sc-2,cy+e.mesh.position.z*sc-2,5,5);});
-  G.bosses.forEach(b=>{if(!b.dead){ctx.fillStyle=b.phase===2?'#ff6600':'#ff0000';ctx.beginPath();ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,7,0,Math.PI*2);ctx.fill();}});
+  G.bosses.forEach(b=>{if(!b.dead&&G.mission>=6){ctx.fillStyle=b.phase===2?'#ff6600':'#ff0000';ctx.beginPath();ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,7,0,Math.PI*2);ctx.fill();}});
   ctx.fillStyle='#2ecc71';G.npcs.forEach(n=>ctx.fillRect(cx+n.x*sc-2,cy+n.z*sc-2,5,5));
   ctx.fillStyle='#e67e22';G.pickups.forEach(p=>{if(!p.done)ctx.fillRect(cx+p.x*sc-2,cy+p.z*sc-2,4,4);});
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx+px*sc,cy+pz*sc,5,0,Math.PI*2);ctx.fill();
