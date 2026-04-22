@@ -28,69 +28,55 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 
 /* ── HUD ── */
 #hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
-
-/* שורה עליונה — פס אחד */
-#top-row{position:absolute;top:0;left:0;right:0;display:flex;align-items:stretch;height:44px;background:rgba(0,0,0,.82);border-bottom:1px solid rgba(245,197,24,.3);}
-#top-row>*{display:flex;align-items:center;padding:0 10px;border-right:1px solid rgba(255,255,255,.1);}
-#top-row>*:first-child{border-right:none;}
-#tr-terr{color:#9b59b6;font-size:13px;font-weight:bold;min-width:60px;justify-content:center;}
-#tr-terr span{font-size:18px;margin-left:3px;}
-#tr-title{flex:1;justify-content:center;color:#f5c518;font-size:13px;font-weight:bold;text-shadow:0 0 8px #f5c518;letter-spacing:1px;}
-#tr-score{color:#f5c518;font-size:11px;flex-direction:column;gap:1px;min-width:70px;justify-content:center;}
-#tr-fs{cursor:pointer;pointer-events:all;color:#f5c518;font-size:18px;min-width:40px;justify-content:center;transition:background .2s;border-right:none!important;}
-#tr-fs:hover{background:rgba(245,197,24,.15);}
-
-/* bars block — צד ימין מתחת לשורה עליונה */
-
-.hl{font-size:9px;color:#aaa;margin-bottom:0;}
-.hdn{font-size:11px;font-weight:bold;color:#f5c518;margin-bottom:3px;}
-.bg{background:#333;border-radius:3px;height:6px;margin-top:2px;}
-.bf{height:6px;border-radius:3px;transition:width .25s;}
+#tb{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid #f5c518;border-radius:8px;padding:5px 14px;color:#f5c518;font-size:clamp(11px,2.8vw,14px);font-weight:bold;text-shadow:0 0 8px #f5c518;white-space:nowrap;}
+#hb{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.85);border:1px solid #555;border-radius:8px;padding:7px 10px;min-width:120px;}
+.hl{font-size:10px;color:#aaa;margin-bottom:1px;}
+.hdn{font-size:12px;font-weight:bold;color:#f5c518;margin-bottom:4px;}
+.bg{background:#333;border-radius:3px;height:7px;margin-top:2px;}
+.bf{height:7px;border-radius:3px;transition:width .25s;}
 #hpf{background:linear-gradient(90deg,#e74c3c,#c0392b);width:100%;}
 #stf{background:linear-gradient(90deg,#2ecc71,#27ae60);width:100%;}
 #xpf{background:linear-gradient(90deg,#3498db,#2980b9);width:0%;}
+#terr-bar{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.85);border:1px solid #9b59b6;border-radius:8px;padding:7px 10px;min-width:110px;}
+.tl{font-size:10px;color:#aaa;margin-bottom:1px;}
+.tc{font-size:16px;font-weight:bold;color:#9b59b6;}
+#sc{font-size:10px;color:#f5c518;margin-top:1px;}
+#lvl{font-size:10px;color:#3498db;margin-top:1px;}
+#gangp{position:absolute;top:54px;right:10px;background:rgba(0,0,0,.85);border:1px solid #e67e22;border-radius:8px;padding:6px 10px;font-size:11px;color:#fff;}
+.gt{color:#e67e22;font-weight:bold;margin-bottom:2px;}
+#mp{position:absolute;top:54px;left:10px;background:rgba(0,0,0,.87);border-right:3px solid #f5c518;border-radius:0 8px 8px 0;padding:7px 10px;max-width:180px;font-size:11px;color:#fff;}
+.mt{color:#f5c518;font-weight:bold;margin-bottom:2px;font-size:10px;}
+.mx{line-height:1.5;}
 
-/* משימה — צד שמאל מתחת לשורה עליונה */
+/* nav arrow */
+#nav{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;display:none;flex-direction:column;align-items:center;}
+#nav-arrow{font-size:28px;animation:bounce .7s ease-in-out infinite alternate;}
+#nav-lbl{color:#f5c518;font-size:12px;font-weight:bold;background:rgba(0,0,0,.7);border-radius:6px;padding:2px 8px;margin-top:2px;}
+@keyframes bounce{from{transform:translateY(0);}to{transform:translateY(-8px);}}
 
-.mt{color:#f5c518;font-weight:bold;margin-bottom:1px;font-size:10px;}
-.mx{line-height:1.4;font-size:11px;}
-/* עמודה שמאלית — משימה + stats */
-#left-col{position:absolute;top:48px;left:0;display:flex;flex-direction:column;max-width:min(200px,52vw);}
-#mp{background:rgba(0,0,0,.87);border-right:3px solid #f5c518;border-radius:0 8px 0 0;padding:5px 10px;font-size:11px;color:#fff;}
-#hb{background:rgba(0,0,0,.82);border-right:3px solid #e74c3c;border-radius:0 0 8px 0;padding:6px 10px;}
-
-/* minimap — תמיד ימין תחתון */
-#mm-wrap{position:absolute;bottom:10px;right:10px;width:110px;height:110px;background:rgba(0,0,0,.88);border:2px solid #f5c518;border-radius:8px;overflow:hidden;}
+/* minimap */
+#mm-wrap{position:absolute;bottom:10px;right:10px;width:120px;height:120px;background:rgba(0,0,0,.88);border:2px solid #f5c518;border-radius:8px;overflow:hidden;}
 #mm-wrap canvas{width:100%;height:100%;}
 
 /* notif */
-#notif{position:absolute;top:34%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.94);border:2px solid #f5c518;border-radius:12px;padding:10px 18px;color:#f5c518;font-size:clamp(12px,3.2vw,15px);font-weight:bold;text-align:center;display:none;max-width:80vw;z-index:50;line-height:1.5;}
-#xpp{position:absolute;top:26%;left:50%;transform:translate(-50%,-50%);color:#3498db;font-size:clamp(13px,4vw,18px);font-weight:bold;display:none;z-index:51;text-shadow:0 0 10px #3498db;}
+#notif{position:absolute;top:36%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.94);border:2px solid #f5c518;border-radius:12px;padding:12px 20px;color:#f5c518;font-size:clamp(12px,3.2vw,16px);font-weight:bold;text-align:center;display:none;max-width:85vw;z-index:50;line-height:1.6;}
+#xpp{position:absolute;top:28%;left:50%;transform:translate(-50%,-50%);color:#3498db;font-size:clamp(14px,4vw,20px);font-weight:bold;display:none;z-index:51;text-shadow:0 0 10px #3498db;}
 @keyframes floatUp{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3);}100%{opacity:0;transform:translate(-50%,-160%) scale(.9);}}
-#ip{position:absolute;bottom:135px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);border:1px solid #2ecc71;border-radius:8px;padding:6px 12px;color:#2ecc71;font-size:12px;display:none;white-space:nowrap;}
-
-/* ── NAV ARROW — חץ על שולי המסך ── */
-/* המיכל של החץ יהיה על שוליים */
-#nav{position:absolute;pointer-events:none;display:none;flex-direction:column;align-items:center;transition:top .1s,left .1s,bottom .1s,right .1s;}
-#nav-arrow{width:36px;height:36px;background:rgba(0,0,0,.78);border:2px solid #f5c518;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:#f5c518;transition:transform .08s;}
-#nav-lbl{color:#f5c518;font-size:10px;font-weight:bold;background:rgba(0,0,0,.75);border-radius:5px;padding:2px 6px;margin-top:3px;white-space:nowrap;max-width:100px;text-align:center;overflow:hidden;text-overflow:ellipsis;}
+#ip{position:absolute;bottom:clamp(145px,25vw,190px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);border:1px solid #2ecc71;border-radius:8px;padding:6px 12px;color:#2ecc71;font-size:12px;display:none;white-space:nowrap;}
 
 /* ── MOBILE ── */
 #mob{position:fixed;inset:0;pointer-events:none;z-index:20;display:none;}
-/* ג'ויסטיק — שמאל תחתון */
-#jz{position:absolute;bottom:14px;left:14px;width:118px;height:118px;pointer-events:all;}
+#jz{position:absolute;bottom:18px;left:18px;width:124px;height:124px;pointer-events:all;}
 #jb{position:absolute;inset:0;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.2);border-radius:50%;}
-#jk{position:absolute;width:46px;height:46px;background:rgba(245,197,24,.72);border:2px solid #f5c518;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}
-/* אזור מצלמה — בין ג'ויסטיק לכפתורים */
-#cz{position:absolute;top:44px;bottom:0;left:142px;right:80px;pointer-events:all;}
-/* כפתורי פעולה — ימין תחתון, מעל המפה */
-#abs{position:absolute;bottom:130px;right:12px;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:all;}
-.ab{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid;user-select:none;-webkit-user-select:none;transition:transform .1s;}
-.ab:active{transform:scale(.85);}
-#ba{background:rgba(231,76,60,.85);border-color:#e74c3c;}
-#be{background:rgba(46,204,113,.85);border-color:#2ecc71;}
-#bj{background:rgba(52,152,219,.85);border-color:#3498db;}
-#bt{background:rgba(155,89,182,.85);border-color:#9b59b6;font-size:10px;color:#fff;}
+#jk{position:absolute;width:50px;height:50px;background:rgba(245,197,24,.72);border:2px solid #f5c518;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);}
+#cz{position:absolute;top:0;right:0;bottom:0;left:152px;pointer-events:all;}
+#abs{position:absolute;bottom:16px;right:8px;display:flex;flex-direction:column;gap:8px;align-items:flex-end;pointer-events:all;}
+.ab{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:2px solid;user-select:none;-webkit-user-select:none;transition:transform .1s;}
+.ab:active{transform:scale(.87);}
+#ba{background:rgba(231,76,60,.78);border-color:#e74c3c;}
+#be{background:rgba(46,204,113,.78);border-color:#2ecc71;}
+#bj{background:rgba(52,152,219,.78);border-color:#3498db;}
+#bt{background:rgba(155,89,182,.78);border-color:#9b59b6;font-size:10px;color:#fff;}
 
 /* ── DIALOG ── */
 #dlg-ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:flex-end;justify-content:center;padding:0 12px 16px;}
@@ -137,7 +123,7 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 </div>
 
 <!-- CUTSCENE -->
-<div id="cut" style="display:none">
+<div id="cut">
   <div class="cut-ch" id="cut-ch"></div>
   <div class="cut-ti" id="cut-ti"></div>
   <div class="cut-tx" id="cut-tx"></div>
@@ -188,35 +174,22 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 
 <!-- HUD -->
 <div id="hud" style="display:none">
-  <!-- שורה עליונה אחת עם הכל -->
-  <div id="top-row">
-    <div id="tr-terr">🏴<span id="tc">0</span>/6</div>
-    <div id="tr-title">🐕 כלבי לוד</div>
-    <div id="tr-score">
-      <span style="color:#f5c518">ניקוד: <span id="scv">0</span></span>
-      <span style="color:#3498db">רמה <span id="lvv">1</span></span>
-    </div>
-    <div id="tr-fs" onclick="toggleFS()">⛶</div>
+  <div id="tb">🐕 כלבי לוד — לוד</div>
+  <div id="hb">
+    <div class="hdn" id="hdn">קולין</div>
+    <div class="hl">❤️ בריאות</div><div class="bg"><div class="bf" id="hpf"></div></div>
+    <div class="hl" style="margin-top:4px">⚡ סיבולת</div><div class="bg"><div class="bf" id="stf"></div></div>
+    <div class="hl" style="margin-top:4px">✨ XP</div><div class="bg"><div class="bf" id="xpf"></div></div>
   </div>
-
-
-  <!-- עמודה שמאלית: משימה + stats -->
-  <div id="left-col">
-    <div id="mp"><div class="mt">⭐ משימה</div><div class="mx" id="mtx">—</div></div>
-    <div id="hb">
-      <div class="hdn" id="hdn">קולין</div>
-      <div class="hl">❤️</div><div class="bg"><div class="bf" id="hpf"></div></div>
-      <div class="hl" style="margin-top:3px">⚡</div><div class="bg"><div class="bf" id="stf"></div></div>
-      <div class="hl" style="margin-top:3px">✨</div><div class="bg"><div class="bf" id="xpf"></div></div>
-    </div>
+  <div id="terr-bar">
+    <div class="tl">🏴 שטחים</div><div class="tc"><span id="tc">0</span>/6</div>
+    <div id="sc">ניקוד: <span id="scv">0</span></div>
+    <div id="lvl">רמה <span id="lvv">1</span></div>
   </div>
-
-  <!-- חץ ניווט — יוסט לשוליים ב-JS -->
+  <div id="gangp"><div class="gt">🐾 כנופייה</div>חברים: <span id="gc">0</span></div>
+  <div id="mp"><div class="mt">⭐ משימה</div><div class="mx" id="mtx">—</div></div>
   <div id="nav"><div id="nav-arrow">▲</div><div id="nav-lbl"></div></div>
-
-  <!-- מפה — שמאל תחתון -->
-  <div id="mm-wrap"><canvas id="mm" width="100" height="100"></canvas></div>
-
+  <div id="mm-wrap"><canvas id="mm" width="120" height="120"></canvas></div>
   <div id="notif"></div>
   <div id="xpp"></div>
   <div id="ip"></div>
@@ -243,65 +216,16 @@ canvas#cv{display:block;width:100vw;height:100vh;}
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ════════════════════════════════════════════════
-// STORY — חייב להיות לפני three.js כדי שהכפתור יעבוד מיד
+// STORY
 // ════════════════════════════════════════════════
 const SLIDES=['לוד, ישראל.\nעיר של ניגודים — רחובות ישנים ורעש של חיים.','שלושה כלבי רחוב ללא בית.\nאבל עם חלום אחד...','קולין — חזק. זיפו — מהיר. מומו — חכם.\nביחד הם יכבשו את העיר.','הם מתחילים מהתחתית.\nפחי אשפה. שינה תחת גשרים.','אבל לוד — תהיה שלהם. 🐕'];
 let sIdx=0;
 document.getElementById('st-tx').textContent=SLIDES[0];
-function nextStory(){
-  sIdx++;
-  if(sIdx>=SLIDES.length){
-    document.getElementById('story').style.display='none';
-    document.getElementById('cs-scr').style.display='flex';
-    return;
-  }
-  document.getElementById('st-tx').textContent=SLIDES[sIdx];
-}
-// selDog — ממתין עד שthree.js והמשחק נטענו
-let _pendingDog=null;
-function selDog(d){
-  _pendingDog=d;
-  document.querySelectorAll('.cc').forEach(el=>el.style.pointerEvents='none');
-  const sub=document.querySelector('#cs-scr .sub');
-  if(sub)sub.textContent='⏳ טוען משחק...';
-  (function wait(){
-    if(typeof THREE!=='undefined'&&typeof init==='function'){
-      // three.js ומשחק נטענו — מתחילים!
-      const real=window._realSelDog||selDog;
-      if(window._realSelDog){window._realSelDog(d);}
-      else{setTimeout(wait,50);}
-    } else {
-      setTimeout(wait,50);
-    }
-  })();
-}
-</script>
-<script>
-// טוען three.js ממספר מקורות — הראשון שעובד מנצח
-(function loadThree(){
-  const CDNS=[
-    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-    'https://unpkg.com/three@0.128.0/build/three.min.js',
-    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
-  ];
-  let i=0;
-  function tryNext(){
-    if(i>=CDNS.length){
-      document.body.innerHTML='<div style="color:#f5c518;font-size:18px;text-align:center;margin-top:40vh;padding:20px;">❌ לא ניתן לטעון את המשחק.<br><br>פתח את הקובץ בדפדפן עם חיבור לאינטרנט<br>(Chrome / Firefox)</div>';
-      return;
-    }
-    const s=document.createElement('script');
-    s.src=CDNS[i++];
-    s.onload=function(){window._threeLoaded=true;};
-    s.onerror=tryNext;
-    document.head.appendChild(s);
-  }
-  tryNext();
-})();
-</script>
-<script>
+function nextStory(){sIdx++;if(sIdx>=SLIDES.length){document.getElementById('story').style.display='none';document.getElementById('cs-scr').style.display='flex';return;}document.getElementById('st-tx').textContent=SLIDES[sIdx];}
+
 // ════════════════════════════════════════════════
 // CUTSCENES
 // ════════════════════════════════════════════════
@@ -309,15 +233,8 @@ const CUTS={
   intro:{ch:'פתיחה',ti:'ברוכים הבאים ללוד',tx:'הרחובות פתוחים לפניכם.\nבלה הזקנה מחכה ליד השוק — דברו איתה קודם.'},
   ch2:{ch:'פרק 2',ti:'הכנופייה גדלה',tx:'גייסתם חברים.\nעכשיו אתם כוח אמיתי — הגיע הזמן לכבוש שטחים!'},
   ch3:{ch:'פרק 3',ti:'שליטה במחצית העיר',tx:'לוד מתחילה לפחד מכם.\nג\'ק הרוטווילר שמע עליכם — והוא כועס.'},
-  boss:{ch:'קרב גמר — פרק א',ti:'ג\'ק הרוטווילר',tx:'הוא מחכה לכם ברחוב הרצל.\nהכנו את עצמכם — זהו הקרב האחרון... של פרק א.'},
-  win1:{ch:'סוף פרק א',ti:'🏆 ג\'ק הובס!',tx:'חשבתם שניצחתם?\n\nג\'ק מגלה סוד לפני שהוא בורח:\n\n"אני הייתי רק הכלי...\nמי ששולח אותי גר בוילה בגני איילון.\nשמו — ברונו הדוברמן. 🐩"\n\nמתחיל פרק ב — הבוס האמיתי.'},
-  // ── פרק ב ──
-  p2_intro:{ch:'פרק ב',ti:'ברונו הדוברמן',tx:'ברונו — דוברמן עשיר ופוליטי.\nהוא לא לוחם ברחוב — הוא שולט בכסף.\n\nהוילה שלו בגני איילון מוגנת:\nשומרים, גדרות, ומצלמות.\n\nכדי לנצח צריך להשתמש בכל שלושתכם.'},
-  p2_zippo:{ch:'פרק ב — שלב א',ti:'⚡ זיפו מסתנן',tx:'זיפו — הכי מהיר, הכי שקט.\nרק הוא יכול להתחמק משומרי הוילה.\n\nמשימה: חדור לוילה וגנוב את "תיק השחיתות" — ההוכחות נגד ברונו.\n\nהחלף לזיפו!'},
-  p2_momo:{ch:'פרק ב — שלב ב',ti:'👑 מומו מדבר',tx:'עם תיק ההוכחות — הגיע זמן מומו.\n\nמומו יפגוש את בעלי העסקים ברחוב הרצל\nויגרום להם לסגור את עסקיהם לברונו.\n\nבלי תמיכה כלכלית — ברונו יחלש!\n\nהחלף למומו!'},
-  p2_colin:{ch:'פרק ב — שלב ג',ti:'🦴 קולין פוצח',tx:'הוילה חלשה עכשיו — הגיע זמן קולין!\n\nהשומרים יצאו לעצור אתכם.\nקולין יפרוץ את שערי הוילה ויסלק אותם.\n\nאחרי זה — קרב גמר מול ברונו עצמו!\n\nהחלף לקולין!'},
-  p2_boss:{ch:'קרב גמר — פרק ב',ti:'👹 ברונו הדוברמן',tx:'ברונו נמצא בתוך הוילה.\nהוא גדול, מהיר, ומסוכן.\n\nאל תתנו לו לברוח!\n\nזהו הקרב האחרון — ברגע שתנצחו,\nלוד תהיה שלכם לנצח.'},
-  win2:{ch:'סוף המשחק',ti:'🏆🏆 לוד שייכת לכלבים לנצח!',tx:'עשיתם את זה.\n\nברונו הובס. הכסף שלו — מחולק לתושבים.\nהוילה — בית לכלבי הרחוב.\n\nקולין, זיפו ומומו — מלכי לוד.\n\nהעיר חופשית. 🐕🐕🐕'},
+  boss:{ch:'קרב גמר',ti:'ג\'ק הרוטווילר',tx:'הוא מחכה לכם ברחוב הרצל.\nהכנו את עצמכם — זהו הקרב האחרון!'},
+  win:{ch:'סוף',ti:'🏆 לוד שייכת לכלבים!',tx:'עשיתם את זה.\nמרחוב הרצל ועד תחנת הרכבת — לוד שלכם!\n\nכלבי לוד — אגדה לעד. 🐕'},
 };
 let cutCb=null;
 function showCut(k,cb){const c=CUTS[k];document.getElementById('cut-ch').textContent=c.ch;document.getElementById('cut-ti').textContent=c.ti;document.getElementById('cut-tx').textContent=c.tx;document.getElementById('cut').style.display='flex';cutCb=cb||null;G.paused=true;}
@@ -366,45 +283,13 @@ const MISSIONS=[
    hint:'שטח ללא כיבוש',
    targetFn:()=>G.terrs.find(t=>!t.cap)||{x:0,z:0},
    unlock:()=>{}},
-  // 6 — פרק א בוס
+  // 6
   {txt:'7️⃣ מצא והכנע את ג\'ק הרוטווילר 👹',
    hint:"ג'ק ברחוב הרצל",
    targetFn:()=>G.bosses[0]||{x:25,z:20},
-   unlock:()=>{G.bosses.forEach(b=>{if(b.id==='jack'){b.mesh.visible=true;b.hp=b.mhp;b.dead=false;}});}},
-  // 7 — מעבר לפרק ב (קאטסין אוטומטי)
-  {txt:'📖 פרק ב מתחיל...',
-   hint:'',targetFn:()=>({x:0,z:0}),
-   unlock:()=>{setTimeout(()=>showCut('p2_intro',()=>setMission(8)),800);}},
-  // 8 — זיפו חדירה לוילה
-  {txt:'⚡ החלף לזיפו — הסתנן לוילה וגנוב את התיק',
-   hint:'וילה ברונו — גני איילון',
-   targetFn:()=>({x:G.villa.x,z:G.villa.z+5}),
-   unlock:()=>{showCut('p2_zippo',null);
-       // יצירת תיק להסתנן
-       setTimeout(()=>{
-         const m=new THREE.Mesh(new THREE.BoxGeometry(.6,.8,.3),new THREE.MeshLambertMaterial({color:0x8B4513,emissive:0x221100}));
-         m.position.set(G.villa.x,1,G.villa.z+5);scene.add(m);
-         G.pickups.push({mesh:m,x:G.villa.x,z:G.villa.z+5,done:false,type:'villa_doc'});
-       },500);}},
-  // 9 — מומו שכנוע עסקים (3 NPCs מיוחדים)
-  {txt:'👑 החלף למומו — שכנע 3 בעלי עסקים נגד ברונו (0/3)',
-   hint:'בעלי עסקים ברחוב הרצל',
-   targetFn:()=>G.npcs.find(n=>n.type==='business'&&!n.convinced)||{x:0,z:10},
-   unlock:()=>{showCut('p2_momo',null);G.npcs.forEach(n=>{if(n.type==='business')n.ind.visible=true;});}},
-  // 10 — קולין מפרוץ שומרים
-  {txt:'🦴 החלף לקולין — הכנע 4 שומרי הוילה ⚔️ (0/4)',
-   hint:'שומרים ליד הוילה',
-   targetFn:()=>G.enemies.find(e=>e.type==='guard'&&e.hp>0&&e.mesh.visible)||{x:G.villa.x,z:G.villa.z},
-   unlock:()=>{showCut('p2_colin',null);G.enemies.forEach(e=>{if(e.type==='guard'){e.mesh.visible=true;e.hp=e.mhp;}});}},
-  // 11 — ברונו בוס
-  {txt:'🏰 פרוץ לוילה והכנע את ברונו הדוברמן! 👹',
-   hint:'ברונו בתוך הוילה',
-   targetFn:()=>G.bosses.find(b=>b.id==='bruno')||{x:G.villa.x,z:G.villa.z},
-   unlock:()=>{showCut('p2_boss',null);G.bosses.forEach(b=>{if(b.id==='bruno'){b.mesh.visible=true;b.hp=b.mhp;b.dead=false;}});}},
-  // 12 — ניצחון סופי
-  {txt:'🏆🏆 לוד שייכת לכלבים לנצח!',
-   hint:'',targetFn:()=>({x:0,z:0}),
-   unlock:()=>{}},
+   unlock:()=>{G.bosses.forEach(b=>{b.mesh.visible=true;b.hp=b.mhp;b.dead=false;});}},
+  // 7
+  {txt:'🏆 לוד שייכת לכלבים!',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{}},
 ];
 
 // ════════════════════════════════════════════════
@@ -421,13 +306,9 @@ const G={
   terrs:[],terrCnt:0,
   enemies:[],bosses:[],pickups:[],npcs:[],particles:[],
   gang:0,score:0,
-  foodEaten:0,          // mission 1
-  enemiesKilled:0,      // mission 3
-  recruitsDone:0,       // mission 4
-  guardsKilled:0,       // mission 10 (פרק ב)
-  businessConvinced:0,  // mission 9 (פרק ב)
-  villaInfiltrated:false, // mission 8 — זיפו חדר
-  villa:{x:95,z:115},   // מיקום הוילה של ברונו (גני איילון)
+  foodEaten:0,          // for mission 1
+  enemiesKilled:0,      // for mission 3
+  recruitsDone:0,       // for mission 4
   keys:{},yaw:0,pitch:.35,
   atkCD:0,velY:0,onGround:true,
   dlgOpen:false,paused:false,
@@ -462,9 +343,7 @@ function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles
 // ════════════════════════════════════════════════
 // SELECT DOG
 // ════════════════════════════════════════════════
-window._realSelDog=function(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('story').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';init();}
-// אם כבר חיכה — מריצים עכשיו
-if(_pendingDog){window._realSelDog(_pendingDog);_pendingDog=null;}
+function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';init();}
 
 // ════════════════════════════════════════════════
 // INIT
@@ -478,12 +357,11 @@ function init(){
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
   buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();
-  buildVilla();buildGuards();buildBruno();buildBusinessNPCs();
   setupInput();
   // start everything hidden — gates will show what's needed
   G.enemies.forEach(e=>e.mesh.visible=false);
   G.bosses.forEach(b=>{b.mesh.visible=false;});
-  G.npcs.forEach(n=>{if(n.ind&&(n.type==='recruit'||n.type==='business'))n.ind.visible=false;});
+  G.npcs.forEach(n=>{if(n.ind&&n.type==='recruit')n.ind.visible=false;});
   setMission(0);
   showCut('intro',null);
   loop();
@@ -676,7 +554,7 @@ function buildBoss(){
   const bg=mkDog(0x111111,1.7);bg.position.set(25,0,18);scene.add(bg);
   const cr=new THREE.Mesh(new THREE.ConeGeometry(.8,.9,5),new THREE.MeshLambertMaterial({color:0xf5c518}));cr.position.set(0,3.2,0);bg.add(cr);
   const bar=hpBar(bg,2.4,3.9);
-  G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:22,atk:3.2,atkT:0,bar,dead:false,phase:1,dashT:4,dashOn:false,dvx:0,dvz:0,id:"jack"});
+  G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:22,atk:3.2,atkT:0,bar,dead:false,phase:1,dashT:4,dashOn:false,dvx:0,dvz:0});
 }
 
 // ════════════════════════════════════════════════
@@ -705,77 +583,8 @@ function buildNPCs(){
 }
 
 // ════════════════════════════════════════════════
-// פרק ב — וילה, שומרים, ברונו, עסקים
+// INPUT
 // ════════════════════════════════════════════════
-function buildVilla(){
-  const vx=G.villa.x, vz=G.villa.z;
-  // גדר חיצונית
-  [[0,-22,44,2],[0,22,44,2],[-22,0,2,44],[22,0,2,44]].forEach(([dx,dz,w,d])=>
-    mkB(w,3,d,0x888866,vx+dx,1.5,vz+dz));
-  // שער עם צבע שונה
-  mkB(6,4,1,0x664422,vx,2,vz-22);
-  // בניין הוילה עצמו — גדול ומרשים
-  mkB(20,10,16,0xeee0c0,vx,5,vz);
-  // גג אדום-כהה
-  const roof=new THREE.Mesh(new THREE.BoxGeometry(22,1,18),new THREE.MeshLambertMaterial({color:0x882222}));
-  roof.position.set(vx,10.5,vz);scene.add(roof);
-  // עמודים
-  [[-8,0],[8,0],[-8,-8],[8,-8]].forEach(([dx,dz])=>mkB(1.5,10,1.5,0xddd0aa,vx+dx,5,vz+dz));
-  // בריכה לפני הוילה
-  const pool=new THREE.Mesh(new THREE.BoxGeometry(8,0.3,5),new THREE.MeshLambertMaterial({color:0x4488cc}));
-  pool.position.set(vx,0.15,vz-14);scene.add(pool);
-  // עצים מסביב
-  [[-18,-18],[18,-18],[-18,18],[18,18]].forEach(([dx,dz])=>bldTree(vx+dx,vz+dz));
-  // הוסף לבניינים לחסימה
-  blds.push({x:vx,z:vz,w:20,d:16});
-  blds.push({x:vx,z:vz-22,w:44,d:2});
-  blds.push({x:vx,z:vz+22,w:44,d:2});
-  blds.push({x:vx-22,z:vz,w:2,d:44});
-  blds.push({x:vx+22,z:vz,w:2,d:44});
-  // שטח כיבוש — חצר הוילה
-  addTerr(vx,vz,18,'וילת ברונו');
-}
-
-function buildGuards(){
-  // 4 שומרים מסביב לוילה
-  [[G.villa.x-15,G.villa.z],[G.villa.x+15,G.villa.z],
-   [G.villa.x,G.villa.z-15],[G.villa.x,G.villa.z+15]].forEach(([x,z])=>{
-    const eg=mkDog(0x333355,1.1);eg.position.set(x,0,z);scene.add(eg);
-    const bar=hpBar(eg,1.6,2.5);
-    G.enemies.push({mesh:eg,hp:80,mhp:80,spd:4,alert:12,atk:2.5,atkT:0,bar,
-      homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2,type:'guard'});
-  });
-}
-
-function buildBruno(){
-  // ג'ק — פרק א, ברונו — פרק ב
-  // ג'ק כבר קיים ב-G.bosses[0]
-  // ברונו — דוברמן שחור-חום, גדול יותר
-  const bg=mkDog(0x1a0a00,2.0);bg.position.set(G.villa.x,0,G.villa.z);scene.add(bg);
-  // עניבה/קולר זהב
-  const collar=new THREE.Mesh(new THREE.BoxGeometry(1.8,.4,2.2),new THREE.MeshLambertMaterial({color:0xf5c518}));
-  collar.position.set(0,1.4*2,0.4*2);bg.add(collar);
-  // כתר
-  const cr=new THREE.Mesh(new THREE.ConeGeometry(.9,1,5),new THREE.MeshLambertMaterial({color:0xf5c518}));
-  cr.position.set(0,4.2,0);bg.add(cr);
-  const bar=hpBar(bg,3,5.5);
-  G.bosses.push({mesh:bg,hp:300,mhp:300,spd:5,alert:20,atk:3.5,atkT:0,bar,
-    dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0,id:'bruno'});
-}
-
-function buildBusinessNPCs(){
-  // 3 בעלי עסקים ברחוב הרצל — רק מומו יכול לשכנע
-  [{x:-20,z:4,name:'דוד הקצב',av:'🥩'},
-   {x:10,z:4,name:'רחל הפלאפל',av:'🧆'},
-   {x:45,z:4,name:'מאיר הנגר',av:'🔧'},
-  ].forEach(n=>{
-    const ng=mkDog(0xE8C870,.8);ng.position.set(n.x,0,n.z);scene.add(ng);
-    const ind=new THREE.Mesh(new THREE.SphereGeometry(.3,6,6),
-      new THREE.MeshLambertMaterial({color:0xff6600,emissive:0x441100}));
-    ind.position.set(0,2.4,0);ng.add(ind);
-    G.npcs.push({...n,x:n.x,z:n.z,mesh:ng,ind,type:'business',convinced:false,recruited:false});
-  });
-}
 function setupInput(){
   document.addEventListener('keydown',e=>{G.keys[e.code]=true;if(e.code==='Tab')e.preventDefault();});
   document.addEventListener('keyup',e=>{G.keys[e.code]=false;});
@@ -809,20 +618,20 @@ function setMission(idx){
 }
 
 function updateMissionHUD(){
-  let txt=MISSIONS[G.mission]?MISSIONS[G.mission].txt:'—';
-  if(G.mission===1)txt=txt.replace('0/3',G.foodEaten+'/3');
-  if(G.mission===3)txt=txt.replace('0/3',G.enemiesKilled+'/3');
-  if(G.mission===4)txt=txt.replace('0/2',G.recruitsDone+'/2');
-  if(G.mission===9)txt=txt.replace('0/3',G.businessConvinced+'/3');
-  if(G.mission===10)txt=txt.replace('0/4',G.guardsKilled+'/4');
+  let txt=MISSIONS[G.mission].txt;
+  // Update counters dynamically
+  if(G.mission===1)txt=txt.replace('0/3',`${G.foodEaten}/3`);
+  if(G.mission===3)txt=txt.replace('0/3',`${G.enemiesKilled}/3`);
+  if(G.mission===4)txt=txt.replace('0/2',`${G.recruitsDone}/2`);
   document.getElementById('mtx').textContent=txt;
 }
 
 function updateNavArrow(){
   const nav=document.getElementById('nav');
-  if(G.mission===0||G.mission>=7){nav.style.display='none';return;}
+  if(G.mission>=7){nav.style.display='none';return;}
   const m=MISSIONS[G.mission];
   if(!m||!m.hint){nav.style.display='none';return;}
+  document.getElementById('nav-lbl').textContent=m.hint;
   nav.style.display='flex';
 }
 
@@ -833,37 +642,14 @@ function updateNavDirection(){
   const tx=(tgt.mesh?tgt.mesh.position.x:tgt.x)||0;
   const tz=(tgt.mesh?tgt.mesh.position.z:tgt.z)||0;
   const dx=tx-PB.position.x, dz=tz-PB.position.z;
-  const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
-
-  // כיוון בזווית מסך — עולם ⟶ מסך
+  // angle in screen space: world angle minus camera yaw
   const worldAngle=Math.atan2(dx,dz);
-  const screenAngle=worldAngle-G.yaw+Math.PI; // +PI כי מצלמה מאחור
-
-  // מיקם החץ על שוליים — 60px מהקצה
-  const W=innerWidth, H=innerHeight;
-  const cx=W/2, cy=H/2;
-  const margin=60;
-  const cos=Math.cos(screenAngle), sin=Math.sin(screenAngle);
-  // מצא נקודה על שולי המסך
-  let ex, ey;
-  const tRight =( W/2-margin)/sin, tLeft  =(-W/2+margin)/sin;
-  const tBottom=( H/2-margin)/cos, tTop   =(-H/2+margin)/cos;
-  const ts=[];
-  if(sin>0.01&&tRight>0)ts.push(tRight);
-  if(sin<-0.01&&tLeft>0)ts.push(-tLeft);
-  if(cos>0.01&&tBottom>0)ts.push(tBottom);
-  if(cos<-0.01&&tTop>0)ts.push(-tTop);
-  const t=ts.length?Math.min(...ts):80;
-  ex=cx+sin*t; ey=cy+cos*t;
-  ex=Math.max(margin,Math.min(W-margin,ex));
-  ey=Math.max(margin+44,Math.min(H-margin,ey));
-
-  const nav=document.getElementById('nav');
-  nav.style.left=ex+'px'; nav.style.top=ey+'px';
-  nav.style.transform='translate(-50%,-50%)';
-  // סובב החץ
+  const screenAngle=worldAngle-G.yaw+Math.PI;
   document.getElementById('nav-arrow').style.transform=`rotate(${screenAngle}rad)`;
-  document.getElementById('nav-lbl').textContent=`${m.hint}\n${dist}מ׳`;
+  // distance
+  const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
+  const lbl=document.getElementById('nav-lbl');
+  lbl.textContent=`${m.hint} (${dist}מ׳)`;
 }
 
 // ════════════════════════════════════════════════
@@ -928,64 +714,31 @@ function doAtk(){
 
   // אויבים רגילים — משלב 3 עד 5
   if(G.mission>=3&&G.mission<=5){
-    G.enemies.filter(e=>e.type!=='guard').forEach(e=>{
+    G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
       if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.2){
         const dmg=dog.pow*10*(1+dog.lv*.1);e.hp-=dmg;sHit();flash(e.mesh.children[0]);spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0xe74c3c,5);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();addXP(20);G.score+=50;G.enemiesKilled++;
           updateMissionHUD();
-          if(G.mission===3&&G.enemiesKilled>=3){showN('✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!');setTimeout(()=>setMission(4),1200);}
-          else showN('⚔️ הכנעת '+G.enemiesKilled+'/3 אויבים');
+          if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
+          else showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
         }
       }
     });
   }
 
-  // ג'ק — שלב 6
+  // בוס — רק בשלב 6
   if(G.mission===6){
-    G.bosses.filter(b=>b.id==='jack').forEach(b=>{
+    G.bosses.forEach(b=>{
       if(b.dead||!b.mesh.visible)return;
       if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.5){
         const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();flash(b.mesh.children[0]);spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
-        if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(60);G.score+=200;
-          spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,20);
-          setTimeout(()=>showCut('win1',()=>setMission(7)),600);
-        }
-      }
-    });
-  }
-
-  // שומרי הוילה — שלב 10 (קולין בלבד!)
-  if(G.mission===10){
-    if(G.dog!=='colin'){showN('🦴 רק קולין מספיק חזק! החלף לקולין!');return;}
-    G.enemies.filter(e=>e.type==='guard').forEach(e=>{
-      if(e.hp<=0||!e.mesh.visible)return;
-      if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.2){
-        const dmg=dog.pow*10*(1+dog.lv*.1);e.hp-=dmg;sHit();flash(e.mesh.children[0]);spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0x3355ee,5);
-        if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();addXP(25);G.score+=75;G.guardsKilled++;
-          updateMissionHUD();
-          if(G.guardsKilled>=4){showN('✅ כל השומרים הובסו! קולין פרץ לוילה!');setTimeout(()=>setMission(11),1200);}
-          else showN('🛡️ הכנעת '+G.guardsKilled+'/4 שומרים');
-        }
-      }
-    });
-  }
-
-  // ברונו — שלב 11
-  if(G.mission===11){
-    G.bosses.filter(b=>b.id==='bruno').forEach(b=>{
-      if(b.dead||!b.mesh.visible)return;
-      if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<5){
-        const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();flash(b.mesh.children[0]);spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,8);
-        if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(100);G.score+=500;
-          spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,30);
-          setTimeout(()=>showCut('win2',()=>setMission(12)),600);
-        }
+        if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(80);G.score+=300;spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,22);setTimeout(()=>showCut('win',()=>setMission(7)),600);}
       }
     });
   }
 }
-function flash(m){if(!m||!m.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
+function flash(m){if(!m?.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
 
 // ════════════════════════════════════════════════
 // NEARBY & INTERACT
@@ -1009,18 +762,8 @@ function doInteract(){
     if(G.mission===1&&G.foodEaten>=3)setMission(2);
   } else if(o.type==='quest')dlgElder(o);
   else if(o.type==='recruit'){
-    if(G.mission<4){showN(o.name+': "תחזור אליי מאוחר יותר..."');return;}
+    if(G.mission<4){showN(`${o.name}: "תחזור אליי מאוחר יותר..."`);return;}
     dlgRecruit(o);
-  }
-  else if(o.type==='business'){
-    if(G.mission!==9){showN(o.name+': "עסוק עכשיו."');return;}
-    dlgBusiness(o);
-  }
-  else if(o.type==='villa_doc'){
-    if(G.dog!=='zippo'){showN('⚡ רק זיפו מספיק זריז! החלף לזיפו!');return;}
-    o.done=true;scene.remove(o.mesh);sPickup();addXP(40);G.score+=150;
-    showN('⚡ זיפו גנב את תיק השחיתות! יש לנו הוכחות!');
-    setTimeout(()=>setMission(9),2000);
   }
 }
 
@@ -1051,37 +794,6 @@ function recruitDog(n){
 }
 
 // ════════════════════════════════════════════════
-// פרק ב — דיאלוגים
-// ════════════════════════════════════════════════
-function dlgBusiness(n){
-  if(n.convinced){openDlg(n.av||'🏪',n.name,'סגרתי את הדלתות לברונו — מבטיח! 💪',[{t:'תודה!',fn:closeDlg}]);return;}
-  if(G.dog!=='momo'){
-    openDlg('🏪',n.name,'אני לא מדבר עם כל אחד...
-שלחו את מומו — הוא יודע לדבר.',[{t:'אחזור עם מומו',fn:closeDlg}]);return;
-  }
-  openDlg('👑','מומו → '+n.name,
-    'שמעת על מה שברונו עושה לעיר?
-הוא לוקח כסף מכל בעל עסק...
-אנחנו כאן לשנות את זה.
-
-אתה איתנו?',
-    [{t:'טוב, אני סוגר לו! 💪',fn:()=>{convinceBusiness(n);closeDlg();}},
-     {t:'צריך לחשוב על זה...',fn:()=>{closeDlg();showN(n.name+': "תן לי יום לחשוב."');}}]);
-}
-function convinceBusiness(n){
-  n.convinced=true;
-  n.ind.material.color.setHex(0x00ff88);
-  n.mesh.children[0].material.color.setHex(0x88ffaa);
-  G.businessConvinced++;addXP(35);G.score+=100;sCapture();
-  updateMissionHUD();
-  showN('👑 '+n.name+' תומך בנו! ('+G.businessConvinced+'/3)');
-  if(G.businessConvinced>=3&&G.mission===9){
-    showN('✅ כל העסקים נגד ברונו!\nברונו מאבד כוח!');
-    setTimeout(()=>setMission(10),1500);
-  }
-}
-
-// ════════════════════════════════════════════════
 // SWITCH DOG
 // ════════════════════════════════════════════════
 function switchDog(){
@@ -1106,12 +818,12 @@ function updEnemies(dt){
       if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.hp/e.mhp>.5?0xe74c3c:0xffff00);}
     });
   }
-  // ג'ק בוס — שלב 6
+  // בוס — רק שלב 6
   if(G.mission===6){
-    G.bosses.filter(b=>b.id==='jack').forEach(b=>{
+    G.bosses.forEach(b=>{
       if(b.dead||!b.mesh.visible)return;
       const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
-      if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=6.5;showN("⚠️ ג'ק כועס! הוא מואץ!");}
+      if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=6.5;showN("⚠️ ג'ק כועס!");}
       if(dd<b.alert){
         b.dashT-=dt;
         if(b.dashT<=0&&!b.dashOn&&dd<18){b.dashOn=true;b.dashT=b.phase===2?2.5:4;const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.dvx=dx/l*18;b.dvz=dz/l*18;showN("👹 ג'ק돌진!");}
@@ -1119,34 +831,6 @@ function updEnemies(dt){
         else{const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;b.mesh.rotation.y=Math.atan2(dx,dz);if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=1;dmgPlayer(15);}}}
       }
       if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);b.bar.material.color.setHex(b.phase===2?0xff6600:0xff0000);}
-    });
-  }
-  // שומרי וילה — שלב 10
-  if(G.mission===10){
-    G.enemies.filter(e=>e.type==='guard').forEach(e=>{
-      if(e.hp<=0||!e.mesh.visible)return;
-      const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
-      if(dd<e.alert){const dx=px-e.mesh.position.x,dz=pz-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;e.mesh.position.x+=dx/l*e.spd*dt;e.mesh.position.z+=dz/l*e.spd*dt;e.mesh.rotation.y=Math.atan2(dx,dz);if(dd<e.atk){e.atkT-=dt;if(e.atkT<=0){e.atkT=1.0;dmgPlayer(12);}}}
-      else{e.patT-=dt;if(e.patT<=0){e.patAng=Math.random()*Math.PI*2;e.patT=2+Math.random()*2;}const patX=e.homeX+Math.sin(e.patAng)*5,patZ=e.homeZ+Math.cos(e.patAng)*5;const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;if(l>1){e.mesh.position.x+=dx/l*(e.spd*.5)*dt;e.mesh.position.z+=dz/l*(e.spd*.5)*dt;e.mesh.rotation.y=Math.atan2(dx,dz);}}
-      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(0x3355ee);}
-    });
-  }
-  // ברונו — שלב 11 — פאזה 2 + דאש + חיזוק
-  if(G.mission===11){
-    G.bosses.filter(b=>b.id==='bruno').forEach(b=>{
-      if(b.dead||!b.mesh.visible)return;
-      const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
-      if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=7;showN("😡 ברונו מאבד שליטה! הוא עוד יותר מסוכן!");}
-      if(b.hp<b.mhp*.25&&b.phase===2){b.phase=3;showN("🔴 ברונו ביאוש! הוא תוקף ללא הפסקה!");}
-      if(dd<b.alert){
-        b.dashT-=dt;
-        const dashInterval=b.phase===3?1.5:b.phase===2?2.2:3.5;
-        if(b.dashT<=0&&!b.dashOn&&dd<22){b.dashOn=true;b.dashT=dashInterval;const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.dvx=dx/l*20;b.dvz=dz/l*20;showN("👹 ברונו돌진!");}
-        if(b.dashOn){b.mesh.position.x+=b.dvx*dt;b.mesh.position.z+=b.dvz*dt;b.dvx*=.88;b.dvz*=.88;if(Math.abs(b.dvx)<.4)b.dashOn=false;if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<b.atk)dmgPlayer(b.phase===3?25:18);}
-        else{const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;b.mesh.rotation.y=Math.atan2(dx,dz);if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=(b.phase===3?0.7:0.9);dmgPlayer(b.phase===3?20:14);}}}
-      }
-      const pct=b.hp/b.mhp;
-      if(b.bar){b.bar.scale.x=Math.max(0,pct);b.bar.material.color.setHex(pct>.5?0xff0000:pct>.25?0xff6600:0xffff00);}
     });
   }
 }
@@ -1213,7 +897,7 @@ function closeLU(){document.getElementById('lu').style.display='none';G.paused=f
 // CAMERA
 // ════════════════════════════════════════════════
 function updCamera(){
-  const sz=(G.dog==='momo'?0.58:1),cd=8,ch=4+G.pitch*6;
+  const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
   const px=PB.position.x,py=PB.position.y+1.1*sz,pz=PB.position.z;
   camera.position.lerp(new THREE.Vector3(px+Math.sin(G.yaw)*cd,py+ch,pz+Math.cos(G.yaw)*cd),.1);
   camera.lookAt(px,py+.7,pz);
@@ -1227,23 +911,19 @@ function updHUD(){
   document.getElementById('hpf').style.width=dog.hp/dog.mhp*100+'%';
   document.getElementById('stf').style.width=dog.stam+'%';
   document.getElementById('scv').textContent=G.score;
-  document.getElementById('tc').textContent=G.terrCnt;
 }
 
 // ════════════════════════════════════════════════
 // MINIMAP
 // ════════════════════════════════════════════════
 function drawMM(){
-  const ctx=mmCtx,W=100,H=100,sc=.55;
+  const ctx=mmCtx,W=120,H=120,sc=.58;
   const px=PB.position.x,pz=PB.position.z,cx=W/2-px*sc,cy=H/2-pz*sc;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#152015';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#3a3a3a';ctx.fillRect(0,H/2-3,W,6);ctx.fillRect(W/2-3,0,6,H);ctx.fillRect(W/2-3-40*sc,0,6,H);ctx.fillRect(W/2-3+40*sc,0,6,H);
   G.terrs.forEach(t=>{ctx.fillStyle=t.cap?'#f5c518':'#9b59b6';ctx.beginPath();ctx.arc(cx+t.x*sc,cy+t.z*sc,4,0,Math.PI*2);ctx.fill();});
   if(G.mission>=3){ctx.fillStyle='#e74c3c';G.enemies.forEach(e=>{if(e.hp>0&&e.mesh.visible)ctx.fillRect(cx+e.mesh.position.x*sc-2,cy+e.mesh.position.z*sc-2,5,5);});}
-  // ג'ק במיניmapp
-  if(G.mission===6){G.bosses.filter(b=>b.id==='jack'&&!b.dead).forEach(b=>{ctx.fillStyle='#ff4400';ctx.beginPath();ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,6,0,Math.PI*2);ctx.fill();});}
-  // ברונו במיניmapp
-  if(G.mission>=11){G.bosses.filter(b=>b.id==='bruno'&&!b.dead).forEach(b=>{ctx.fillStyle='#ff0066';ctx.beginPath();ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,8,0,Math.PI*2);ctx.fill();});}
+  if(G.mission===6){ctx.fillStyle='#ff6600';G.bosses.forEach(b=>{if(!b.dead)ctx.beginPath(),ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,6,0,Math.PI*2),ctx.fill();});}
   ctx.fillStyle='#2ecc71';G.npcs.forEach(n=>ctx.fillRect(cx+n.x*sc-2,cy+n.z*sc-2,4,4));
   ctx.fillStyle='#e67e22';G.pickups.forEach(p=>{if(!p.done)ctx.fillRect(cx+p.x*sc-2,cy+p.z*sc-2,4,4);});
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx+px*sc,cy+pz*sc,5,0,Math.PI*2);ctx.fill();
@@ -1256,30 +936,6 @@ function drawMM(){
 // ════════════════════════════════════════════════
 let NT=null;
 function showN(t){const el=document.getElementById('notif');el.textContent=t;el.style.display='block';if(NT)clearTimeout(NT);NT=setTimeout(()=>el.style.display='none',3500);}
-
-function toggleFS(){
-  const btn=document.getElementById('fs-btn');
-  if(!document.fullscreenElement){
-    (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||function(){}).call(document.documentElement);
-  } else {
-    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
-  }
-}
-document.addEventListener('fullscreenchange',()=>{const b=document.getElementById('tr-fs');if(b)b.textContent=document.fullscreenElement?'✕':'⛶';});
-document.addEventListener('webkitfullscreenchange',()=>{const b=document.getElementById('tr-fs');if(b)b.textContent=document.fullscreenElement?'✕':'⛶';});
-
-// בדיקה: אם three.js לא נטען תוך 8 שניות — הצג שגיאה
-setTimeout(()=>{
-  if(typeof THREE==='undefined'){
-    document.body.innerHTML='<div style="position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f5c518;font-family:Arial;text-align:center;padding:30px;gap:20px;">'
-      +'<div style="font-size:48px">🐕</div>'
-      +'<div style="font-size:22px;font-weight:bold">כלבי לוד</div>'
-      +'<div style="font-size:14px;color:#ccc;max-width:300px;line-height:1.8">המשחק דורש חיבור לאינטרנט בטעינה הראשונה.<br><br>פתח את הקובץ בעזרת Chrome או Firefox עם חיבור אינטרנט פעיל.</div>'
-      +'<button onclick="location.reload()" style="background:#f5c518;color:#000;border:none;border-radius:10px;padding:12px 28px;font-size:15px;font-weight:bold;cursor:pointer;margin-top:10px">🔄 נסה שוב</button>'
-      +'</div>';
-  }
-},8000);
-
 </script>
 </body>
 </html>
