@@ -234,7 +234,12 @@ const CUTS={
   ch2:{ch:'פרק 2',ti:'הכנופייה גדלה',tx:'גייסתם חברים.\nעכשיו אתם כוח אמיתי — הגיע הזמן לכבוש שטחים!'},
   ch3:{ch:'פרק 3',ti:'שליטה במחצית העיר',tx:'לוד מתחילה לפחד מכם.\nג\'ק הרוטווילר שמע עליכם — והוא כועס.'},
   boss:{ch:'קרב גמר',ti:'ג\'ק הרוטווילר',tx:'הוא מחכה לכם ברחוב הרצל.\nהכנו את עצמכם — זהו הקרב האחרון!'},
-  win:{ch:'סוף',ti:'🏆 לוד שייכת לכלבים!',tx:'עשיתם את זה.\nמרחוב הרצל ועד תחנת הרכבת — לוד שלכם!\n\nכלבי לוד — אגדה לעד. 🐕'},
+  win:{ch:'סוף פרק א׳',ti:'🏆 לוד שייכת לכלבים!',tx:'עשיתם את זה.\nמרחוב הרצל ועד תחנת הרכבת — לוד שלכם!\n\nאבל מנוחה? אין דבר כזה...'},
+  ch2_open:{ch:'פרק ב׳ — הוילה של נווה ירק',ti:'בלה מגיעה בריצה...',tx:'בלה: "מומו נחטפה! הדוברמן מהוילה — ברונו — לקח אותה.\nהוא אוסף כלבים קטנים. הוא מסוכן."\n\nקולין: "אני הולך לשם עכשיו."\nבלה: "צריך מוח, לא שרירים."\nזיפו: "...אני אכנס."'},
+  ch2_stealth:{ch:'פרק ב׳ — סצנה 2',ti:'ההתגנבות',tx:'הוילה מוגנת: 4 שומרים, 2 רוטווילרים עם ADHD,\nומצלמה עם מדבקת ריאל מדריד.\n\nזיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."'},
+  ch2_momo:{ch:'פרק ב׳ — סצנה 3',ti:'מומו בכלא',tx:'מומו לא בוכה. היא מסתכלת על ברונו.\n\nמומו: "יש לך עיניים יפות. אמרו לך פעם?"\nברונו: "..."\nמומו: "בסדר אז נשב בשתיקה."\n\nזיפו מגיע. פותח את הכלוב.\nואז ברונו מרים את הראש.'},
+  ch2_boss:{ch:'פרק ב׳ — קרב גמר',ti:'ברונו הדוברמן',tx:'קולין מחכה בחוץ.\n\nקולין: "אז אתה ברונו."\nברונו: "גררר."\nקולין: "דיבור נהדר."\n\nברונו חזק יותר, מהיר יותר —\nאבל קולין לוחם בשביל משהו.\nזה תמיד עושה הבדל.'},
+  win2:{ch:'סיום פרק ב׳',ti:'🐕 הכנופייה הולכת',tx:'מומו מסתכלת אחורה על ברונו.\n\nמומו: "הוא לא רע. הוא פשוט לא הכיר שום דבר אחר."\nזיפו: "הוא כמעט הרג אותנו."\nמומו: "אבל בעיניים שלו ראיתי—"\nקולין: "מומו."\nמומו: "מה?"\nקולין: "הוא ניסה לאכול אותך."\nמומו: "...נכון. נשכח מזה."\n\n🏆 כלבי לוד — אגדה לעד.'},
 };
 let cutCb=null;
 function showCut(k,cb){const c=CUTS[k];document.getElementById('cut-ch').textContent=c.ch;document.getElementById('cut-ti').textContent=c.ti;document.getElementById('cut-tx').textContent=c.tx;document.getElementById('cut').style.display='flex';cutCb=cb||null;G.paused=true;}
@@ -289,7 +294,36 @@ const MISSIONS=[
    targetFn:()=>G.bosses[0]||{x:25,z:20},
    unlock:()=>{G.bosses.forEach(b=>{b.mesh.visible=true;b.hp=b.mhp;b.dead=false;});}},
   // 7
-  {txt:'🏆 לוד שייכת לכלבים!',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{}},
+  {txt:'🏆 לוד שייכת לכלבים! — המתן...',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{
+    setTimeout(()=>showCut('ch2_open',()=>setMission(8)),1800);
+  }},
+  // 8 — הגיעו לוילה עם זיפו
+  {txt:'8️⃣ פרק ב׳: הגיעו לוילה בנווה ירק עם זיפו ⚡',
+   hint:'וילת ברונו — נווה ירק',
+   targetFn:()=>({x:110,z:-110}),
+   unlock:()=>{
+     G.ch2Active=true;
+     showN('בלה: "זיפו — רק אתה יכול להסתנן. קולין — חכה בחוץ."');
+   }},
+  // 9 — שחרר את מומו
+  {txt:'9️⃣ שחרר את מומו מהכלוב 🔓',
+   hint:'כלוב מומו בחצר הוילה',
+   targetFn:()=>({x:112,z:-108}),
+   unlock:()=>{
+     showCut('ch2_stealth',null);
+     showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים. מה יכול להשתבש."');
+   }},
+  // 10 — קרב ברונו
+  {txt:'🔟 קולין: הכנע את ברונו! ⚔️',
+   hint:'ברונו — ליד השער',
+   targetFn:()=>G.bruno||{x:108,z:-95},
+   unlock:()=>{
+     showCut('ch2_boss',()=>{
+       if(G.bruno){G.bruno.mesh.visible=true;G.bruno.hp=G.bruno.mhp;G.bruno.dead=false;}
+     });
+   }},
+  // 11
+  {txt:'🏆 כלבי לוד — אגדה לעד! 🐕',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{}},
 ];
 
 // ════════════════════════════════════════════════
@@ -309,8 +343,12 @@ const G={
   foodEaten:0,          // for mission 1
   enemiesKilled:0,      // for mission 3
   recruitsDone:0,       // for mission 4
+  ch2Active:false,      // פרק ב׳ פעיל
+  momoFreed:false,      // מומו שוחררה
+  bruno:null,           // boss ברונו
   keys:{},yaw:0,pitch:.35,
   atkCD:0,velY:0,onGround:true,
+  vx:0,vz:0,          // velocity for smooth movement
   dlgOpen:false,paused:false,
   near:null,
   joy:{on:false,dx:0,dy:0,id:-1,sx:0,sy:0},
@@ -352,11 +390,11 @@ function init(){
   const cv=document.getElementById('cv');
   renderer=new THREE.WebGLRenderer({canvas:cv,antialias:!isMob});
   renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.5:2));
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x87CEEB);scene.fog=new THREE.FogExp2(0x87CEEB,.022);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0xf4a44a);scene.fog=new THREE.FogExp2(0xe8956a,.018);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();
+  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();buildVilla();buildBruno();
   setupInput();
   // start everything hidden — gates will show what's needed
   G.enemies.forEach(e=>e.mesh.visible=false);
@@ -371,11 +409,17 @@ function init(){
 // LIGHTS
 // ════════════════════════════════════════════════
 function buildLights(){
-  scene.add(new THREE.AmbientLight(0xfff4e0,.6));
-  const sun=new THREE.DirectionalLight(0xfffde7,1.1);sun.position.set(40,80,30);sun.castShadow=true;
+  // אור אמביינט חם — שעת ערב
+  scene.add(new THREE.AmbientLight(0xffe5b0,.45));
+  // שמש נמוכה — צבע זהוב-כתום
+  const sun=new THREE.DirectionalLight(0xff9a3c,1.3);sun.position.set(80,60,30);sun.castShadow=true;
   sun.shadow.mapSize.set(isMob?1024:2048,isMob?1024:2048);
-  ['left','right','top','bottom'].forEach((k,i)=>sun.shadow.camera[k]=[-100,100,100,-100][i]);
-  sun.shadow.camera.far=250;scene.add(sun);
+  ['left','right','top','bottom'].forEach((k,i)=>sun.shadow.camera[k]=[-120,120,120,-120][i]);
+  sun.shadow.camera.far=280;scene.add(sun);
+  // אור fill מהצד הנגדי — תכלת קל
+  const fill=new THREE.DirectionalLight(0x8ab4d4,.3);fill.position.set(-60,40,-20);scene.add(fill);
+  // bounce מהקרקע — חום אדמה
+  const bounce=new THREE.HemisphereLight(0xffd080,0x6b4a1a,.35);scene.add(bounce);
 }
 
 // ════════════════════════════════════════════════
@@ -393,8 +437,8 @@ function d2(ax,az,bx,bz){return Math.sqrt((ax-bx)**2+(az-bz)**2);}
 // צפון: רמת אשכול | דרום: גני אביב | מערב: תחנה | מזרח: עיר עתיקה
 // ════════════════════════════════════════════════
 function buildWorld(){
-  // קרקע
-  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshLambertMaterial({color:0x5a8a3a}));
+  // קרקע — צבע אדמה חמה
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshLambertMaterial({color:0x4a6e2a}));
   gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
 
   // === רחובות ראשיים ===
@@ -546,7 +590,7 @@ function buildEnemies(){
   // 8 אויבים — פזורים בעיר, מתחילים נסתרים
   [[-30,-10],[38,-48],[-78,8],[72,42],[4,-120],[-60,-128],[28,110],[-35,110]].forEach(([x,z])=>{
     const eg=mkDog(0x2a2a2a,1);eg.position.set(x,0,z);scene.add(eg);const bar=hpBar(eg,1.4,2.3);
-    G.enemies.push({mesh:eg,hp:60,mhp:60,spd:3.5+Math.random()*2,alert:14,atk:2.6,atkT:0,bar,homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2});
+    G.enemies.push({mesh:eg,hp:60,mhp:60,spd:3.5+Math.random()*2,alert:14,atk:2.6,atkT:0,bar,homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2,state:'patrol',lastSeenX:0,lastSeenZ:0,searchT:0});
   });
 }
 function buildBoss(){
@@ -555,6 +599,50 @@ function buildBoss(){
   const cr=new THREE.Mesh(new THREE.ConeGeometry(.8,.9,5),new THREE.MeshLambertMaterial({color:0xf5c518}));cr.position.set(0,3.2,0);bg.add(cr);
   const bar=hpBar(bg,2.4,3.9);
   G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:22,atk:3.2,atkT:0,bar,dead:false,phase:1,dashT:4,dashOn:false,dvx:0,dvz:0});
+}
+
+// ════════════════════════════════════════════════
+// VILLA — נווה ירק (פינה מזרח-צפון)
+// ════════════════════════════════════════════════
+function buildVilla(){
+  const VX=110,VZ=-110;
+  // קירות גבוהים
+  mkB(50,.5,50,0x3a3a3a,VX,.3,VZ); // רצפת חצר
+  mkB(50,5,.5,0xc8c0a0,VX,2.5,VZ-25); // קיר צפון
+  mkB(50,5,.5,0xc8c0a0,VX,2.5,VZ+25); // קיר דרום
+  mkB(.5,5,50,0xc8c0a0,VX-25,2.5,VZ); // קיר מערב
+  mkB(.5,5,50,0xc8c0a0,VX+25,2.5,VZ); // קיר מזרח
+  // בית
+  mkB(20,10,16,0xe8d5b0,VX+5,5,VZ+5);
+  mkB(20,.5,16,0xd4572a,VX+5,10.5,VZ+5); // גג
+  // כלוב מומו
+  const cageX=VX-5,cageZ=VZ-8;
+  mkB(3,2,3,0x555,cageX,1,cageZ);
+  // תווית כלוב
+  const cageInd=new THREE.Mesh(new THREE.SphereGeometry(.35,6,6),new THREE.MeshLambertMaterial({color:0xff69b4,emissive:0x551133}));
+  cageInd.position.set(cageX,3.2,cageZ);scene.add(cageInd);
+  G.cagePos={x:cageX,z:cageZ,ind:cageInd};
+  // עצים
+  for(let i=0;i<4;i++)bldTree(VX-18+i*12,VZ-18);
+  // שלט וילה
+  const sb=new THREE.Mesh(new THREE.BoxGeometry(8,.4,1.2),new THREE.MeshLambertMaterial({color:0x2c1a0e}));sb.position.set(VX,5.5,VZ+25.5);scene.add(sb);
+  // רק הבית נחסם — לא הקירות (כדי לא לחסום תנועה)
+  blds.push({x:VX+5,z:VZ+5,w:20,d:16});
+}
+
+// ════════════════════════════════════════════════
+// BRUNO — דוברמן, boss פרק ב׳
+// ════════════════════════════════════════════════
+function buildBruno(){
+  const bg=mkDog(0x1a0a0a,1.9); // כהה מאוד, גדול
+  bg.position.set(108,0,-95);scene.add(bg);
+  // שרשרת כסופה עבה
+  const chain=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,6,12),new THREE.MeshLambertMaterial({color:0x888888,metalness:.8}));
+  chain.position.set(0,1.35*1.9,.4*1.9);chain.rotation.x=Math.PI/2;bg.add(chain);
+  const bar=hpBar(bg,2.8,4.5);
+  const bruno={mesh:bg,hp:320,mhp:320,spd:5.5,alert:25,atk:3.8,atkT:0,bar,dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0};
+  bg.visible=false;
+  G.bruno=bruno;
 }
 
 // ════════════════════════════════════════════════
@@ -628,7 +716,8 @@ function updateMissionHUD(){
 
 function updateNavArrow(){
   const nav=document.getElementById('nav');
-  if(G.mission>=7){nav.style.display='none';return;}
+  if(G.mission>=11){nav.style.display='none';return;}
+  if(G.mission===7){nav.style.display='none';return;}
   const m=MISSIONS[G.mission];
   if(!m||!m.hint){nav.style.display='none';return;}
   document.getElementById('nav-lbl').textContent=m.hint;
@@ -636,7 +725,7 @@ function updateNavArrow(){
 }
 
 function updateNavDirection(){
-  if(G.mission>=7||G.mission===0)return;
+  if(G.mission>=11||G.mission===7||G.mission===0)return;
   const m=MISSIONS[G.mission];if(!m)return;
   const tgt=m.targetFn();if(!tgt)return;
   const tx=(tgt.mesh?tgt.mesh.position.x:tgt.x)||0;
@@ -673,33 +762,56 @@ function updPlayer(dt){
   const dog=G.dogs[G.dog];
   const fwd=new THREE.Vector3(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
   const rgt=new THREE.Vector3(Math.cos(G.yaw),0,-Math.sin(G.yaw));
-  let mv=new THREE.Vector3();
-  if(G.keys['KeyW']||G.keys['ArrowUp'])mv.add(fwd);if(G.keys['KeyS']||G.keys['ArrowDown'])mv.sub(fwd);
-  if(G.keys['KeyA']||G.keys['ArrowLeft'])mv.sub(rgt);if(G.keys['KeyD']||G.keys['ArrowRight'])mv.add(rgt);
-  if(G.joy.on){mv.add(fwd.clone().multiplyScalar(-G.joy.dy));mv.add(rgt.clone().multiplyScalar(G.joy.dx));}
-  const moving=mv.lengthSq()>.01;
+  let inputX=0,inputZ=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp']){inputX+=fwd.x;inputZ+=fwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']){inputX-=fwd.x;inputZ-=fwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']){inputX-=rgt.x;inputZ-=rgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){inputX+=rgt.x;inputZ+=rgt.z;}
+  if(G.joy.on){inputX+=fwd.x*(-G.joy.dy)+rgt.x*G.joy.dx;inputZ+=fwd.z*(-G.joy.dy)+rgt.z*G.joy.dx;}
+  // נרמול קלט
+  const il=Math.sqrt(inputX*inputX+inputZ*inputZ)||1;
+  const hasInput=Math.abs(inputX)+Math.abs(inputZ)>.01;
+  const targetVX=hasInput?(inputX/il)*dog.spd:0;
+  const targetVZ=hasInput?(inputZ/il)*dog.spd:0;
+  // תאוצה/האטה הדרגתית
+  const accel=hasInput?12:18; // האטה מהירה יותר מתאוצה
+  G.vx+=(targetVX-G.vx)*Math.min(1,accel*dt);
+  G.vz+=(targetVZ-G.vz)*Math.min(1,accel*dt);
+  const moving=Math.abs(G.vx)+Math.abs(G.vz)>.05;
   if(moving){
-    mv.normalize().multiplyScalar(dog.spd*dt);
-    PB.rotation.y=Math.atan2(-mv.x,-mv.z);walkT+=dt*8;
+    PB.rotation.y=Math.atan2(-G.vx,-G.vz);
+    walkT+=dt*8;
     dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});
-    if(dogModel)dogModel.position.y=Math.abs(Math.sin(walkT))*.06;
-    if(dogTail)dogTail.rotation.z=Math.sin(walkT*2)*.28;
+    // head bob — תנועה עם גוף
+    if(dogModel)dogModel.position.y=Math.abs(Math.sin(walkT))*.09;
+    if(dogTail)dogTail.rotation.z=Math.sin(walkT*2)*.35;
     dog.stam=Math.max(0,dog.stam-5*dt);
-  } else {if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;}
-  if(G.keys['Space']&&G.onGround){G.velY=8;G.onGround=false;}
-  G.velY+=GRAV*dt;PB.position.y+=G.velY*dt;
+  } else {
+    dogLegs.forEach(lg=>{lg.node.rotation.x*=.85;});
+    if(dogModel)dogModel.position.y*=.85;
+    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
+  }
+  // קפיצה — arc טבעי יותר עם coyote time קצר
+  if(G.keys['Space']&&G.onGround){G.velY=9.5;G.onGround=false;spawnPfx(PB.position.x,.1,PB.position.z,0xc8a060,3);}
+  // כוח משיכה מוגבר בנפילה (feel כבד יותר)
+  const gravMul=G.velY<0?1.4:1;
+  G.velY+=GRAV*gravMul*dt;
+  PB.position.y+=G.velY*dt;
   if(PB.position.y<=0){PB.position.y=0;G.velY=0;G.onGround=true;}
-  const nx=Math.max(-175,Math.min(175,PB.position.x+mv.x));
-  const nz=Math.max(-175,Math.min(175,PB.position.z+mv.z));
+  // תנועה עם collision
+  const nx=Math.max(-175,Math.min(175,PB.position.x+G.vx*dt));
+  const nz=Math.max(-175,Math.min(175,PB.position.z+G.vz*dt));
   let blocked=false;
   for(const b of blds){if(nx>b.x-b.w/2-1&&nx<b.x+b.w/2+1&&nz>b.z-b.d/2-1&&nz<b.z+b.d/2+1){blocked=true;break;}}
   if(!blocked){PB.position.x=nx;PB.position.z=nz;}
+  else{G.vx*=.1;G.vz*=.1;} // עצור velocity בפגיעה בקיר
   if(G.atkCD>0)G.atkCD-=dt;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=.5;}
   if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
   checkNear();
+  checkCh2Triggers();
 }
 
 // ════════════════════════════════════════════════
@@ -710,7 +822,7 @@ function doAtk(){
   const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
   spawnPfx(px,1,pz,0xf5c518,4);
 
-  if(G.mission<3){showN('⚠️ עדיין לא הגיע הזמן לקרב!\nקודם השלם את המשימה הנוכחית.');return;}
+      if(G.mission<3){showN('⚠️ עדיין לא הגיע הזמן לקרב!\nקודם השלם את המשימה הנוכחית.');return;}
 
   // אויבים רגילים — משלב 3 עד 5
   if(G.mission>=3&&G.mission<=5){
@@ -737,8 +849,21 @@ function doAtk(){
       }
     });
   }
+
+  // ברונו — boss פרק ב׳, שלב 10
+  if(G.mission===10&&G.bruno&&!G.bruno.dead&&G.bruno.mesh.visible){
+    if(G.dog!=='colin'){showN('קולין: "זה הקרב שלי. החלף אלי."');return;}
+    const b=G.bruno;
+    if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.8){
+      const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();flash(b.mesh.children[0]);spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
+      if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(120);G.score+=500;spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);
+        showCut('win2',()=>setMission(11));
+      }
+    }
+  }
 }
 function flash(m){if(!m?.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
+function dmgPlayer(dmg){const dog=G.dogs[G.dog];dog.hp=Math.max(0,dog.hp-dmg);sHit();const hf=document.getElementById('hf');hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);if(dog.hp<=0){showN('💀 נפגעת! מחכה לשיקום...');dog.hp=Math.round(dog.mhp*.25);}}
 
 // ════════════════════════════════════════════════
 // NEARBY & INTERACT
@@ -803,19 +928,88 @@ function switchDog(){
   showN({colin:'🦴 קולין — כוח',zippo:'⚡ זיפו — מהירות',momo:'👑 מומו — כריזמה'}[G.dog]);
 }
 
+function checkCh2Triggers(){
+  if(!G.ch2Active)return;
+  const px=PB.position.x,pz=PB.position.z;
+  // שלב 8 — הגיע לוילה
+  if(G.mission===8&&d2(px,pz,110,-110)<20){
+    showCut('ch2_momo',()=>setMission(9));
+  }
+  // שלב 9 — שחרר מומו מהכלוב
+  if(G.mission===9&&G.cagePos&&!G.momoFreed){
+    if(d2(px,pz,G.cagePos.x,G.cagePos.z)<4){
+      G.momoFreed=true;
+      if(G.cagePos.ind){scene.remove(G.cagePos.ind);}
+      addXP(60);G.score+=200;sCapture();
+      spawnPfx(G.cagePos.x,2,G.cagePos.z,0xff69b4,18);
+      showN('🔓 מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
+      setTimeout(()=>setMission(10),2200);
+    }
+  }
+}
+
 // ════════════════════════════════════════════════
 // ENEMIES AI — gated
 // ════════════════════════════════════════════════
+// כל אויב: state = 'patrol' | 'chase' | 'search'
+// FOV: 120° קדימה, 40° אחורה רק בטווח קצר
+// זיכרון: רודפים לנקודה אחרונה שנראתה + 4 שניות חיפוש
+// תיאום: כשמגלים — מזעיקים אויבים קרובים
+function canSeePlayer(e,px,pz){
+  const ex=e.mesh.position.x,ez=e.mesh.position.z;
+  const dd=d2(ex,ez,px,pz);
+  if(dd>e.alert)return false;
+  // זווית ראייה
+  const toPlayer=Math.atan2(px-ex,pz-ez);
+  const facing=e.mesh.rotation.y;
+  let angleDiff=Math.abs(toPlayer-facing)%(Math.PI*2);
+  if(angleDiff>Math.PI)angleDiff=Math.PI*2-angleDiff;
+  const fov=dd<5?Math.PI:Math.PI*(2/3); // 360° קרוב, 120° רחוק
+  return angleDiff<fov/2;
+}
+function alertNearby(e,px,pz){
+  G.enemies.forEach(other=>{
+    if(other===e||other.hp<=0||!other.mesh.visible)return;
+    if(d2(other.mesh.position.x,other.mesh.position.z,e.mesh.position.x,e.mesh.position.z)<20){
+      other.state='chase';other.lastSeenX=px;other.lastSeenZ=pz;other.searchT=5;
+    }
+  });
+}
 function updEnemies(dt){
   const px=PB.position.x,pz=PB.position.z;
-  // רגילים — משלב 3 ועד 5 (כולל)
   if(G.mission>=3&&G.mission<=6){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
       const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
-      if(dd<e.alert){const dx=px-e.mesh.position.x,dz=pz-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;e.mesh.position.x+=dx/l*e.spd*dt;e.mesh.position.z+=dz/l*e.spd*dt;e.mesh.rotation.y=Math.atan2(dx,dz);if(dd<e.atk){e.atkT-=dt;if(e.atkT<=0){e.atkT=1.2;dmgPlayer(8);}}}
-      else{e.patT-=dt;if(e.patT<=0){e.patAng=Math.random()*Math.PI*2;e.patT=2+Math.random()*2.5;}const patX=e.homeX+Math.sin(e.patAng)*7,patZ=e.homeZ+Math.cos(e.patAng)*7;const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;if(l>1){e.mesh.position.x+=dx/l*(e.spd*.38)*dt;e.mesh.position.z+=dz/l*(e.spd*.38)*dt;e.mesh.rotation.y=Math.atan2(dx,dz);}}
-      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.hp/e.mhp>.5?0xe74c3c:0xffff00);}
+      const sees=canSeePlayer(e,px,pz);
+      // מעברי state
+      if(sees){
+        if(e.state!=='chase'){alertNearby(e,px,pz);if(e.state==='patrol')showN('👁️ גילו אותך!');}
+        e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=4;
+      } else if(e.state==='chase'){
+        e.state='search';e.searchT=4;
+      }
+      if(e.state==='chase'||e.state==='search'){
+        const tx=e.state==='chase'?px:e.lastSeenX;
+        const tz=e.state==='chase'?pz:e.lastSeenZ;
+        const dx=tx-e.mesh.position.x,dz=tz-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+        const spd=e.state==='search'?e.spd*.5:e.spd;
+        e.mesh.position.x+=dx/l*spd*dt;e.mesh.position.z+=dz/l*spd*dt;
+        e.mesh.rotation.y=Math.atan2(dx,dz);
+        // תקיפה
+        if(dd<e.atk&&e.state==='chase'){e.atkT-=dt;if(e.atkT<=0){e.atkT=1.2;dmgPlayer(8);}}
+        // סוף חיפוש
+        if(e.state==='search'){e.searchT-=dt;if(e.searchT<=0){e.state='patrol';e.patT=0;}}
+      } else {
+        // סיור — תנועה אקראית
+        e.patT-=dt;
+        if(e.patT<=0){e.patAng=Math.random()*Math.PI*2;e.patT=2+Math.random()*3;}
+        const patX=e.homeX+Math.sin(e.patAng)*9,patZ=e.homeZ+Math.cos(e.patAng)*9;
+        const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+        if(l>1.5){e.mesh.position.x+=dx/l*(e.spd*.3)*dt;e.mesh.position.z+=dz/l*(e.spd*.3)*dt;
+          e.mesh.rotation.y+=(Math.atan2(dx,dz)-e.mesh.rotation.y)*.08;} // סיבוב חלק
+      }
+      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.state==='chase'?0xff4400:e.hp/e.mhp>.5?0xe74c3c:0xffff00);}
     });
   }
   // בוס — רק שלב 6
@@ -833,8 +1027,20 @@ function updEnemies(dt){
       if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);b.bar.material.color.setHex(b.phase===2?0xff6600:0xff0000);}
     });
   }
+  // ברונו — boss פרק ב׳, שלב 10
+  if(G.mission===10&&G.bruno&&!G.bruno.dead&&G.bruno.mesh.visible){
+    const b=G.bruno;
+    const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
+    if(b.hp<b.mhp*.4&&b.phase===1){b.phase=2;b.spd=7.5;showN('⚠️ ברונו מתפרע! גררר!');}
+    if(dd<b.alert){
+      b.dashT-=dt;
+      if(b.dashT<=0&&!b.dashOn&&dd<20){b.dashOn=true;b.dashT=b.phase===2?2:3.5;const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.dvx=dx/l*22;b.dvz=dz/l*22;showN('💥 ברונו돌진!');}
+      if(b.dashOn){b.mesh.position.x+=b.dvx*dt;b.mesh.position.z+=b.dvz*dt;b.dvx*=.88;b.dvz*=.88;if(Math.abs(b.dvx)<.5)b.dashOn=false;if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<b.atk)dmgPlayer(25);}
+      else{const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;b.mesh.rotation.y=Math.atan2(dx,dz);if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=.9;dmgPlayer(18);}}}
+    }
+    if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);b.bar.material.color.setHex(b.phase===2?0x8800ff:0xe74c3c);}
+  }
 }
-function dmgPlayer(dmg){const dog=G.dogs[G.dog];dog.hp=Math.max(0,dog.hp-dmg);sHit();const hf=document.getElementById('hf');hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);if(dog.hp<=0){showN('💀 נפגעת! מחכה לשיקום...');dog.hp=Math.round(dog.mhp*.25);}}
 
 // ════════════════════════════════════════════════
 // PICKUPS ANIM
