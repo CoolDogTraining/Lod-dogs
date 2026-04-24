@@ -297,29 +297,37 @@ const MISSIONS=[
   {txt:'🏆 לוד שייכת לכלבים! — המתן...',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{
     setTimeout(()=>showCut('ch2_open',()=>setMission(8)),1800);
   }},
-  // 8 — הגיעו לוילה עם זיפו
-  {txt:'8️⃣ פרק ב׳: הגיעו לוילה בנווה ירק עם זיפו ⚡',
-   hint:'וילת ברונו — נווה ירק',
-   targetFn:()=>({x:110,z:-110}),
+  // 8 — כנס לוילה
+  {txt:'8️⃣ פרק ב׳: הגיעו לשער הוילה בנווה ירק ⚡',
+   hint:'שער וילת ברונו',
+   targetFn:()=>({x:55,z:-55}),
    unlock:()=>{
      G.ch2Active=true;
-     showN('בלה: "זיפו — רק אתה יכול להסתנן. קולין — חכה בחוץ."');
+     // marker לשער בעולם הראשי
+     const gateM=new THREE.Mesh(new THREE.BoxGeometry(6,.2,2),new THREE.MeshLambertMaterial({color:0x5a3a1a}));
+     gateM.position.set(55,.2,-55);scene.add(gateM);
+     const gateLight=new THREE.Mesh(new THREE.SphereGeometry(.4,6,6),new THREE.MeshLambertMaterial({color:0xff9900,emissive:0xcc6600}));
+     gateLight.position.set(55,2,-55);scene.add(gateLight);
+     G.gateMarker={x:55,z:-55};
+     showN('בלה: "זיפו — רק אתה יכול להסתנן.\nקולין — חכה בחוץ."');
    }},
-  // 9 — שחרר את מומו
-  {txt:'9️⃣ שחרר את מומו מהכלוב 🔓',
-   hint:'כלוב מומו בחצר הוילה',
-   targetFn:()=>({x:112,z:-108}),
+  // 9 — בתוך הוילה — שחרר את מומו
+  {txt:'9️⃣ הסתנן לוילה ושחרר את מומו 🔓',
+   hint:'כנס לשער הוילה',
+   targetFn:()=>G.gateMarker||{x:55,z:-55},
    unlock:()=>{
-     showCut('ch2_stealth',null);
-     showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים. מה יכול להשתבש."');
+     showCut('ch2_stealth',()=>enterVilla());
    }},
-  // 10 — קרב ברונו
+  // 10 — קרב ברונו (גם בוילה)
   {txt:'🔟 קולין: הכנע את ברונו! ⚔️',
-   hint:'ברונו — ליד השער',
-   targetFn:()=>G.bruno||{x:108,z:-95},
+   hint:'ברונו — בחצר הוילה',
+   targetFn:()=>G.gateMarker||{x:55,z:-55},
    unlock:()=>{
      showCut('ch2_boss',()=>{
-       if(G.bruno){G.bruno.mesh.visible=true;G.bruno.hp=G.bruno.mhp;G.bruno.dead=false;}
+       G.dog='colin';
+       document.getElementById('hdn').textContent=G.dogs['colin'].name;
+       const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
+       enterVilla();
      });
    }},
   // 11
@@ -376,7 +384,7 @@ function sEDie(){tone(200,.05,'sawtooth',.2);tone(100,.3,'square',.15);}
 // PARTICLES
 // ════════════════════════════════════════════════
 function spawnPfx(x,y,z,col,n=8){for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.08,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));m.position.set(x,y,z);scene.add(m);G.particles.push({mesh:m,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8});}}
-function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles[i];p.life-=dt;if(p.life<=0){scene.remove(p.mesh);G.particles.splice(i,1);continue;}p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.vy-=12*dt;p.mesh.position.z+=p.vz*dt;p.mesh.material.opacity=p.life/.8;}}
+function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles[i];p.life-=dt;if(p.life<=0){(p.villa?villaScene:scene).remove(p.mesh);G.particles.splice(i,1);continue;}p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.vy-=12*dt;p.mesh.position.z+=p.vz*dt;p.mesh.material.opacity=p.life/.8;}}
 
 // ════════════════════════════════════════════════
 // SELECT DOG
@@ -394,7 +402,7 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();buildVilla();buildBruno();
+  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();
   setupInput();
   // start everything hidden — gates will show what's needed
   G.enemies.forEach(e=>e.mesh.visible=false);
@@ -602,47 +610,429 @@ function buildBoss(){
 }
 
 // ════════════════════════════════════════════════
-// VILLA — נווה ירק (פינה מזרח-צפון)
+// VILLA MAP SYSTEM — MGS-style map transition
 // ════════════════════════════════════════════════
-function buildVilla(){
-  const VX=110,VZ=-110;
-  // קירות גבוהים
-  mkB(50,.5,50,0x3a3a3a,VX,.3,VZ); // רצפת חצר
-  mkB(50,5,.5,0xc8c0a0,VX,2.5,VZ-25); // קיר צפון
-  mkB(50,5,.5,0xc8c0a0,VX,2.5,VZ+25); // קיר דרום
-  mkB(.5,5,50,0xc8c0a0,VX-25,2.5,VZ); // קיר מערב
-  mkB(.5,5,50,0xc8c0a0,VX+25,2.5,VZ); // קיר מזרח
-  // בית
-  mkB(20,10,16,0xe8d5b0,VX+5,5,VZ+5);
-  mkB(20,.5,16,0xd4572a,VX+5,10.5,VZ+5); // גג
-  // כלוב מומו
-  const cageX=VX-5,cageZ=VZ-8;
-  mkB(3,2,3,0x555,cageX,1,cageZ);
-  // תווית כלוב
-  const cageInd=new THREE.Mesh(new THREE.SphereGeometry(.35,6,6),new THREE.MeshLambertMaterial({color:0xff69b4,emissive:0x551133}));
-  cageInd.position.set(cageX,3.2,cageZ);scene.add(cageInd);
-  G.cagePos={x:cageX,z:cageZ,ind:cageInd};
-  // עצים
-  for(let i=0;i<4;i++)bldTree(VX-18+i*12,VZ-18);
-  // שלט וילה
-  const sb=new THREE.Mesh(new THREE.BoxGeometry(8,.4,1.2),new THREE.MeshLambertMaterial({color:0x2c1a0e}));sb.position.set(VX,5.5,VZ+25.5);scene.add(sb);
-  // רק הבית נחסם — לא הקירות (כדי לא לחסום תנועה)
-  blds.push({x:VX+5,z:VZ+5,w:20,d:16});
+let villaScene=null,villaCamera=null,villaObjects=[],villaBlds=[];
+let villaGuards=[],villaCageInd=null,villaAlerted=false;
+const VILLA={
+  inVilla:false,
+  playerX:0,playerZ:0,  // שחקן בתוך הוילה
+  playerYaw:0,
+  detected:false,        // התגלית
+  detectedT:0,
+  alertCooldown:0,
+};
+
+// fade overlay
+function initFadeEl(){
+  if(document.getElementById('fade-ov'))return;
+  const f=document.createElement('div');
+  f.id='fade-ov';
+  f.style.cssText='position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:500;transition:opacity .6s;';
+  document.body.appendChild(f);
+}
+function fadeOut(cb){
+  initFadeEl();
+  const f=document.getElementById('fade-ov');
+  f.style.pointerEvents='all';f.style.opacity='1';
+  setTimeout(cb,650);
+}
+function fadeIn(){
+  const f=document.getElementById('fade-ov');
+  if(!f)return;
+  setTimeout(()=>{f.style.opacity='0';f.style.pointerEvents='none';},80);
+}
+
+// כלי עזר לVilla scene
+function vmkB(sc,w,h,d,c,x,y,z){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:c}));
+  m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;sc.add(m);
+  villaObjects.push(m);return m;
+}
+function vmkTree(sc,x,z){
+  vmkB(sc,.4,4,.4,0x3a2200,x,2,z);
+  const l=new THREE.Mesh(new THREE.SphereGeometry(2.2,7,7),new THREE.MeshLambertMaterial({color:0x1a5c1a}));
+  l.position.set(x,5.5,z);sc.add(l);villaObjects.push(l);
+}
+function vmkBush(sc,x,z){
+  const b=new THREE.Mesh(new THREE.SphereGeometry(1.1,6,6),new THREE.MeshLambertMaterial({color:0x2a6b2a}));
+  b.position.set(x,.8,z);sc.add(b);villaObjects.push(b);
+}
+
+function buildVillaScene(){
+  villaScene=new THREE.Scene();
+  villaScene.background=new THREE.Color(0x1a1a2e); // לילה כחול-כהה
+  villaScene.fog=new THREE.FogExp2(0x0d0d1a,.04);
+
+  // תאורה — לילה עם פנסים
+  villaScene.add(new THREE.AmbientLight(0x2233aa,.4));
+  const moon=new THREE.DirectionalLight(0x8899cc,.6);moon.position.set(-30,60,20);moon.castShadow=true;
+  moon.shadow.mapSize.set(1024,1024);
+  ['left','right','top','bottom'].forEach((k,i)=>moon.shadow.camera[k]=[-60,60,60,-60][i]);
+  villaScene.add(moon);
+  // פנסי גינה — 4 עמודים עם אור כתום
+  [[12,12],[-12,12],[12,-12],[-12,-12]].forEach(([x,z])=>{
+    vmkB(villaScene,.25,3.5,.25,0x333,x,1.75,z);
+    const lp=new THREE.Mesh(new THREE.SphereGeometry(.3,6,6),new THREE.MeshLambertMaterial({color:0xff9933,emissive:0xcc6600}));
+    lp.position.set(x,3.7,z);villaScene.add(lp);villaObjects.push(lp);
+    const pl=new THREE.PointLight(0xff8822,1.2,12);pl.position.set(x,3.5,z);villaScene.add(pl);
+  });
+  // אור אדום מעל כניסת הבית
+  const entry=new THREE.PointLight(0xff2200,.8,8);entry.position.set(0,4,18);villaScene.add(entry);
+
+  // === קרקע ===
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(80,80),new THREE.MeshLambertMaterial({color:0x2a3a1a}));
+  gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;villaScene.add(gnd);villaObjects.push(gnd);
+
+  // אספלט חצר פנימית
+  vmkB(villaScene,38,.08,38,0x1a1a1a,0,.05,0);
+  // שביל מהשער לבית
+  vmkB(villaScene,4,.09,26,0x222222,0,.06,6);
+
+  // === קירות חיצוניים ===
+  // צפון
+  vmkB(villaScene,80,6,.6,0xd4c8a0,0,3,-38);
+  // דרום (עם פתח שער 6 יח׳)
+  vmkB(villaScene,37,6,.6,0xd4c8a0,-21.5,3,38);
+  vmkB(villaScene,37,6,.6,0xd4c8a0,21.5,3,38);
+  // מזרח
+  vmkB(villaScene,.6,6,76,0xd4c8a0,40,3,0);
+  // מערב
+  vmkB(villaScene,.6,6,76,0xd4c8a0,-40,3,0);
+
+  // === הבית ===
+  vmkB(villaScene,28,9,20,0xe8d5a8,0,4.5,10);   // גוף ראשי
+  vmkB(villaScene,28,.5,20,0xb84030,0,9.25,10); // גג שטוח-אדום
+  vmkB(villaScene,8,4,6,0xd4c090,0,2,20);       // כניסה בולטת
+  vmkB(villaScene,8,.3,6,0x884020,0,4.15,20);   // גג כניסה
+  // חלונות — זוהרים בצהוב
+  const winM=new THREE.MeshLambertMaterial({color:0xffee88,emissive:0x886600});
+  [[-8,4,1],[8,4,1],[-8,4,19],[8,4,19],[-12,4,10],[12,4,10]].forEach(([x,y,z])=>{
+    const w=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.8,.15),winM);w.position.set(x,y,z);villaScene.add(w);villaObjects.push(w);
+  });
+  // עמודות כניסה
+  vmkB(villaScene,.8,4,.8,0xf5f0e0,-2.5,2,17.5);
+  vmkB(villaScene,.8,4,.8,0xf5f0e0,2.5,2,17.5);
+
+  // === גינה — צד מערב ===
+  vmkB(villaScene,.2,1,20,0x556633,-18,.5,-5); // גדר קטנה
+  vmkTree(villaScene,-25,-20);vmkTree(villaScene,-30,-5);vmkTree(villaScene,-26,10);
+  vmkBush(villaScene,-22,-12);vmkBush(villaScene,-20,5);vmkBush(villaScene,-28,15);
+  // ריצוף גינה
+  vmkB(villaScene,18,.08,24,0x3a5a2a,-29,.06,-2);
+
+  // === גינה — צד מזרח ===
+  vmkTree(villaScene,25,-18);vmkTree(villaScene,30,8);
+  vmkBush(villaScene,22,15);vmkBush(villaScene,28,-5);
+  // בריכה קטנה
+  vmkB(villaScene,6,.15,6,0x1a4a6a,28,.08,-12);
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(5.5,5.5),new THREE.MeshLambertMaterial({color:0x2266aa,transparent:true,opacity:.8}));
+  water.rotation.x=-Math.PI/2;water.position.set(28,.2,-12);villaScene.add(water);villaObjects.push(water);
+
+  // === כלוב מומו — פינה שמאל אחורית ===
+  // גדר כלוב
+  for(let i=0;i<5;i++){vmkB(villaScene,.12,2.5,.12,0x667766,-22+i*1.5,1.25,-28);}
+  for(let i=0;i<5;i++){vmkB(villaScene,.12,2.5,.12,0x667766,-22+i*1.5,1.25,-22);}
+  vmkB(villaScene,.12,2.5,6,0x667766,-22,1.25,-25);
+  vmkB(villaScene,.12,2.5,6,0x667766,-16,1.25,-25);
+  vmkB(villaScene,6,.12,6,0x667766,-19,2.5,-25); // גג כלוב
+  // מומו indicator
+  villaCageInd=new THREE.Mesh(new THREE.SphereGeometry(.4,8,8),new THREE.MeshLambertMaterial({color:0xff69b4,emissive:0x992255}));
+  villaCageInd.position.set(-19,3.5,-25);villaScene.add(villaCageInd);
+
+  // === שער כניסה ===
+  vmkB(villaScene,2.5,4,1,0x5a3a1a,-4,2,38.5);
+  vmkB(villaScene,2.5,4,1,0x5a3a1a,4,2,38.5);
+  vmkB(villaScene,8,.5,.5,0x5a3a1a,0,4.5,38.5); // קרש עליון
+
+  // collision map לוילה
+  villaBlds=[
+    {x:0,z:-38,w:80,d:.6},   // קיר צפון
+    {x:-21.5,z:38,w:37,d:.6},{x:21.5,z:38,w:37,d:.6}, // קיר דרום
+    {x:40,z:0,w:.6,d:76},{x:-40,z:0,w:.6,d:76}, // קירות צדדיים
+    {x:0,z:10,w:28,d:20},    // הבית
+  ];
+
+  // VILLA CAMERA
+  villaCamera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,200);
+
+  // שומרים
+  buildVillaGuards();
+  VILLA.playerX=0;VILLA.playerZ=35; // spawn ליד שער
+}
+
+function buildVillaGuards(){
+  villaGuards=[];
+  // שומר 1 — סיור ברחבת הכניסה
+  const waypoints1=[[0,28],[14,28],[14,5],[0,5]];
+  const g1=mkDog(0x3a4a5a,1);g1.position.set(0,0,28);villaScene.add(g1);villaObjects.push(g1);
+  const bar1=new THREE.Mesh(new THREE.BoxGeometry(1.4,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));bar1.position.set(0,2.5,0);g1.add(bar1);
+  // אינדיקטור "גילוי" — קונוס
+  const det1=new THREE.Mesh(new THREE.ConeGeometry(.3,.6,5),new THREE.MeshLambertMaterial({color:0xffff00,transparent:true,opacity:.9}));
+  det1.position.set(0,2.8,0);g1.add(det1);
+  villaGuards.push({mesh:g1,bar:bar1,det:det1,waypoints:waypoints1,wpIdx:0,spd:2.8,state:'patrol',alertT:0,waitT:0,hp:50,mhp:50});
+
+  // שומר 2 — סיור ליד כלוב מומו + גינה מערבית
+  const waypoints2=[[-19,-25],[-30,-25],[-30,0],[-19,0]];
+  const g2=mkDog(0x3a4a5a,1);g2.position.set(-19,0,-25);villaScene.add(g2);villaObjects.push(g2);
+  const bar2=new THREE.Mesh(new THREE.BoxGeometry(1.4,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));bar2.position.set(0,2.5,0);g2.add(bar2);
+  const det2=new THREE.Mesh(new THREE.ConeGeometry(.3,.6,5),new THREE.MeshLambertMaterial({color:0xffff00,transparent:true,opacity:.9}));
+  det2.position.set(0,2.8,0);g2.add(det2);
+  villaGuards.push({mesh:g2,bar:bar2,det:det2,waypoints:waypoints2,wpIdx:0,spd:2.5,state:'patrol',alertT:0,waitT:0,hp:50,mhp:50});
+
+  // שומר 3 — סיור גינה מזרחית
+  const waypoints3=[[25,-20],[35,-20],[35,10],[25,10]];
+  const g3=mkDog(0x3a4a5a,1);g3.position.set(28,0,-12);villaScene.add(g3);villaObjects.push(g3);
+  const bar3=new THREE.Mesh(new THREE.BoxGeometry(1.4,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));bar3.position.set(0,2.5,0);g3.add(bar3);
+  const det3=new THREE.Mesh(new THREE.ConeGeometry(.3,.6,5),new THREE.MeshLambertMaterial({color:0xffff00,transparent:true,opacity:.9}));
+  det3.position.set(0,2.8,0);g3.add(det3);
+  villaGuards.push({mesh:g3,bar:bar3,det:det3,waypoints:waypoints3,wpIdx:0,spd:3,state:'patrol',alertT:0,waitT:0,hp:50,mhp:50});
+
+  // ברונו — בחצר מול הבית, מסתובב
+  const brunoMesh=mkDog(0x0d0505,1.9);brunoMesh.position.set(0,0,0);villaScene.add(brunoMesh);
+  const chain=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,6,12),new THREE.MeshLambertMaterial({color:0x888888}));
+  chain.position.set(0,1.35*1.9,.4*1.9);chain.rotation.x=Math.PI/2;brunoMesh.add(chain);
+  const brunoBar=new THREE.Mesh(new THREE.BoxGeometry(2.8,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));brunoBar.position.set(0,4.5,0);brunoMesh.add(brunoBar);
+  G.bruno={mesh:brunoMesh,hp:320,mhp:320,spd:5.5,alert:18,atk:3.8,atkT:0,bar:brunoBar,dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0,patrolAngle:0};
+  villaObjects.push(brunoMesh);
 }
 
 // ════════════════════════════════════════════════
-// BRUNO — דוברמן, boss פרק ב׳
+// ENTER / EXIT VILLA
 // ════════════════════════════════════════════════
-function buildBruno(){
-  const bg=mkDog(0x1a0a0a,1.9); // כהה מאוד, גדול
-  bg.position.set(108,0,-95);scene.add(bg);
-  // שרשרת כסופה עבה
-  const chain=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,6,12),new THREE.MeshLambertMaterial({color:0x888888,metalness:.8}));
-  chain.position.set(0,1.35*1.9,.4*1.9);chain.rotation.x=Math.PI/2;bg.add(chain);
-  const bar=hpBar(bg,2.8,4.5);
-  const bruno={mesh:bg,hp:320,mhp:320,spd:5.5,alert:25,atk:3.8,atkT:0,bar,dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0};
-  bg.visible=false;
-  G.bruno=bruno;
+function enterVilla(){
+  G.paused=true;
+  fadeOut(()=>{
+    // בנה scene פעם ראשונה
+    if(!villaScene)buildVillaScene();
+    VILLA.inVilla=true;
+    VILLA.playerX=0;VILLA.playerZ=35;
+    VILLA.playerYaw=Math.PI; // מסתכל צפון
+    VILLA.detected=false;VILLA.alertCooldown=0;
+    villaAlerted=false;
+    // reset שומרים
+    villaGuards.forEach(g=>{g.state='patrol';g.alertT=0;g.waitT=0;g.hp=g.mhp;if(g.bar)g.bar.scale.x=1;});
+    if(G.bruno&&!G.bruno.dead){G.bruno.hp=G.bruno.mhp;G.bruno.phase=1;}
+    // HUD
+    document.getElementById('tb').textContent='🏠 וילת ברונו — נווה ירק';
+    showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."');
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+function exitVilla(won){
+  G.paused=true;
+  fadeOut(()=>{
+    VILLA.inVilla=false;
+    document.getElementById('tb').textContent='🐕 כלבי לוד — לוד';
+    if(won){
+      setMission(10);
+    }
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+// ════════════════════════════════════════════════
+// VILLA LOOP — player + guards + bruno
+// ════════════════════════════════════════════════
+let villaWalkT=0;
+function updVilla(dt){
+  if(!VILLA.inVilla||G.paused||G.dlgOpen)return;
+  const dog=G.dogs[G.dog];
+
+  // --- תנועת שחקן ---
+  const fwd=new THREE.Vector3(-Math.sin(VILLA.playerYaw),0,-Math.cos(VILLA.playerYaw));
+  const rgt=new THREE.Vector3(Math.cos(VILLA.playerYaw),0,-Math.sin(VILLA.playerYaw));
+  let ix=0,iz=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp']){ix+=fwd.x;iz+=fwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']){ix-=fwd.x;iz-=fwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']){ix-=rgt.x;iz-=rgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){ix+=rgt.x;iz+=rgt.z;}
+  if(G.joy.on){ix+=fwd.x*(-G.joy.dy)+rgt.x*G.joy.dx;iz+=fwd.z*(-G.joy.dy)+rgt.z*G.joy.dx;}
+  const il=Math.sqrt(ix*ix+iz*iz)||1;
+  const hasInput=Math.abs(ix)+Math.abs(iz)>.01;
+  const spd=dog.spd*(G.mission===9?1:1); // זיפו מהיר יותר
+  if(hasInput){
+    const nx=Math.max(-38,Math.min(38,VILLA.playerX+(ix/il)*spd*dt));
+    const nz=Math.max(-36,Math.min(41,VILLA.playerZ+(iz/il)*spd*dt));
+    let blocked=false;
+    for(const b of villaBlds){if(nx>b.x-b.w/2-1&&nx<b.x+b.w/2+1&&nz>b.z-b.d/2-1&&nz<b.z+b.d/2+1){blocked=true;break;}}
+    if(!blocked){VILLA.playerX=nx;VILLA.playerZ=nz;}
+    VILLA.playerYaw=Math.atan2(-ix/il,-iz/il);
+    villaWalkT+=dt*8;
+  }
+  // camera follow
+  const ch=5,cd=9;
+  villaCamera.position.lerp(new THREE.Vector3(VILLA.playerX+Math.sin(VILLA.playerYaw)*cd,ch,VILLA.playerZ+Math.cos(VILLA.playerYaw)*cd),.12);
+  villaCamera.lookAt(VILLA.playerX,1.2,VILLA.playerZ);
+
+  // PB position sync (לanimation)
+  PB.position.set(VILLA.playerX,0,VILLA.playerZ);
+  PB.rotation.y=VILLA.playerYaw+Math.PI;
+  if(dogModel)dogModel.position.y=hasInput?Math.abs(Math.sin(villaWalkT))*.07:0;
+  dogLegs.forEach(lg=>{lg.node.rotation.x=hasInput?Math.sin(villaWalkT+lg.ph)*.38:lg.node.rotation.x*.85;});
+
+  // --- יציאה דרך השער (דרום) ---
+  if(VILLA.playerZ>40){
+    if(G.mission===9&&!G.momoFreed){showN('זיפו: "אני לא יכול לעזוב בלי מומו!"');}
+    else if(G.momoFreed||G.mission===10){exitVilla(G.momoFreed);}
+    else{showN('זיפו: "אני צריך להיכנס לחצר קודם."');VILLA.playerZ=38;}
+  }
+
+  // --- שחרור מומו ---
+  if(G.mission===9&&!G.momoFreed&&villaCageInd){
+    const dd=d2(VILLA.playerX,VILLA.playerZ,-19,-25);
+    if(dd<4){
+      G.momoFreed=true;
+      villaScene.remove(villaCageInd);villaCageInd=null;
+      addXP(60);G.score+=200;sCapture();
+      spawnVFX(-19,2,-25,0xff69b4,20);
+      showN('🔓 מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
+      // ברונו מגיב!
+      setTimeout(()=>{
+        villaAlerted=true;
+        villaGuards.forEach(g=>g.state='chase');
+        showN('⚠️ ברונו שמע! ברח מהוילה מהר!');
+      },1500);
+    }
+  }
+
+  // --- שומרים AI ---
+  updVillaGuards(dt);
+
+  // --- ברונו ---
+  updVillaBruno(dt);
+
+  // --- התגלות ← מישן 10 ---
+  if(VILLA.alertCooldown>0)VILLA.alertCooldown-=dt;
+}
+
+function updVillaGuards(dt){
+  const px=VILLA.playerX,pz=VILLA.playerZ;
+  const t=Date.now()*.001;
+  villaGuards.forEach((g,gi)=>{
+    if(g.hp<=0)return;
+    const gx=g.mesh.position.x,gz=g.mesh.position.z;
+    const dd=d2(gx,gz,px,pz);
+
+    // ראייה — FOV 110° בטווח 12, או 360° בטווח 3
+    let sees=false;
+    if(dd<3)sees=true;
+    else if(dd<12){
+      const toP=Math.atan2(px-gx,pz-gz);
+      const facing=g.mesh.rotation.y;
+      let ang=Math.abs(toP-facing)%(Math.PI*2);
+      if(ang>Math.PI)ang=Math.PI*2-ang;
+      sees=ang<(Math.PI*0.6);
+    }
+    // אם מומו שוחררה — כל השומרים ב-chase
+    if(villaAlerted)sees=true;
+
+    // אינדיקטור גילוי
+    if(g.det){
+      g.det.material.color.setHex(g.state==='chase'?0xff2200:g.state==='search'?0xff8800:0xffff00);
+      g.det.material.opacity=sees||g.state!=='patrol'?.95:.5;
+      g.det.position.y=2.8+Math.sin(t*3+gi)*.1;
+    }
+
+    if(sees&&g.state==='patrol'){
+      g.state='chase';g.alertT=0;
+      if(!villaAlerted){
+        showN(`⚠️ שומר ${gi+1} ראה אותך!`);
+        // מזעיק אחרים קרובים
+        villaGuards.forEach((o,oi)=>{
+          if(oi!==gi&&d2(o.mesh.position.x,o.mesh.position.z,gx,gz)<22)o.state='search';
+        });
+      }
+    }
+    if(g.state==='chase'){
+      const dx=px-gx,dz=pz-gz,l=Math.sqrt(dx*dx+dz*dz)||1;
+      g.mesh.position.x+=dx/l*g.spd*1.6*dt;
+      g.mesh.position.z+=dz/l*g.spd*1.6*dt;
+      g.mesh.rotation.y=Math.atan2(dx,dz);
+      if(dd<2.2){
+        // תפיסה!
+        dmgPlayer(15);
+        if(!VILLA.detected){
+          VILLA.detected=true;
+          showN('🚨 נתפסת! ברונו מגיע!');
+          villaAlerted=true;
+          villaGuards.forEach(o=>o.state='chase');
+          if(G.bruno&&!G.bruno.dead)G.bruno.alert=40; // ברונו מגיב מרחוק
+        }
+      }
+      if(!sees){g.alertT+=dt;if(g.alertT>4){g.state='search';g.alertT=0;}}
+    } else if(g.state==='search'){
+      // חיפוש — הולך למיקום שהיה
+      const tx=px+(Math.random()-.5)*6,tz=pz+(Math.random()-.5)*6;
+      const dx=tx-gx,dz=tz-gz,l=Math.sqrt(dx*dx+dz*dz)||1;
+      if(l>1){g.mesh.position.x+=dx/l*g.spd*.8*dt;g.mesh.position.z+=dz/l*g.spd*.8*dt;g.mesh.rotation.y=Math.atan2(dx,dz);}
+      g.alertT+=dt;if(g.alertT>6){g.state='patrol';g.alertT=0;}
+      if(sees)g.state='chase';
+    } else {
+      // סיור waypoints
+      if(g.waitT>0){g.waitT-=dt;g.mesh.rotation.y+=.8*dt;return;}
+      const wp=g.waypoints[g.wpIdx];
+      const dx=wp[0]-gx,dz=wp[1]-gz,l=Math.sqrt(dx*dx+dz*dz)||1;
+      if(l<1.2){g.wpIdx=(g.wpIdx+1)%g.waypoints.length;g.waitT=.8+Math.random()*.6;}
+      else{
+        g.mesh.position.x+=dx/l*g.spd*dt;
+        g.mesh.position.z+=dz/l*g.spd*dt;
+        g.mesh.rotation.y+=(Math.atan2(dx,dz)-g.mesh.rotation.y)*.1;
+      }
+    }
+    if(g.bar)g.bar.scale.x=Math.max(0,g.hp/g.mhp);
+  });
+}
+
+function updVillaBruno(dt){
+  if(!G.bruno||G.bruno.dead)return;
+  const b=G.bruno;
+  const px=VILLA.playerX,pz=VILLA.playerZ;
+  const bx=b.mesh.position.x,bz=b.mesh.position.z;
+  const dd=d2(bx,bz,px,pz);
+  // סיור ברחבת הבית
+  if(!villaAlerted&&G.mission===9){
+    b.patrolAngle=(b.patrolAngle||0)+dt*.4;
+    b.mesh.position.x=Math.sin(b.patrolAngle)*8;
+    b.mesh.position.z=Math.cos(b.patrolAngle)*8-5;
+    b.mesh.rotation.y=b.patrolAngle+Math.PI/2;
+    return;
+  }
+  // לאחר גילוי / מישן 10
+  if(b.hp<b.mhp*.4&&b.phase===1){b.phase=2;b.spd=7.5;showN('⚠️ ברונו מתפרע!');}
+  if(dd<b.alert||(villaAlerted&&G.mission===10)){
+    b.dashT-=dt;
+    if(b.dashT<=0&&!b.dashOn&&dd<20){
+      b.dashOn=true;b.dashT=b.phase===2?2:3.2;
+      const dx=px-bx,dz=pz-bz,l=Math.sqrt(dx*dx+dz*dz)||1;
+      b.dvx=dx/l*22;b.dvz=dz/l*22;
+      showN('💥 ברונו돌진!');
+    }
+    if(b.dashOn){
+      b.mesh.position.x+=b.dvx*dt;b.mesh.position.z+=b.dvz*dt;
+      b.dvx*=.88;b.dvz*=.88;
+      if(Math.abs(b.dvx)<.5)b.dashOn=false;
+      if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<b.atk)dmgPlayer(25);
+    } else {
+      const dx=px-bx,dz=pz-bz,l=Math.sqrt(dx*dx+dz*dz)||1;
+      b.mesh.position.x+=dx/l*b.spd*dt;b.mesh.position.z+=dz/l*b.spd*dt;
+      b.mesh.rotation.y=Math.atan2(dx,dz);
+      if(dd<b.atk){b.atkT-=dt;if(b.atkT<=0){b.atkT=.9;dmgPlayer(18);}}
+    }
+  }
+  if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+}
+
+// particle בscene וילה
+function spawnVFX(x,y,z,col,n=8){
+  for(let i=0;i<n;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(.1,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    m.position.set(x,y,z);villaScene.add(m);
+    G.particles.push({mesh:m,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8,villa:true});
+  }
 }
 
 // ════════════════════════════════════════════════
@@ -748,9 +1138,21 @@ let walkT=0;
 function loop(){
   requestAnimationFrame(loop);
   const dt=Math.min(clock.getDelta(),.05);
-  if(!G.paused&&!G.dlgOpen){
+  if(VILLA.inVilla){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updVilla(dt);
+    updPfx(dt);
+    if(villaCamera)renderer.render(villaScene,villaCamera);
+    updHUD();
+    return;
+  }
+  if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
     updPlayer(dt);updEnemies(dt);updPickups(dt);updTerrs(dt);updNPCs(dt);updPfx(dt);
     updateNavDirection();
+    // כניסה לוילה — גילוי שחקן ליד השער
+    if(G.mission===9&&G.gateMarker){
+      const px=PB.position.x,pz=PB.position.z;
+      if(d2(px,pz,G.gateMarker.x,G.gateMarker.z)<5)enterVilla();
+    }
   }
   updCamera();updHUD();drawMM();renderer.render(scene,camera);
 }
@@ -850,16 +1252,23 @@ function doAtk(){
     });
   }
 
-  // ברונו — boss פרק ב׳, שלב 10
-  if(G.mission===10&&G.bruno&&!G.bruno.dead&&G.bruno.mesh.visible){
+  // ברונו — boss פרק ב׳ בתוך הוילה
+  if(G.mission===10&&VILLA.inVilla&&G.bruno&&!G.bruno.dead){
     if(G.dog!=='colin'){showN('קולין: "זה הקרב שלי. החלף אלי."');return;}
     const b=G.bruno;
+    const px=VILLA.playerX,pz=VILLA.playerZ;
     if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.8){
-      const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();flash(b.mesh.children[0]);spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
-      if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(120);G.score+=500;spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);
-        showCut('win2',()=>setMission(11));
+      const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();
+      flash(b.mesh.children[0]);
+      spawnVFX(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
+      if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+      if(b.hp<=0){
+        b.dead=true;b.mesh.visible=false;sCapture();addXP(120);G.score+=500;
+        spawnVFX(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);
+        showCut('win2',()=>{exitVilla(true);setTimeout(()=>setMission(11),800);});
       }
     }
+    return;
   }
 }
 function flash(m){if(!m?.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
@@ -931,20 +1340,9 @@ function switchDog(){
 function checkCh2Triggers(){
   if(!G.ch2Active)return;
   const px=PB.position.x,pz=PB.position.z;
-  // שלב 8 — הגיע לוילה
-  if(G.mission===8&&d2(px,pz,110,-110)<20){
-    showCut('ch2_momo',()=>setMission(9));
-  }
-  // שלב 9 — שחרר מומו מהכלוב
-  if(G.mission===9&&G.cagePos&&!G.momoFreed){
-    if(d2(px,pz,G.cagePos.x,G.cagePos.z)<4){
-      G.momoFreed=true;
-      if(G.cagePos.ind){scene.remove(G.cagePos.ind);}
-      addXP(60);G.score+=200;sCapture();
-      spawnPfx(G.cagePos.x,2,G.cagePos.z,0xff69b4,18);
-      showN('🔓 מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
-      setTimeout(()=>setMission(10),2200);
-    }
+  // שלב 8 — הגיע לשער הוילה (marker בעולם הראשי)
+  if(G.mission===8&&d2(px,pz,0,0)<8){
+    // trigger כשנגשים לנקודת הוילה (טלפורט)
   }
 }
 
