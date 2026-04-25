@@ -138,6 +138,35 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 .st-tx{color:#ddd;font-size:clamp(13px,3vw,16px);max-width:540px;line-height:2.1;margin-bottom:24px;white-space:pre-wrap;}
 #st-btn{background:#f5c518;color:#000;border:none;border-radius:10px;padding:10px 28px;font-size:15px;font-weight:bold;cursor:pointer;}
 
+/* ── SHOP ── */
+#shop-ov{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:350;display:none;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+#shop-ov.open{display:flex;}
+#shop-box{background:linear-gradient(145deg,#1a0e00,#2d1a00);border:2px solid #f5c518;border-radius:16px;padding:18px;width:min(340px,92vw);color:#fff;box-shadow:0 0 40px rgba(245,197,24,.3);}
+.sh-title{color:#f5c518;font-size:clamp(16px,4.5vw,20px);font-weight:bold;text-align:center;margin-bottom:2px;}
+.sh-sub{color:#888;font-size:11px;text-align:center;margin-bottom:10px;}
+.sh-coins{text-align:center;color:#f5c518;font-size:13px;font-weight:bold;background:rgba(245,197,24,.08);border-radius:8px;padding:5px;margin-bottom:12px;border:1px solid rgba(245,197,24,.2);}
+.sh-item{background:rgba(255,255,255,.04);border:1px solid rgba(245,197,24,.25);border-radius:10px;padding:9px 11px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s,border-color .15s;}
+.sh-item:active,.sh-item:hover{background:rgba(245,197,24,.12);border-color:rgba(245,197,24,.6);}
+.sh-ico{font-size:clamp(20px,5vw,28px);flex-shrink:0;}
+.sh-info{flex:1;min-width:0;}
+.sh-name{font-size:clamp(12px,3vw,14px);font-weight:bold;color:#f5c518;}
+.sh-desc{font-size:10px;color:#aaa;margin-top:1px;}
+.sh-cost{font-size:clamp(12px,3vw,14px);font-weight:bold;color:#f5c518;white-space:nowrap;}
+.sh-close{display:block;width:100%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:8px;color:#aaa;font-size:13px;cursor:pointer;margin-top:4px;transition:background .15s;}
+.sh-close:active{background:rgba(255,255,255,.12);}
+
+/* ── COINS HUD ── */
+#coin-hud{position:fixed;bottom:8px;right:8px;z-index:25;background:rgba(0,0,0,.82);border:1px solid rgba(245,197,24,.5);border-radius:10px;padding:4px 10px;color:#f5c518;font-size:clamp(11px,3vw,14px);font-weight:bold;display:none;pointer-events:none;}
+
+/* ── SIDE QUESTS ── */
+#sq-panel{position:fixed;bottom:clamp(150px,28vw,200px);left:10px;z-index:25;max-width:clamp(160px,38vw,200px);display:none;flex-direction:column;gap:4px;}
+.sq-card{background:rgba(0,0,0,.84);border:1px solid rgba(52,152,219,.45);border-radius:8px;padding:6px 9px;font-size:clamp(9px,2.4vw,11px);color:#74b9ff;line-height:1.5;}
+.sq-card.done{border-color:rgba(46,204,113,.5);color:#55efc4;}
+
+/* ── DAMAGE NUMBER ── */
+.dmg-num{position:fixed;pointer-events:none;z-index:60;font-weight:bold;font-size:clamp(14px,4vw,20px);text-shadow:0 2px 6px rgba(0,0,0,.9);white-space:nowrap;animation:dmgFloat 1s ease-out forwards;}
+@keyframes dmgFloat{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3);}100%{opacity:0;transform:translate(-50%,-130%) scale(.8);}}
+
 /* ── LEVEL UP ── */
 #lu{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
 .lu-ti{color:#f5c518;font-size:clamp(22px,6vw,40px);font-weight:bold;margin-bottom:8px;text-shadow:0 0 28px #f5c518;}
@@ -190,6 +219,10 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 <div id="cs-scr" style="display:none">
   <h1>🐕 כלבי לוד</h1>
   <div class="sub">בחר את הכלב שלך</div>
+  <div id="cs-continue" style="display:none;background:rgba(46,204,113,.12);border:1.5px solid #2ecc71;border-radius:12px;padding:10px 20px;margin-bottom:14px;text-align:center;cursor:pointer;" onclick="loadGame()">
+    <div style="color:#2ecc71;font-size:15px;font-weight:bold;">▶ המשך משחק שמור</div>
+    <div id="cs-save-info" style="color:#aaa;font-size:11px;margin-top:3px;"></div>
+  </div>
   <div class="cc-wrap">
     <div class="cc" onclick="selDog('colin')">
       <div class="cc-ico">🦴</div><div class="cc-name">קולין</div><div class="cc-sub">לוחם הרחובות</div>
@@ -279,6 +312,21 @@ canvas#cv{display:block;width:100vw;height:100vh;}
     <div class="ab" id="bt" ontouchstart="mTab()">TAB</div>
   </div>
 </div>
+
+<!-- SHOP -->
+<div id="shop-ov">
+  <div id="shop-box">
+    <div class="sh-title">🏪 <span id="sh-name">חנות</span></div>
+    <div class="sh-sub" id="sh-npc-sub">מה תרצה לקנות?</div>
+    <div class="sh-coins">💰 מטבעות: <span id="sh-coin-val">0</span></div>
+    <div id="sh-items"></div>
+    <button class="sh-close" onclick="closeShop()">✕ סגור</button>
+  </div>
+</div>
+<!-- COINS HUD -->
+<div id="coin-hud">💰 <span id="coin-val">0</span></div>
+<!-- SIDE QUESTS -->
+<div id="sq-panel"></div>
 
 <!-- DIALOG -->
 <div id="dlg-ov" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
@@ -426,10 +474,11 @@ const G={
   mission:0,           // current mission index — SINGLE SOURCE OF TRUTH
   terrs:[],terrCnt:0,
   enemies:[],bosses:[],pickups:[],npcs:[],particles:[],
-  gang:0,score:0,
+  gang:0,score:0,coins:0,
   foodEaten:0,          // for mission 1
   enemiesKilled:0,      // for mission 3
   recruitsDone:0,       // for mission 4
+  totalKills:0,         // side quest tracking
   ch2Active:false,      // פרק ב׳ פעיל
   momoFreed:false,      // מומו שוחררה
   bruno:null,           // boss ברונו
@@ -437,9 +486,12 @@ const G={
   atkCD:0,velY:0,onGround:true,
   vx:0,vz:0,          // velocity for smooth movement
   dlgOpen:false,paused:false,
+  shopOpen:false,
   near:null,
   joy:{on:false,dx:0,dy:0,id:-1,sx:0,sy:0},
   cam:{on:false,id:-1,lx:0,ly:0},
+  sideQ:{bones:{n:0,done:false},kills:{done:false}},
+  bones:[],
 };
 
 let scene,camera,renderer,clock,mmCtx;
@@ -468,7 +520,7 @@ function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles
 // ════════════════════════════════════════════════
 // SELECT DOG
 // ════════════════════════════════════════════════
-function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';init();}
+function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';init();}
 
 // ════════════════════════════════════════════════
 // INIT
@@ -481,7 +533,7 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildNPCs();
+  buildLights();buildWorld();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
   setupInput();
   cacheHUD();
   // start everything hidden — gates will show what's needed
@@ -490,6 +542,8 @@ function init(){
   G.npcs.forEach(n=>{if(n.ind&&n.type==='recruit')n.ind.visible=false;});
   setMission(0);
   showCut('intro',null);
+  updSQPanel();
+  updCoins();
   loop();
 }
 
@@ -1916,6 +1970,22 @@ function buildPickups(){
     const m=new THREE.Mesh(new THREE.SphereGeometry(.38,7,7),new THREE.MeshLambertMaterial({color:0xe67e22,emissive:0x331100}));m.position.set(x,.38,z);scene.add(m);G.pickups.push({mesh:m,x,z,done:false});
   });
 }
+function buildBones(){
+  // עצמות למשימת צד — 5 עצמות מפוזרות
+  const boneSpots=[[65,-10],[32,88],[-58,-34],[8,-78],[44,42]];
+  boneSpots.forEach(([x,z])=>{
+    const g=new THREE.Group();
+    const mat=new THREE.MeshLambertMaterial({color:0xfff5e0,emissive:0x221100});
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.55,7),mat);shaft.rotation.z=.5;g.add(shaft);
+    const b1=new THREE.Mesh(new THREE.SphereGeometry(.13,6,5),mat);b1.position.set(.22,.14,0);g.add(b1);
+    const b2=new THREE.Mesh(new THREE.SphereGeometry(.13,6,5),mat);b2.position.set(-.22,-.14,0);g.add(b2);
+    g.position.set(x,.25,z);
+    // glow indicator
+    const gl=new THREE.Mesh(new THREE.SphereGeometry(.18,5,5),new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x334422,transparent:true,opacity:.6}));gl.position.y=.5;g.add(gl);
+    scene.add(g);
+    G.bones.push({mesh:g,x,z,done:false});
+  });
+}
 
 // ════════════════════════════════════════════════
 // NPCS
@@ -1927,10 +1997,26 @@ function buildNPCs(){
     {x:-18,z:110,name:'בוקסר',type:'recruit',av:'🐶',buildFn:()=>mkBoxer(.85)},
     {x:78,z:40,name:'לולה',type:'recruit',av:'🐩',buildFn:()=>mkLola(.85)},
     {x:4,z:-128,name:'פישקה',type:'recruit',av:'🐕',buildFn:()=>mkFishka(.85)},
+    // חנויות
+    {x:-74,z:50,name:'🥩 מכולת השוק',type:'shop',av:'🏪',buildFn:()=>mkShuki(.7),shopItems:[
+      {ico:'🍖',name:'מנת בשר',desc:'+40 בריאות',cost:30,fn:()=>shopBuy('hp')},
+      {ico:'💊',name:'תרופה',desc:'+80 בריאות מלא',cost:60,fn:()=>shopBuy('hp_big')},
+      {ico:'⚡',name:'מנת אנרגיה',desc:'+100 סטמינה',cost:20,fn:()=>shopBuy('stam')},
+    ]},
+    {x:-84,z:62,name:'🦷 דוכן הציוד',type:'shop',av:'🏪',buildFn:()=>mkBoxer(.7),shopItems:[
+      {ico:'🦷',name:'חידוד שיניים',desc:'+3 כוח קבוע',cost:80,fn:()=>shopBuy('pow')},
+      {ico:'🏃',name:'שמן מנועים',desc:'+0.5 מהירות קבוע',cost:60,fn:()=>shopBuy('spd')},
+      {ico:'🛡️',name:'שריון פרוות',desc:'+20 HP מקס׳',cost:100,fn:()=>shopBuy('mhp')},
+    ]},
   ];
   npcDefs.forEach(n=>{
     const ng=n.buildFn();ng.position.set(n.x,0,n.z);scene.add(ng);
-    const ind=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),new THREE.MeshLambertMaterial({color:0xf5c518,emissive:0x443300}));ind.position.set(0,2.6,0);ng.add(ind);
+    const indCol=n.type==='shop'?0x00ccff:0xf5c518;
+    const ind=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),new THREE.MeshLambertMaterial({color:indCol,emissive:n.type==='shop'?0x003344:0x443300}));ind.position.set(0,2.6,0);ng.add(ind);
+    // סימן חנות — $ מרחף
+    if(n.type==='shop'){
+      const shopSign=new THREE.Mesh(new THREE.BoxGeometry(.6,.4,.08),new THREE.MeshLambertMaterial({color:0xf5c518,emissive:0x332200}));shopSign.position.set(0,3.2,0);ng.add(shopSign);
+    }
     G.npcs.push({...n,col:0,mesh:ng,ind,talked:false,recruited:false});
   });
 }
@@ -1967,7 +2053,7 @@ function setMission(idx){
   MISSIONS[idx].unlock();
   updateMissionHUD();
   updateNavArrow();
-  if(idx>0)showN(`📋 ${MISSIONS[idx].txt}`);
+  if(idx>0){showN(`📋 ${MISSIONS[idx].txt}`);saveGame();}
 }
 
 function updateMissionHUD(){
@@ -2051,6 +2137,7 @@ function loop(){
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
     updPlayer(dt);updEnemies(dt);updPickups(dt);updTerrs(dt);updNPCs(dt);updPfx(dt);
     updateNavDirection();
+    updSQPanel();
     // כניסה למסגד — שחקן הגיע לדלת במשימה 8
     if(G.mission===8&&G.gateMarker){
       const px=PB.position.x,pz=PB.position.z;
@@ -2143,8 +2230,9 @@ function doAtk(){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
       if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.2){
-        const dmg=dog.pow*10*(1+dog.lv*.1);e.hp-=dmg;sHit();flash(e.mesh.children[0]);spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0xe74c3c,5);
-        if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();addXP(20);G.score+=50;G.enemiesKilled++;
+        const dmg=dog.pow*10*(1+dog.lv*.1);e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);showDmg(e.mesh.position.x,1,e.mesh.position.z,Math.round(dmg));
+        if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
+          const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
           updateMissionHUD();
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
@@ -2158,8 +2246,8 @@ function doAtk(){
     G.bosses.forEach(b=>{
       if(b.dead||!b.mesh.visible)return;
       if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.5){
-        const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();flash(b.mesh.children[0]);spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
-        if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();addXP(80);G.score+=300;spawnPfx(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,22);setTimeout(()=>showCut('win',()=>setMission(7)),600);}
+        const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();haptic(22);flash(b.mesh.children[0]);spawnBlood(b.mesh.position.x,1,b.mesh.position.z,16);showDmg(b.mesh.position.x,1,b.mesh.position.z,Math.round(dmg));
+        if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();haptic([80,30,80]);addXP(80);G.score+=300;G.coins+=80;updCoins();spawnBlood(b.mesh.position.x,2,b.mesh.position.z,28);setTimeout(()=>showCut('win',()=>setMission(7)),600);}
       }
     });
   }
@@ -2170,10 +2258,10 @@ function doAtk(){
     mosqueGuards.forEach(g=>{
       if(g.hp<=0)return;
       if(d2(g.mesh.position.x,g.mesh.position.z,px,pz)<3.5){
-        const dmg=dog.pow*9*(1+dog.lv*.1);g.hp-=dmg;sHit();
+        const dmg=dog.pow*9*(1+dog.lv*.1);g.hp-=dmg;sHit();haptic(20);
         if(g.mesh.children[0])flash(g.mesh.children[0]);
-        spawnVFX(g.mesh.position.x,1,g.mesh.position.z,0xe74c3c,5);
-        if(g.hp<=0){g.hp=0;g.state='patrol';g.mesh.visible=false;addXP(15);G.score+=30;showN('✅ שומר הוכנע!');}
+        spawnVFX(g.mesh.position.x,1,g.mesh.position.z,0xe74c3c,5);spawnBlood(g.mesh.position.x,1,g.mesh.position.z,8);showDmgVilla(Math.round(dmg));
+        if(g.hp<=0){g.hp=0;g.state='patrol';g.mesh.visible=false;haptic([40,20,40]);addXP(15);G.score+=30;G.coins+=8;updCoins();showN('✅ שומר הוכנע!');}
         else{g.state='chase';}
       }
     });
@@ -2184,13 +2272,13 @@ function doAtk(){
     const b=G.bruno;
     const px=VILLA.playerX,pz=VILLA.playerZ;
     if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<4.8){
-      const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();
+      const dmg=dog.pow*10*(1+dog.lv*.1);b.hp-=dmg;sHit();haptic(25);
       flash(b.mesh.children[0]);
-      spawnVFX(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);
+      spawnVFX(b.mesh.position.x,1,b.mesh.position.z,0xe74c3c,7);spawnBlood(b.mesh.position.x,1,b.mesh.position.z,14);showDmgVilla(Math.round(dmg));
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
       if(b.hp<=0){
-        b.dead=true;b.mesh.visible=false;sCapture();addXP(120);G.score+=500;
-        spawnVFX(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);
+        b.dead=true;b.mesh.visible=false;sCapture();haptic([100,40,100]);addXP(120);G.score+=500;G.coins+=120;updCoins();
+        spawnVFX(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);spawnBlood(b.mesh.position.x,2,b.mesh.position.z,30);
         // פתח את הדלת
         mosqueDoorLocked=false;
         if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x3a2010);}
@@ -2256,7 +2344,7 @@ function playerRespawn(){
 function dmgPlayer(dmg){
   const dog=G.dogs[G.dog];
   dog.hp=Math.max(0,dog.hp-dmg);
-  sHit();
+  sHit();haptic(dmg>=20?[60,20,40]:30);
   const hf=document.getElementById('hf');
   hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);
   if(dog.hp<=0)playerDeath();
@@ -2268,20 +2356,36 @@ function dmgPlayer(dmg){
 function checkNear(){
   const px=PB.position.x,pz=PB.position.z;G.near=null;let best=5;
   G.pickups.forEach(p=>{if(p.done)return;const dd=d2(p.x,p.z,px,pz);if(dd<best){best=dd;G.near=p;}});
+  G.bones.forEach(b=>{if(b.done)return;const dd=d2(b.x,b.z,px,pz);if(dd<best){best=dd;G.near=b;}});
   G.npcs.forEach(n=>{const dd=d2(n.x,n.z,px,pz);if(dd<best){best=dd;G.near=n;}});
-  if(G.near){_hudIP.style.display='block';_hudIP.textContent=G.near.done!==undefined?'🟢 E — אסוף אוכל 🍖':`🟢 E — דבר עם ${G.near.name}`;}
+  if(G.near){
+    _hudIP.style.display='block';
+    if(G.near.done!==undefined&&G.near.type==='bone')_hudIP.textContent='🟢 E — אסוף עצם 🦴';
+    else if(G.near.done!==undefined)_hudIP.textContent='🟢 E — אסוף אוכל 🍖';
+    else if(G.near.type==='shop')_hudIP.textContent=`🟢 E — ${G.near.name}`;
+    else _hudIP.textContent=`🟢 E — דבר עם ${G.near.name}`;
+  }
   else _hudIP.style.display='none';
 }
 function doInteract(){
   const o=G.near;if(!o)return;
+  if(o.type==='bone'){
+    // side quest bone
+    o.done=true;scene.remove(o.mesh);sPickup();haptic([20,10,20]);G.sideQ.bones.n++;G.coins+=5;updCoins();
+    showN(`🦴 עצם! (${G.sideQ.bones.n}/5 למשימת צד)`);
+    updSQPanel();
+    if(G.sideQ.bones.n>=5&&!G.sideQ.bones.done){G.sideQ.bones.done=true;addXP(40);G.coins+=50;updCoins();haptic([60,30,60]);showN('🏆 משימת צד: עצמות ברחוב — הושלמה!\n+40 XP + 50 💰');}
+    return;
+  }
   if(o.done!==undefined){
     // food
     if(G.mission<1){showN('⚠️ קודם דבר עם בלה הזקנה!');return;}
-    o.done=true;scene.remove(o.mesh);const dog=G.dogs[G.dog];dog.hp=Math.min(dog.mhp,dog.hp+25);G.score+=10;G.foodEaten++;sPickup();addXP(5);
+    o.done=true;scene.remove(o.mesh);const dog=G.dogs[G.dog];dog.hp=Math.min(dog.mhp,dog.hp+25);G.score+=10;G.foodEaten++;sPickup();haptic(15);addXP(5);
     updateMissionHUD();
     showN(`🍖 אכלת! +25 בריאות (${G.foodEaten}/3 מנות)`);
     if(G.mission===1&&G.foodEaten>=3)setMission(2);
   } else if(o.type==='quest')dlgElder(o);
+  else if(o.type==='shop')openShop(o);
   else if(o.type==='recruit'){
     if(G.mission<4){showN(`${o.name}: "תחזור אליי מאוחר יותר..."`);return;}
     dlgRecruit(o);
@@ -2449,7 +2553,7 @@ function updEnemies(dt){
 // ════════════════════════════════════════════════
 // PICKUPS ANIM
 // ════════════════════════════════════════════════
-function updPickups(dt){const t=Date.now()*.002;G.pickups.forEach(p=>{if(!p.done)p.mesh.position.y=.38+Math.sin(t+p.x)*.13;});}
+function updPickups(dt){const t=Date.now()*.002;G.pickups.forEach(p=>{if(!p.done)p.mesh.position.y=.38+Math.sin(t+p.x)*.13;});G.bones.forEach(b=>{if(!b.done){b.mesh.position.y=.18+Math.sin(t*1.3+b.x)*.1;b.mesh.rotation.y+=dt*.8;}});}
 
 // ════════════════════════════════════════════════
 // NPC ANIM
@@ -2495,7 +2599,7 @@ function updTerrs(dt){
 function addXP(amt){
   const dog=G.dogs[G.dog];dog.xp+=amt;showXPPop('+'+amt+' XP');
   const need=XP_TO_LVL[Math.min(dog.lv,XP_TO_LVL.length-1)];
-  if(dog.lv<5&&dog.xp>=need){dog.lv++;dog.xp=0;dog.mhp+=10;dog.hp=dog.mhp;dog.pow+=1;dog.spd+=.3;sLvlUp();showLU(dog);}
+  if(dog.lv<5&&dog.xp>=need){dog.lv++;dog.xp=0;dog.mhp+=10;dog.hp=dog.mhp;dog.pow+=1;dog.spd+=.3;sLvlUp();haptic([50,30,50,30,80]);showLU(dog);}
   if(_hudXP)_hudXP.style.width=Math.min(100,dog.xp/Math.max(1,XP_TO_LVL[Math.min(dog.lv,XP_TO_LVL.length-1)])*100)+'%';
   document.getElementById('lvv').textContent=dog.lv;
 }
@@ -2540,6 +2644,7 @@ function updHUD(){
       ?'linear-gradient(90deg,#e67e22,#f39c12)' // כתום — מתייגע
       :'linear-gradient(90deg,#2ecc71,#55efc4)'; // ירוק — תקין
   _hudSCV.textContent=G.score;
+  updCoins();
   // אזהרת עייפות — פעם ב-8 שניות
   if(st<15&&Date.now()-_lastStamWarn>8000){
     _lastStamWarn=Date.now();
@@ -2805,6 +2910,226 @@ function drawBigMap(){
 // ════════════════════════════════════════════════
 let NT=null;
 function showN(t){const el=document.getElementById('notif');el.textContent=t;el.style.display='block';if(NT)clearTimeout(NT);NT=setTimeout(()=>el.style.display='none',3500);}
+
+// ════════════════════════════════════════════════
+// HAPTIC FEEDBACK
+// ════════════════════════════════════════════════
+function haptic(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
+
+// ════════════════════════════════════════════════
+// BLOOD PARTICLES
+// ════════════════════════════════════════════════
+function spawnBlood(x,y,z,n=10){
+  if(!scene)return;
+  for(let i=0;i<n;i++){
+    const sz=.05+Math.random()*.1;
+    const m=new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),
+      new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true}));
+    m.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
+    scene.add(m);
+    const spd=2.5+Math.random()*5,ang=Math.random()*Math.PI*2;
+    G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
+  }
+  // splat שטוח על הקרקע
+  for(let i=0;i<3;i++){
+    const r=.08+Math.random()*.16;
+    const m=new THREE.Mesh(new THREE.CircleGeometry(r,6),
+      new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false}));
+    m.rotation.x=-Math.PI/2;
+    m.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
+    scene.add(m);
+    G.particles.push({mesh:m,vx:0,vy:0,vz:0,life:5+Math.random()*3});
+  }
+}
+
+// ════════════════════════════════════════════════
+// DAMAGE NUMBERS
+// ════════════════════════════════════════════════
+function showDmg(wx,wy,wz,txt,isCoin){
+  // project 3D position to screen
+  if(!camera||!renderer)return;
+  const v=new THREE.Vector3(wx,wy+.5,wz);
+  v.project(camera);
+  const sw=renderer.domElement.clientWidth,sh=renderer.domElement.clientHeight;
+  const sx=(v.x*.5+.5)*sw,sy=(-.5*v.y+.5)*sh;
+  if(sx<0||sx>sw||sy<0||sy>sh)return;
+  const el=document.createElement('div');
+  el.className='dmg-num';
+  el.textContent=txt;
+  el.style.left=sx+'px';el.style.top=sy+'px';
+  el.style.color=isCoin?'#f5c518':'#ff4444';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+function showDmgVilla(dmg){
+  // inside mosque — simple screen-center flash
+  const el=document.createElement('div');
+  el.className='dmg-num';
+  el.textContent=dmg;
+  el.style.left=(50+Math.random()*20-10)+'%';
+  el.style.top=(45+Math.random()*10-5)+'%';
+  el.style.color='#ff4444';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+// ════════════════════════════════════════════════
+// COINS HUD
+// ════════════════════════════════════════════════
+function updCoins(){
+  const v=document.getElementById('coin-val');
+  const h=document.getElementById('coin-hud');
+  if(v)v.textContent=G.coins;
+  if(h)h.style.display=G.hud?'block':'none';
+}
+
+// ════════════════════════════════════════════════
+// SHOP SYSTEM
+// ════════════════════════════════════════════════
+let _shopNPC=null;
+function openShop(npc){
+  if(G.paused||G.dlgOpen||G.cutOpen)return;
+  _shopNPC=npc;
+  G.paused=true;G.shopOpen=true;
+  document.getElementById('sh-name').textContent=npc.name;
+  document.getElementById('sh-coin-val').textContent=G.coins;
+  const cont=document.getElementById('sh-items');cont.innerHTML='';
+  (npc.shopItems||[]).forEach(item=>{
+    const row=document.createElement('div');row.className='sh-item';
+    row.innerHTML=`<div class="sh-ico">${item.ico}</div><div class="sh-info"><div class="sh-name">${item.name}</div><div class="sh-desc">${item.desc}</div></div><div class="sh-cost">💰${item.cost}</div>`;
+    row.addEventListener('click',()=>{item.fn();document.getElementById('sh-coin-val').textContent=G.coins;});
+    row.addEventListener('touchstart',()=>{item.fn();document.getElementById('sh-coin-val').textContent=G.coins;});
+    cont.appendChild(row);
+  });
+  document.getElementById('shop-ov').classList.add('open');
+}
+function closeShop(){
+  document.getElementById('shop-ov').classList.remove('open');
+  G.paused=false;G.shopOpen=false;_shopNPC=null;
+}
+function shopBuy(type){
+  const dog=G.dogs[G.dog];
+  const costs={hp:30,hp_big:60,stam:20,pow:80,spd:60,mhp:100};
+  const cost=costs[type];
+  if(G.coins<cost){haptic([20,10,20]);showN('💰 אין מספיק מטבעות!');return;}
+  G.coins-=cost;haptic([20,10,30]);
+  if(type==='hp'){dog.hp=Math.min(dog.mhp,dog.hp+40);showN('🍖 +40 בריאות!');}
+  else if(type==='hp_big'){dog.hp=dog.mhp;showN('💊 בריאות מלאה!');}
+  else if(type==='stam'){dog.stam=Math.min(100,dog.stam+100);showN('⚡ +100 סטמינה!');}
+  else if(type==='pow'){dog.pow+=3;showN('🦷 +3 כוח!');}
+  else if(type==='spd'){dog.spd+=.5;showN('🏃 +0.5 מהירות!');}
+  else if(type==='mhp'){dog.mhp+=20;dog.hp=Math.min(dog.hp+20,dog.mhp);showN('🛡️ +20 HP מקסימלי!');}
+  updCoins();sPickup();
+  document.getElementById('sh-coin-val').textContent=G.coins;
+  saveGame();
+}
+
+// ════════════════════════════════════════════════
+// SIDE QUESTS
+// ════════════════════════════════════════════════
+function updSQPanel(){
+  const p=document.getElementById('sq-panel');
+  if(!p||G.mission<1){if(p)p.style.display='none';return;}
+  p.style.display='flex';
+  let html='';
+  // SQ1: עצמות
+  if(!G.sideQ.bones.done){
+    html+=`<div class="sq-card">🦴 עצמות ברחוב<br>${G.sideQ.bones.n}/5 נאספו</div>`;
+  } else {
+    html+=`<div class="sq-card done">✅ עצמות ברחוב</div>`;
+  }
+  // SQ2: 10 ניצחונות
+  if(!G.sideQ.kills.done){
+    html+=`<div class="sq-card">⚔️ 10 ניצחונות<br>${G.totalKills}/10</div>`;
+  } else {
+    html+=`<div class="sq-card done">✅ 10 ניצחונות</div>`;
+  }
+  p.innerHTML=html;
+  // בדוק אם SQ2 הושלמה
+  if(!G.sideQ.kills.done&&G.totalKills>=10){
+    G.sideQ.kills.done=true;addXP(60);G.coins+=100;updCoins();haptic([60,30,60]);
+    showN('🏆 משימת צד: 10 ניצחונות — הושלמה!\n+60 XP + 100 💰');
+    updSQPanel();saveGame();
+  }
+}
+
+// ════════════════════════════════════════════════
+// QUICK SAVE / LOAD
+// ════════════════════════════════════════════════
+const SAVE_KEY='kalbei_lod_v1';
+function saveGame(){
+  try{
+    const dog=G.dogs[G.dog];
+    const save={
+      v:1,ts:Date.now(),
+      dog:G.dog,mission:G.mission,
+      score:G.score,coins:G.coins,gang:G.gang,
+      foodEaten:G.foodEaten,enemiesKilled:G.enemiesKilled,
+      recruitsDone:G.recruitsDone,totalKills:G.totalKills,
+      sideQ:JSON.parse(JSON.stringify(G.sideQ)),
+      dogs:{
+        colin:{...G.dogs.colin},
+        zippo:{...G.dogs.zippo},
+        momo:{...G.dogs.momo},
+      },
+      pos:PB?{x:Math.round(PB.position.x),y:0,z:Math.round(PB.position.z)}:{x:0,y:0,z:60},
+    };
+    localStorage.setItem(SAVE_KEY,JSON.stringify(save));
+  }catch(e){}
+}
+function loadGame(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);if(!raw)return false;
+    const s=JSON.parse(raw);if(!s||s.v!==1)return false;
+    // הסתר char select, הצג HUD
+    document.getElementById('cs-scr').style.display='none';
+    document.getElementById('hud').style.display='block';
+    // שחזר state
+    G.dog=s.dog||'colin';
+    G.mission=s.mission||0;
+    G.score=s.score||0;G.coins=s.coins||0;G.gang=s.gang||0;
+    G.foodEaten=s.foodEaten||0;G.enemiesKilled=s.enemiesKilled||0;
+    G.recruitsDone=s.recruitsDone||0;G.totalKills=s.totalKills||0;
+    if(s.sideQ)G.sideQ=s.sideQ;
+    if(s.dogs){Object.keys(s.dogs).forEach(k=>{if(G.dogs[k])Object.assign(G.dogs[k],s.dogs[k]);});}
+    document.getElementById('hdn').textContent=G.dogs[G.dog].name;
+    if(isMob)document.getElementById('mob').style.display='block';
+    G.hud=true;document.getElementById('coin-hud').style.display='block';
+    init();
+    // אחרי init — שחזר מיקום
+    if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}
+    // שחזר mission (init קורא setMission(0) — נדרוס)
+    G.mission=s.mission;
+    MISSIONS[Math.min(G.mission,MISSIONS.length-1)].unlock&&MISSIONS[Math.min(G.mission,MISSIONS.length-1)].unlock();
+    updateMissionHUD();updateNavArrow();
+    G.gang=s.gang||0;document.getElementById('gc').textContent=G.gang;
+    updCoins();updSQPanel();
+    showN('✅ המשחק נטען בהצלחה! רמה '+G.dogs[G.dog].lv+' • משימה '+(G.mission+1));
+    return true;
+  }catch(e){console.error('load failed',e);return false;}
+}
+function deleteSave(){localStorage.removeItem(SAVE_KEY);showN('🗑️ שמירה נמחקה');}
+
+// בדוק שמירה קיימת בchar select
+(function checkSave(){
+  const raw=localStorage.getItem(SAVE_KEY);
+  if(!raw)return;
+  try{
+    const s=JSON.parse(raw);
+    const btn=document.getElementById('cs-continue');
+    if(!btn)return;
+    const d=new Date(s.ts);
+    const mName={0:'שיחה עם בלה',1:'איסוף אוכל',2:'כיבוש ראשון',3:'קרבות',4:'גיוס',5:'כיבוש שטחים',6:'ג׳ק הרוטווילר',7:'—',8:'המסגד',9:'חדירה',10:'ברונו',11:'ניצחון!'};
+    document.getElementById('cs-save-info').textContent=`רמה ${s.dogs?.[s.dog]?.lv||1} | ${mName[s.mission]||'—'} | 💰${s.coins||0}`;
+    btn.style.display='block';
+  }catch(e){}
+})();
+
+// שמירה אוטומטית כל 60 שניות
+setInterval(()=>{if(PB&&G.mission>0)saveGame();},60000);
+// שמירה על מעבר מיסיון
+const _origSetMission=setMission;
+// (שמירה מופעלת מתוך shopBuy ו-SQ completions)
 </script>
 </body>
 </html>
