@@ -689,7 +689,7 @@ function buildBoss(){
 // ════════════════════════════════════════════════
 // MOSQUE MAP SYSTEM — MGS-style map transition
 // ════════════════════════════════════════════════
-let mosqueScene=null,mosqueCamera=null,mosqueObjects=[],mosqueBlds=[];
+let mosqueDoorMesh=null,mosqueDoorLocked=false;
 let mosqueGuards=[],mosqueCageInd=null,mosqueAlerted=false;
 const VILLA={  // שמרנו VILLA לתאימות עם שאר הקוד
   inVilla:false,
@@ -727,125 +727,195 @@ function vmkCyl(sc,rt,rb,h,seg,col,x,y,z){
 
 function buildMosqueScene(){
   mosqueScene=new THREE.Scene();
-  mosqueScene.background=new THREE.Color(0x010308);
-  mosqueScene.fog=new THREE.FogExp2(0x020510,.045);
+  mosqueScene.background=new THREE.Color(0x0a0e18);
+  mosqueScene.fog=new THREE.FogExp2(0x0a0e18,.022);
 
-  // === תאורה — מפחידה אבל נראית היטב ===
-  mosqueScene.add(new THREE.AmbientLight(0x6688bb,2.0));
-  const moon=new THREE.DirectionalLight(0x8899dd,1.4);moon.position.set(-40,70,30);moon.castShadow=true;
+  // === תאורה — מספיק לראות, אבל צבע קר ומחלה ===
+  mosqueScene.add(new THREE.AmbientLight(0x8899cc,1.8)); // כחול-קר, מספיק בהיר
+  const moon=new THREE.DirectionalLight(0xaabbdd,1.6);moon.position.set(-40,70,30);moon.castShadow=true;
   moon.shadow.mapSize.set(1024,1024);['left','right','top','bottom'].forEach((k,i)=>moon.shadow.camera[k]=[-60,60,60,-60][i]);
   mosqueScene.add(moon);
 
-  // פנסי חצר — כתום חזק
+  // פנסי חצר — אור כתום-חום, מספיק לראות
   [[-14,0,-14],[14,0,-14],[-14,0,14],[14,0,14]].forEach(([x,,z])=>{
-    vmkCyl(mosqueScene,.15,.2,4,6,0x5a4020,x,2,z);
-    const lp=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),new THREE.MeshLambertMaterial({color:0xffaa33,emissive:0xff6600}));
+    vmkCyl(mosqueScene,.15,.2,4,6,0x3a2808,x,2,z);
+    const lp=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),new THREE.MeshLambertMaterial({color:0xff9944,emissive:0x884422}));
     lp.position.set(x,4.3,z);mosqueScene.add(lp);mosqueObjects.push(lp);
-    const pl=new THREE.PointLight(0xff8800,3.5,28);pl.position.set(x,4,z);mosqueScene.add(pl);
+    const pl=new THREE.PointLight(0xff8833,4.0,32);pl.position.set(x,4,z);mosqueScene.add(pl);
   });
 
-  // אור ירוק על הכיפה
-  const domeLight=new THREE.PointLight(0x00ff66,3.0,35);domeLight.position.set(0,14,0);mosqueScene.add(domeLight);
-  // אור אדום על הכלוב
-  const cageLight=new THREE.PointLight(0xff2200,3.5,22);cageLight.position.set(-18,3,-28);mosqueScene.add(cageLight);
-  // אור כחול בצד
-  const sideLight=new THREE.PointLight(0x4488ff,2.5,30);sideLight.position.set(30,5,0);mosqueScene.add(sideLight);
+  // אור ירוק-מחלה על הכיפה — נראה ברור
+  const domeLight=new THREE.PointLight(0x00ff66,3.5,40);domeLight.position.set(0,14,0);mosqueScene.add(domeLight);
+  // אור אדום על הכלוב — חזק וברור
+  const cageLight=new THREE.PointLight(0xff2200,5.0,28);cageLight.position.set(-18,3,-28);mosqueScene.add(cageLight);
+  // אור כחול מהצד
+  const sideLight=new THREE.PointLight(0x4488ff,3.0,35);sideLight.position.set(30,5,0);mosqueScene.add(sideLight);
+  // מילוי כללי — שלא יהיו פינות שחורות לחלוטין
+  mosqueScene.add(new THREE.HemisphereLight(0x334466,0x221133,1.0));
 
-  // === קרקע — אבן ישנה עם כתמים ===
-  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshLambertMaterial({color:0x2a2218}));
+  // === קרקע — אריחים ישנים, נראים ברור ===
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshLambertMaterial({color:0x3a3228}));
   gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;mosqueScene.add(gnd);mosqueObjects.push(gnd);
-  // ריצוף פסים כהים — מראה ישן ומוזנח
+  // ריצוף — פסים נראים
   for(let i=-4;i<=4;i++){
-    const tile=new THREE.Mesh(new THREE.PlaneGeometry(.3,100),new THREE.MeshLambertMaterial({color:0x1a1610}));
+    const tile=new THREE.Mesh(new THREE.PlaneGeometry(.25,100),new THREE.MeshLambertMaterial({color:0x252018}));
     tile.rotation.x=-Math.PI/2;tile.position.set(i*5,.02,0);mosqueScene.add(tile);mosqueObjects.push(tile);
   }
   for(let i=-4;i<=4;i++){
-    const tile=new THREE.Mesh(new THREE.PlaneGeometry(100,.3),new THREE.MeshLambertMaterial({color:0x1a1610}));
+    const tile=new THREE.Mesh(new THREE.PlaneGeometry(100,.25),new THREE.MeshLambertMaterial({color:0x252018}));
     tile.rotation.x=-Math.PI/2;tile.position.set(0,.02,i*5);mosqueScene.add(tile);mosqueObjects.push(tile);
   }
 
-  // שטיח מרכזי — ישן ומכתים
-  vmkB(mosqueScene,20,.05,20,0x4a0808,0,.03,0);
-  // פסי שטיח עמומים
+  // שטיח מרכזי — אדום כהה, נראה ברור
+  vmkB(mosqueScene,20,.05,20,0x6a0808,0,.03,0);
   for(let i=-2;i<=2;i++){
-    vmkB(mosqueScene,.3,.06,20,0x6a2200,i*4,.04,0);
-    vmkB(mosqueScene,20,.06,.3,0x6a2200,0,.04,i*4);
+    vmkB(mosqueScene,.3,.06,20,0x8a1800,i*4,.04,0);
+    vmkB(mosqueScene,20,.06,.3,0x8a1800,0,.04,i*4);
   }
 
-  // === כתמים ורטיבות על הקרקע (circles אפלים) ===
-  [[-8,-5],[12,3],[-20,8],[5,-15],[30,-10],[-30,5]].forEach(([x,z])=>{
-    const stain=new THREE.Mesh(new THREE.CircleGeometry(1.2+Math.random()*.8,8),new THREE.MeshLambertMaterial({color:0x0d0a08}));
-    stain.rotation.x=-Math.PI/2;stain.position.set(x,.025,z);mosqueScene.add(stain);mosqueObjects.push(stain);
+  // === כתמי דם — גדולים וברורים (פסיכי) ===
+  [[-8,8],[15,-18],[-22,-5],[5,2],[-10,-25],[20,5]].forEach(([x,z])=>{
+    const blood=new THREE.Mesh(new THREE.CircleGeometry(1.0+Math.random()*.7,8),new THREE.MeshLambertMaterial({color:0x5a0000}));
+    blood.rotation.x=-Math.PI/2;blood.position.set(x,.026,z);mosqueScene.add(blood);mosqueObjects.push(blood);
+    // "שביל" דם — כמה טיפות קטנות שמובילות לאיפשהו
+    for(let d=1;d<4;d++){
+      const drop=new THREE.Mesh(new THREE.CircleGeometry(.15+Math.random()*.1,6),new THREE.MeshLambertMaterial({color:0x440000}));
+      drop.rotation.x=-Math.PI/2;drop.position.set(x+(Math.random()-.5)*d*1.5,.027,z+d*1.2);mosqueScene.add(drop);mosqueObjects.push(drop);
+    }
   });
 
-  // === קירות חיצוניים — אבן כהה ומוזנחת ===
-  vmkB(mosqueScene,80,10,.8,0x1e1a14,0,5,-44); // צפון
-  vmkB(mosqueScene,37,10,.8,0x1a1812,-21.5,5,44); // דרום שמאל
-  vmkB(mosqueScene,37,10,.8,0x1a1812,21.5,5,44);  // דרום ימין
-  vmkB(mosqueScene,.8,10,88,0x1c1810,40,5,0);  // מזרח
-  vmkB(mosqueScene,.8,10,88,0x1c1810,-40,5,0); // מערב
-  // סדקים בקיר (פסים כהים)
-  [[0,8,-43.6],[0,4,-43.6],[-35,6,0,.8,12,.4]].forEach(([x,y,z,w=80,h=.4,d=.3])=>vmkB(mosqueScene,w,h,d,0x0a0806,x,y,z));
-  // קישוט קיר — פס ירוק-מעופש
-  vmkB(mosqueScene,80,.3,.9,0x1a3a1a,0,9.5,-44);
-  vmkB(mosqueScene,80,.3,.9,0x1a3a1a,0,9.5,44);
+  // === כלוב עצמות — על הרצפה, נראה ברור ===
+  [[-25,10],[20,-35],[-15,25],[28,15],[-32,-18]].forEach(([x,z])=>{
+    // "גוף" — קופסה שטוחה בצבע עצם
+    vmkB(mosqueScene,1.4,.12,2.8,0x8a7a5a,x,.06,z);
+    // "עצמות" — מקלות קצרים
+    vmkB(mosqueScene,.18,.1,.18,0x9a8a6a,x+.5,.08,z-.8);
+    vmkB(mosqueScene,.18,.1,.18,0x9a8a6a,x-.3,.08,z+.6);
+    vmkB(mosqueScene,.6,.08,.1,0x9a8a6a,x,.07,z-1.2);
+    vmkB(mosqueScene,.1,.08,.6,0x9a8a6a,x+.7,.07,z+.3);
+  });
 
-  // === המסגד הראשי — בניין פנימי ===
-  vmkB(mosqueScene,30,10,24,0x222018,0,5,-8); // גוף
-  vmkB(mosqueScene,30,10,.8,0x1e1c14,0,5,16); // קיר קדמי
+  // === כלובים ריקים על הקיר — מה היה בהם? ===
+  [[-35,10],[-35,-10],[-35,-25],[35,5],[35,-15]].forEach(([x,z])=>{
+    // מסגרת כלוב על הקיר
+    vmkB(mosqueScene,2.5,.08,1.8,0x334433,x,2.6,z);  // גג
+    vmkB(mosqueScene,2.5,.08,1.8,0x334433,x,.5,z);   // רצפה
+    for(let b=0;b<5;b++)vmkB(mosqueScene,.08,2.1,.08,0x334433,x-1.0+b*.5,.05+1.05,z-0.9);
+    for(let b=0;b<4;b++)vmkB(mosqueScene,.08,2.1,.08,0x334433,x-0.9,1.55,z-.8+b*.55);
+    // דלת כלוב — פתוחה לרווחה (מה ברח?)
+    vmkB(mosqueScene,.08,2.1,.7,0x445544,x+1.25+.35,1.55,z-.45);
+  });
 
-  // חלונות בקיר הצפוני — עם "אור" ירוק-עמום מבפנים
+  // === עצי תמר יבשים — שרידי גינה ===
+  [[-30,-30],[30,-30],[-30,30],[30,30],[-35,0],[35,0]].forEach(([x,z])=>{
+    vmkB(mosqueScene,.4,5,.4,0x2a1c0a,x,2.5,z);
+    [-1,1].forEach(sd=>{
+      vmkB(mosqueScene,.12,2,.12,0x221508,x+sd*1.5,5.5,z);
+      vmkB(mosqueScene,.12,2,.12,0x221508,x,5.5,z+sd*1.2);
+    });
+    // גולגולת על גזע העץ (פסיכי)
+    const skull=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshLambertMaterial({color:0x9a8a6a}));
+    skull.position.set(x,.22,z);skull.scale.set(1,.85,1);mosqueScene.add(skull);mosqueObjects.push(skull);
+  });
+  vmkB(mosqueScene,80,12,.8,0x0a0806,0,6,-44); // צפון
+  vmkB(mosqueScene,37,12,.8,0x080604,-21.5,6,44); // דרום שמאל
+  vmkB(mosqueScene,37,12,.8,0x080604,21.5,6,44);  // דרום ימין
+  vmkB(mosqueScene,.8,12,88,0x090705,40,6,0);  // מזרח
+  vmkB(mosqueScene,.8,12,88,0x090705,-40,6,0); // מערב
+  // סדקים גדולים יותר — קירות ישנים מאוד
+  [[0,8,-43.6],[0,4,-43.6],[-35,6,0,.8,12,.4],[20,5,44,.8,10,.4]].forEach(([x,y,z,w=80,h=.5,d=.4])=>vmkB(mosqueScene,w,h,d,0x040302,x,y,z));
+  // קישוט קיר — מחק ירוק מעופש
+  vmkB(mosqueScene,80,.2,.9,0x0a1a0a,0,10,-44);
+  vmkB(mosqueScene,80,.2,.9,0x0a1a0a,0,10,44);
+  // פסי חושך על הקיר
+  for(let i=-3;i<=3;i++){
+    vmkB(mosqueScene,.18,12,.22,0x1a1608,i*10,6,-43.7);
+  }
+
+  // === קירות חיצוניים — אבן נראית ===
+  vmkB(mosqueScene,80,12,.8,0x3a3020,0,6,-44);
+  vmkB(mosqueScene,37,12,.8,0x323020,-21.5,6,44);
+  vmkB(mosqueScene,37,12,.8,0x323020,21.5,6,44);
+  vmkB(mosqueScene,.8,12,88,0x363020,40,6,0);
+  vmkB(mosqueScene,.8,12,88,0x363020,-40,6,0);
+  // סדקים נראים
+  [[0,8,-43.6],[0,4,-43.6]].forEach(([x,y,z])=>vmkB(mosqueScene,80,.4,.35,0x1a1610,x,y,z));
+  vmkB(mosqueScene,.8,10,.4,0x1a1610,-35,6,0);
+  // פס קישוט ירוק-כחלחל
+  vmkB(mosqueScene,80,.35,.9,0x224422,0,10.2,-44);
+  vmkB(mosqueScene,80,.35,.9,0x224422,0,10.2,44);
+
+  // === המסגד הראשי — נראה, צבע אבן כהה ===
+  vmkB(mosqueScene,30,12,24,0x2e2a1e,0,6,-8);
+  vmkB(mosqueScene,30,12,.8,0x2a2618,0,6,16);
+  // פסי אבן — נראים
+  for(let i=0;i<6;i++)vmkB(mosqueScene,30,.18,.85,0x1e1c14,0,i*2,-8);
+
+  // חלונות — ירוק מחלה מבפנים, נראה בבירור
   [[-10,6,-44],[0,6,-44],[10,6,-44]].forEach(([x,y,z])=>{
-    vmkB(mosqueScene,3,3,.4,0x0d1a0d,x,y,z);
-    const glow=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshLambertMaterial({color:0x002200,emissive:0x003300,side:THREE.DoubleSide}));
+    vmkB(mosqueScene,2.8,2.8,.45,0x1a3020,x,y,z);
+    const glow=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshLambertMaterial({color:0x003300,emissive:0x006600,side:THREE.DoubleSide}));
     glow.position.set(x,y,z+.3);mosqueScene.add(glow);mosqueObjects.push(glow);
+    const wl=new THREE.PointLight(0x00aa44,2.5,10);wl.position.set(x,y,z+1);mosqueScene.add(wl);
   });
 
-  // כיפה — ירוקה-כהה עם סדקים
-  const dome=new THREE.Mesh(new THREE.SphereGeometry(8,16,12,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0x0d2a12}));
-  dome.position.set(0,10.5,-8);mosqueScene.add(dome);mosqueObjects.push(dome);
-  vmkCyl(mosqueScene,8,8,2,12,0x1c1a10,0,10,-8); // תוף כיפה
-  // הלל ירח — עמום
-  const crescent=new THREE.Mesh(new THREE.TorusGeometry(.6,.08,6,16,Math.PI*1.4),new THREE.MeshLambertMaterial({color:0x886600,emissive:0x332200}));
-  crescent.position.set(0,19,-8);crescent.rotation.z=-.3;mosqueScene.add(crescent);mosqueObjects.push(crescent);
+  // כיפה — ירוק-כהה נראה
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(8,16,12,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0x1a4a22}));
+  dome.position.set(0,11.5,-8);mosqueScene.add(dome);mosqueObjects.push(dome);
+  vmkCyl(mosqueScene,8,8,2,12,0x282414,0,10.5,-8);
+  // פסי קישוט על הכיפה
+  for(let i=0;i<8;i++){const rib=new THREE.Mesh(new THREE.BoxGeometry(.2,8,.18),new THREE.MeshLambertMaterial({color:0x122a18}));rib.rotation.y=i*Math.PI/4;rib.position.set(0,11.5,-8);mosqueScene.add(rib);mosqueObjects.push(rib);}
+  // הלל ירח
+  const crescent=new THREE.Mesh(new THREE.TorusGeometry(.6,.08,6,16,Math.PI*1.4),new THREE.MeshLambertMaterial({color:0x886600,emissive:0x443300}));
+  crescent.position.set(0,20,-8);crescent.rotation.z=-.3;mosqueScene.add(crescent);mosqueObjects.push(crescent);
 
-  // === מינרטים — גבוהים ומאיימים ===
+  // === מינרטים — גבוהים ומאיימים, בצבע אבן ===
   [[-18,-20],[18,-20]].forEach(([mx,mz])=>{
-    vmkCyl(mosqueScene,1.2,1.6,22,8,0x1e1c14,mx,11,mz);
-    vmkCyl(mosqueScene,2,1.2,2,8,0x171510,mx,23,mz);
-    vmkCyl(mosqueScene,.8,1.2,2,8,0x1e1c14,mx,25,mz);
-    vmkCyl(mosqueScene,.1,1,4,8,0x0d2210,mx,28,mz);
-    // נורת מינרט — כמעט כבויה
-    const ml=new THREE.Mesh(new THREE.SphereGeometry(.3,6,6),new THREE.MeshLambertMaterial({color:0x332200,emissive:0x221100}));
-    ml.position.set(mx,30,mz);mosqueScene.add(ml);mosqueObjects.push(ml);
-    const mpl=new THREE.PointLight(0x331100,.3,8);mpl.position.set(mx,29,mz);mosqueScene.add(mpl);
+    vmkCyl(mosqueScene,1.0,1.4,28,8,0x2a2618,mx,14,mz);
+    vmkCyl(mosqueScene,1.8,1.0,2,8,0x222018,mx,28.5,mz);
+    vmkCyl(mosqueScene,.6,1.0,2,8,0x2a2618,mx,30.5,mz);
+    vmkCyl(mosqueScene,.08,.8,6,8,0x1a3a1a,mx,34,mz);
+    // קוצים ברזל על הכרכוב
+    for(let a=0;a<8;a++){
+      const spk=new THREE.Mesh(new THREE.ConeGeometry(.13,.6,4),new THREE.MeshLambertMaterial({color:0x666660}));
+      spk.position.set(mx+Math.sin(a*Math.PI/4)*1.9,29,mz+Math.cos(a*Math.PI/4)*1.9);
+      mosqueScene.add(spk);mosqueObjects.push(spk);
+    }
+    // נורת מינרט — כתומה חיוורת
+    const ml=new THREE.Mesh(new THREE.SphereGeometry(.28,6,6),new THREE.MeshLambertMaterial({color:0xcc6600,emissive:0x441100}));
+    ml.position.set(mx,37,mz);mosqueScene.add(ml);mosqueObjects.push(ml);
+    const mpl=new THREE.PointLight(0x882200,.8,10);mpl.position.set(mx,36,mz);mosqueScene.add(mpl);
   });
 
-  // === קשתות כניסה — גותיות וכבדות ===
+  // === קשתות כניסה — נראות, עם קוצים ===
   [-8,-2,4].forEach(x=>{
-    const arch=new THREE.Mesh(new THREE.TorusGeometry(2.5,0.4,6,12,Math.PI),new THREE.MeshLambertMaterial({color:0x0d1a0d}));
+    const arch=new THREE.Mesh(new THREE.TorusGeometry(2.5,0.5,6,12,Math.PI),new THREE.MeshLambertMaterial({color:0x2a2618}));
     arch.position.set(x,7,16.5);mosqueScene.add(arch);mosqueObjects.push(arch);
+    [-.8,0,.8].forEach(ox=>{const sp=new THREE.Mesh(new THREE.ConeGeometry(.12,.5,4),new THREE.MeshLambertMaterial({color:0x888880}));sp.position.set(x+ox,9.8,16.5);mosqueScene.add(sp);mosqueObjects.push(sp);});
   });
-  // קישוט קשתות — פסי ציפוי ישן
   [-8,-2,4].forEach(x=>{
-    vmkB(mosqueScene,.15,6,.15,0x2a2010,x-2.5,4,16.4);
-    vmkB(mosqueScene,.15,6,.15,0x2a2010,x+2.5,4,16.4);
+    vmkB(mosqueScene,.22,7,.22,0x222018,x-2.5,3.5,16.4);
+    vmkB(mosqueScene,.22,7,.22,0x222018,x+2.5,3.5,16.4);
   });
 
-  // דלת פנימית — כהה ומוחלדת
-  vmkB(mosqueScene,3,5,.4,0x0d1a0d,-2,2.5,15.8);
+  // דלת — חום כהה נראית
+  mosqueDoorMesh=vmkB(mosqueScene,3.2,5.5,.4,0x1a1008,-2,2.7,15.8);
+  mosqueDoorLocked=false;
+  // גריל ברזל — נראה
+  for(let i=0;i<4;i++)vmkB(mosqueScene,.1,2,.12,0x555550,-3.5+i*.8,6,15.8);
 
-  // === עמודי חצר — נסדקים ===
+  // === עמודי חצר — אבן, נראים ===
   [[-12,12],[-12,-12],[12,12],[12,-12],[-12,0],[12,0],[0,12],[0,-12]].forEach(([cx,cz])=>{
-    vmkCyl(mosqueScene,.55,.65,5,8,0x1e1c14,cx,2.5,cz);
-    vmkB(mosqueScene,1.4,.4,1.4,0x191714,cx,5.2,cz); // כותרת עמוד
-    // סדק בעמוד
-    vmkB(mosqueScene,.08,4,.1,0x0a0806,cx+.3,2.5,cz);
+    vmkCyl(mosqueScene,.55,.65,6,8,0x2e2a1e,cx,3,cz);
+    vmkB(mosqueScene,1.4,.4,1.4,0x262210,cx,6.2,cz);
+    // סדקים נראים
+    vmkB(mosqueScene,.12,5,.14,0x1a1810,cx+.3,3,cz);
+    vmkB(mosqueScene,.1,3,.12,0x1a1810,cx-.22,4,cz+.15);
   });
 
-  // קשתות בין עמודים — כבדות וכהות
+  // קשתות בין עמודים
   [[-12,0],[12,0]].forEach(([cx,])=>{
-    const a=new THREE.Mesh(new THREE.TorusGeometry(6,.3,6,12,Math.PI),new THREE.MeshLambertMaterial({color:0x161410}));
+    const a=new THREE.Mesh(new THREE.TorusGeometry(6,.35,6,12,Math.PI),new THREE.MeshLambertMaterial({color:0x282414}));
     a.rotation.z=Math.PI/2;a.position.set(cx,8,0);mosqueScene.add(a);mosqueObjects.push(a);
   });
 
@@ -894,25 +964,140 @@ function buildMosqueScene(){
   // שמור ref כדי להסתיר כשמשוחררת
   G.momoModel=momoInCage;
 
-  // שלט מעל הכלוב — "אסור"
-  vmkB(mosqueScene,4,.6,.1,0x8b0000,CX,4.5,CZ);
+  // שלט מעל הכלוב — "אסור" — אדום בהיר
+  vmkB(mosqueScene,4,.6,.1,0xaa0000,CX,4.5,CZ);
 
-  // === עצי תמר — יבשים ומתים ===
+  // === עצי תמר יבשים — בצבעים הנראים ===
   [[-30,-30],[30,-30],[-30,30],[30,30],[-35,0],[35,0]].forEach(([x,z])=>{
-    vmkB(mosqueScene,.4,5,.4,0x1a1208,x,2.5,z); // גזע כהה
-    // ענפים מתים במקום עלים ירוקים
+    vmkB(mosqueScene,.4,5,.4,0x3a2810,x,2.5,z);
     [-1,1].forEach(sd=>{
-      vmkB(mosqueScene,.15,2,.15,0x151008,x+sd*1.5,5.5,z);
-      vmkB(mosqueScene,.15,2,.15,0x151008,x,5.5,z+sd*1.2);
+      vmkB(mosqueScene,.15,2,.15,0x2a1e0a,x+sd*1.5,5.5,z);
+      vmkB(mosqueScene,.15,2,.15,0x2a1e0a,x,5.5,z+sd*1.2);
     });
+    // גולגולת על בסיס העץ — נראית ברור
+    const skull=new THREE.Mesh(new THREE.SphereGeometry(.22,8,6),new THREE.MeshLambertMaterial({color:0xc8b88a}));
+    skull.position.set(x,.22,z);skull.scale.set(1,.85,1);mosqueScene.add(skull);mosqueObjects.push(skull);
+    // שקעי עיניים — כהים
+    [-1,1].forEach(sd=>{const ey=new THREE.Mesh(new THREE.SphereGeometry(.06,6,6),new THREE.MeshLambertMaterial({color:0x1a1008}));ey.position.set(x+sd*.08,.28,z+.16);mosqueScene.add(ey);mosqueObjects.push(ey);});
   });
 
-  // === פריטי אווירה — גופות כלבים ישנות / עצמות ===
-  [[-25,10],[20,-35],[-15,25],[28,15]].forEach(([x,z])=>{
-    vmkB(mosqueScene,1.2,.15,2.5,0x2a2018,x,.1,z); // "גוף" על הרצפה
-    vmkB(mosqueScene,.3,.12,.3,0x2a2018,x+.6,.06,z-.5);
-    vmkB(mosqueScene,.3,.12,.3,0x2a2018,x-.4,.06,z+.8);
+  // === שלטי אזהרה ערביים על הקירות — "מוות למי שמתקרב" (אסתטיקה בלבד) ===
+  [[-38,10,0,Math.PI/2],[-38,-15,0,Math.PI/2],[38,5,0,-Math.PI/2],[38,-20,0,-Math.PI/2],[0,8,-43.2,0]].forEach(([x,y,z,ry=0])=>{
+    const sign=new THREE.Mesh(new THREE.BoxGeometry(3.5,.9,.1),new THREE.MeshLambertMaterial({color:0x8a0000}));
+    sign.position.set(x,y+3,z);sign.rotation.y=ry;mosqueScene.add(sign);mosqueObjects.push(sign);
+    // פסי "כתב" על השלט — לבן
+    for(let i=0;i<3;i++){const ln=new THREE.Mesh(new THREE.BoxGeometry(.8,.1,.12),new THREE.MeshLambertMaterial({color:0xeeeecc}));ln.position.set(x+(i-.9)*.9,y+3.05,z);ln.rotation.y=ry;mosqueScene.add(ln);mosqueObjects.push(ln);}
   });
+
+  // === כלובים ריקים על הקיר מזרח — מה היה בהם? ===
+  [[35,10],[35,-5],[35,-20]].forEach(([x,z])=>{
+    vmkB(mosqueScene,2.5,.08,1.8,0x445544,x,2.6,z);
+    vmkB(mosqueScene,2.5,.08,1.8,0x445544,x,.5,z);
+    for(let b=0;b<5;b++)vmkB(mosqueScene,.08,2.1,.08,0x445544,x-1.0+b*.5,.05+1.05,z-0.9);
+    for(let b=0;b<4;b++)vmkB(mosqueScene,.08,2.1,.08,0x445544,x-0.9,1.55,z-.8+b*.55);
+    // דלת פתוחה
+    vmkB(mosqueScene,.08,2.1,.7,0x556655,x+1.25+.35,1.55,z-.45);
+    // כתם אדום בפנים הכלוב
+    const bl=new THREE.Mesh(new THREE.CircleGeometry(.5,8),new THREE.MeshLambertMaterial({color:0x660000}));
+    bl.rotation.x=-Math.PI/2;bl.position.set(x,.52,z);mosqueScene.add(bl);mosqueObjects.push(bl);
+  });
+
+  // === שרשרות ברזל תלויות מהתקרה — פסיכי ===
+  [[0,5],[-15,-5],[15,-10],[-8,-20],[8,5],[-22,10],[22,-25]].forEach(([x,z])=>{
+    const chainH=3+Math.random()*3;
+    for(let s=0;s<Math.floor(chainH*2);s++){
+      const link=new THREE.Mesh(new THREE.TorusGeometry(.18,.05,4,8),new THREE.MeshLambertMaterial({color:0x666658}));
+      link.position.set(x,9-s*.5,z);link.rotation.x=s%2===0?Math.PI/2:0;
+      mosqueScene.add(link);mosqueObjects.push(link);
+    }
+    // ווי ברזל בסוף השרשרת
+    const hook=new THREE.Mesh(new THREE.TorusGeometry(.25,.06,4,8,Math.PI*1.5),new THREE.MeshLambertMaterial({color:0x777768}));
+    hook.position.set(x,9-chainH,z);mosqueScene.add(hook);mosqueObjects.push(hook);
+  });
+
+  // === גופות כלבים — שוכבות על הצד, נראות כמו גופות אמיתיות ===
+  [[-25,10,0.4],[20,-35,1.2],[-15,25,-0.3],[28,15,2.0],[-32,-18,-1.0]].forEach(([x,z,ry])=>{
+    const corpse=new THREE.Group();
+    const fur=new THREE.MeshLambertMaterial({color:0x5a4830});
+    const belly=new THREE.MeshLambertMaterial({color:0x7a6448});
+    // גוף שוכב על הצד
+    const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,.55,2.2),fur);
+    body.position.set(0,.28,0);body.rotation.z=Math.PI/2;corpse.add(body);
+    // בטן — נראית כי שוכב על הצד
+    const bel=new THREE.Mesh(new THREE.BoxGeometry(.9,.3,1.8),belly);
+    bel.position.set(.28,.28,0);bel.rotation.z=Math.PI/2;corpse.add(bel);
+    // ראש — מוטה לצד
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.62,.55,.68),fur);
+    head.position.set(.1,.32,.95);head.rotation.z=.6;corpse.add(head);
+    const snout=new THREE.Mesh(new THREE.BoxGeometry(.32,.28,.38),new THREE.MeshLambertMaterial({color:0x3a2810}));
+    snout.position.set(.18,.18,1.28);snout.rotation.z=.4;corpse.add(snout);
+    // עיניים סגורות
+    [-1,1].forEach(sd=>{const ey=new THREE.Mesh(new THREE.BoxGeometry(.15,.04,.16),new THREE.MeshLambertMaterial({color:0x1a1008}));ey.position.set(.35+sd*.14,.48,.88);ey.rotation.z=.5;corpse.add(ey);});
+    // רגליים — פרושות ונוקשות
+    [[.3,.0,-.65,-.4],[.3,.0,.65,-.4],[-.25,.0,-.65,.3],[-.25,.0,.65,.3]].forEach(([lx,ly,lz,ra])=>{
+      const leg=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.42),fur);
+      leg.position.set(lx+.3,ly+.08,lz);leg.rotation.z=Math.PI/2+ra;corpse.add(leg);
+    });
+    // זנב — פרוש
+    const tail=new THREE.Mesh(new THREE.CylinderGeometry(.06,.04,.45,6),fur);
+    tail.position.set(.05,.22,-1.1);tail.rotation.z=.8;tail.rotation.x=-.3;corpse.add(tail);
+    // כתם דם מתחת
+    const pool=new THREE.Mesh(new THREE.CircleGeometry(.55+Math.random()*.25,8),new THREE.MeshLambertMaterial({color:0x550000}));
+    pool.rotation.x=-Math.PI/2;pool.position.set(0,.01,0);corpse.add(pool);
+
+    corpse.position.set(x,0,z);
+    corpse.rotation.y=ry;
+    mosqueScene.add(corpse);mosqueObjects.push(corpse);
+  });
+
+  // === סמלים מוסלמיים ===
+
+  // מחראב (niche) בקיר הצפוני — כיוון קיבלה
+  const mihrabArch=new THREE.Mesh(new THREE.TorusGeometry(2.2,.35,8,16,Math.PI),new THREE.MeshLambertMaterial({color:0x3a5a3a}));
+  mihrabArch.position.set(0,6,-43.4);mosqueScene.add(mihrabArch);mosqueObjects.push(mihrabArch);
+  vmkB(mosqueScene,4.4,4,.3,0x2a4030,0,3,-43.3); // גומחה
+  vmkB(mosqueScene,3.8,3.5,.2,0x1a3020,0,3,-43.1); // פנים גומחה כהה
+  // קישוט סביב המחראב — פסי זהב
+  vmkB(mosqueScene,5,.2,.3,0x886600,0,8,-43.3);
+  vmkB(mosqueScene,.2,6,.3,0x886600,-2.5,5,-43.3);
+  vmkB(mosqueScene,.2,6,.3,0x886600,2.5,5,-43.3);
+
+  // סהרונים על הקירות — סמל אסלאמי
+  [[-38,6,10,Math.PI/2],[-38,6,-10,Math.PI/2],[38,6,10,-Math.PI/2],[38,6,-10,-Math.PI/2]].forEach(([x,y,z,ry])=>{
+    const cr=new THREE.Mesh(new THREE.TorusGeometry(1.1,.12,8,20,Math.PI*1.5),new THREE.MeshLambertMaterial({color:0xccaa00,emissive:0x443300}));
+    cr.position.set(x,y,z);cr.rotation.y=ry;cr.rotation.z=-.3;mosqueScene.add(cr);mosqueObjects.push(cr);
+    // כוכב 6-קרני קטן מעל הסהר
+    for(let p=0;p<6;p++){
+      const pt=new THREE.Mesh(new THREE.ConeGeometry(.12,.35,3),new THREE.MeshLambertMaterial({color:0xddbb00,emissive:0x332200}));
+      pt.position.set(x+Math.sin(p*Math.PI/3)*.5,y+1.6+Math.cos(p*Math.PI/3)*.5,z);
+      pt.rotation.y=ry;pt.rotation.z=p*Math.PI/3;mosqueScene.add(pt);mosqueObjects.push(pt);
+    }
+  });
+
+  // סהר + כוכב על הכיפה (מעל ההלל ירח)
+  const topCr=new THREE.Mesh(new THREE.TorusGeometry(.9,.1,8,20,Math.PI*1.5),new THREE.MeshLambertMaterial({color:0xddbb00,emissive:0x554400}));
+  topCr.position.set(0,21,-8);topCr.rotation.z=-.25;mosqueScene.add(topCr);mosqueObjects.push(topCr);
+  for(let p=0;p<6;p++){
+    const pt=new THREE.Mesh(new THREE.ConeGeometry(.1,.28,3),new THREE.MeshLambertMaterial({color:0xeedd00,emissive:0x443300}));
+    pt.position.set(Math.sin(p*Math.PI/3)*.4,21.6+Math.cos(p*Math.PI/3)*.4,-8);
+    pt.rotation.z=p*Math.PI/3;mosqueScene.add(pt);mosqueObjects.push(pt);
+  }
+
+  // טיח גיאומטרי על קיר המסגד הפנימי — ריבועים מסתובבים (נוף אסלאמי)
+  [[-10,4,-7.5],[0,4,-7.5],[10,4,-7.5],[-10,7,-7.5],[0,7,-7.5],[10,7,-7.5]].forEach(([x,y,z])=>{
+    const tile=new THREE.Mesh(new THREE.BoxGeometry(2.5,2.5,.12),new THREE.MeshLambertMaterial({color:0x2a4a2a}));
+    tile.position.set(x,y,z);tile.rotation.z=Math.PI/4;mosqueScene.add(tile);mosqueObjects.push(tile);
+    const inner=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.4,.14),new THREE.MeshLambertMaterial({color:0x3a6a3a}));
+    inner.position.set(x,y,z+.01);mosqueScene.add(inner);mosqueObjects.push(inner);
+    const dot=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.15),new THREE.MeshLambertMaterial({color:0x886600}));
+    dot.position.set(x,y,z+.02);dot.rotation.z=Math.PI/4;mosqueScene.add(dot);mosqueObjects.push(dot);
+  });
+
+  // כיתוב "אללה" מעל הדלת הפנימית — שלושה קשתות קישוט
+  vmkB(mosqueScene,6,.25,.2,0x886600,0,9.5,16.3);
+  vmkB(mosqueScene,6,.25,.2,0x664400,0,9,16.3);
+  const calArch=new THREE.Mesh(new THREE.TorusGeometry(1.5,.12,6,16,Math.PI),new THREE.MeshLambertMaterial({color:0x886600}));
+  calArch.position.set(0,8.5,16.3);mosqueScene.add(calArch);mosqueObjects.push(calArch);
 
   // collision
   mosqueBlds=[
@@ -930,15 +1115,15 @@ function buildMosqueScene(){
 
 function buildMosqueGuards(){
   mosqueGuards=[];
-  // שומר 1 — פטרול מרכזי (הרחק מהכניסה)
-  const wps1=[[-8,10],[8,10],[8,-10],[-8,-10]];
-  addGuard(mosqueScene,wps1,0,0,5,2.8,mosqueGuards);
-  // שומר 2 — ליד כלוב מומו
-  const wps2=[[-18,-30],[-30,-30],[-30,-10],[-18,-10]];
-  addGuard(mosqueScene,wps2,-18,0,-25,2.5,mosqueGuards);
-  // שומר 3 — גינה מזרחית
-  const wps3=[[25,-30],[38,-30],[38,-5],[25,-5]];
-  addGuard(mosqueScene,wps3,28,0,-15,3,mosqueGuards);
+  // שומר 1 — פטרול בחצי הצפוני, רחוק מהכניסה
+  const wps1=[[-20,-15],[20,-15],[20,-35],[-20,-35]];
+  addGuard(mosqueScene,wps1,0,0,-25,2.8,mosqueGuards);
+  // שומר 2 — ליד כלוב מומו, בצד מערבי
+  const wps2=[[-30,-20],[-30,-38],[-15,-38],[-15,-20]];
+  addGuard(mosqueScene,wps2,-25,0,-30,2.5,mosqueGuards);
+  // שומר 3 — גינה מזרחית עמוקה
+  const wps3=[[30,-10],[38,-25],[30,-38],[22,-25]];
+  addGuard(mosqueScene,wps3,32,0,-20,3,mosqueGuards);
 
   // ברונו — מסתובב ליד הכיפה
   const brunoMesh=mkDog(0x0d0505,1.9);brunoMesh.position.set(0,0,0);mosqueScene.add(brunoMesh);
@@ -1059,7 +1244,14 @@ function updVilla(dt){
   mosqueCamera.lookAt(VILLA.playerX,1,VILLA.playerZ);
 
   PB.position.set(VILLA.playerX,0,VILLA.playerZ);
-  PB.rotation.y=-G.yaw+Math.PI;
+  // כיוון הכלב — לכיוון ההליכה (ריאליסטי), לא לכיוון המצלמה
+  if(hasInput){
+    const moveAngle=Math.atan2(inputX/iln,inputZ/iln);
+    const targetY=-moveAngle+Math.PI;
+    let diff=targetY-PB.rotation.y;
+    while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    PB.rotation.y+=diff*Math.min(1,12*dt);
+  }
   if(hasInput){
     villaWalkT+=dt*8;
     dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(villaWalkT+lg.ph)*.38;});
@@ -1071,9 +1263,10 @@ function updVilla(dt){
     if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
   }
 
-  // יציאה דרך השער דרום
+  // יציאה דרך השער דרום — רק אם הדלת לא נעולה
   if(VILLA.playerZ>45){
     if(G.mission===9&&!G.momoFreed)showN('זיפו: "אני לא יכול לעזוב בלי מומו!"');
+    else if(mosqueDoorLocked)showN('🔒 הדלת נעולה! הבס את ברונו כדי לפתוח!');
     else exitMosque(G.momoFreed);
     return;
   }
@@ -1086,7 +1279,35 @@ function updVilla(dt){
       addXP(60);G.score+=200;sCapture();
       spawnVFX(G.cagePos.x,2,G.cagePos.z,0xff69b4,20);
       showN('🔓 מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
-      setTimeout(()=>{mosqueAlerted=true;mosqueGuards.forEach(g=>g.state='chase');showN('⚠️ ברונו שמע! ברח מהמסגד מהר!');},1500);
+      // נעל את הדלת — הוסף חסימה קולקטורית ועדכן צבע
+      setTimeout(()=>{
+        mosqueDoorLocked=true;
+        if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x3a0808);}
+        // מנעול ברזל — מוסיף mesh מעל הדלת
+        const lock=new THREE.Mesh(new THREE.BoxGeometry(.45,.45,.5),new THREE.MeshLambertMaterial({color:0x888880}));
+        lock.position.set(-2,2.8,15.6);mosqueScene.add(lock);mosqueObjects.push(lock);
+        const lockBar=new THREE.Mesh(new THREE.BoxGeometry(1.8,.15,.5),new THREE.MeshLambertMaterial({color:0x777770}));
+        lockBar.position.set(-2,3.6,15.6);mosqueScene.add(lockBar);mosqueObjects.push(lockBar);
+        // הוסף את הדלת לcollision
+        mosqueBlds.push({x:-2,z:15.8,w:3.2,d:.5});
+        showN('🔒 הדלת ננעלה!\nברונו: "אַנְتُمْ مَحَاصِرُونَ!" (אתם לכודים!)');
+      },800);
+      setTimeout(()=>{
+        mosqueAlerted=true;
+        mosqueGuards.forEach(g=>g.state='chase');
+        // ברונו — מתעורר בזעם, מכפיל מהירות,돌진 מיידי
+        if(G.bruno&&!G.bruno.dead){
+          G.bruno.alert=999;G.bruno.spd=8.5;G.bruno.dashT=0; // 돌진 מיידי
+          // flash אדום על ברונו
+          if(G.bruno.mesh.children[0]){
+            const origCol=G.bruno.mesh.children[0].material.color.getHex();
+            G.bruno.mesh.children[0].material.color.setHex(0xff0000);
+            setTimeout(()=>{if(G.bruno.mesh.children[0])G.bruno.mesh.children[0].material.color.setHex(origCol);},600);
+          }
+          spawnVFX(G.bruno.mesh.position.x,2,G.bruno.mesh.position.z,0xff2200,18);
+        }
+        showN('💢 ברונו מתפרע! הדלת נעולה — הבס אותו!');
+      },1500);
     }
   }
   updVillaGuards(dt);
@@ -1435,7 +1656,12 @@ function doAtk(){
       if(b.hp<=0){
         b.dead=true;b.mesh.visible=false;sCapture();addXP(120);G.score+=500;
         spawnVFX(b.mesh.position.x,2,b.mesh.position.z,0xf5c518,28);
-        showCut('win2',()=>{exitMosque(true);setTimeout(()=>setMission(11),800);});
+        // פתח את הדלת
+        mosqueDoorLocked=false;
+        if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x3a2010);}
+        mosqueBlds=mosqueBlds.filter(b=>!(Math.abs(b.x+2)<1&&Math.abs(b.z-15.8)<1));
+        showN('🔓 הדלת נפתחה! ברח מהמסגד!');
+        setTimeout(()=>showCut('win2',()=>{exitMosque(true);setTimeout(()=>setMission(11),800);}),1200);
       }
     }
     return;
