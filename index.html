@@ -669,7 +669,42 @@ function buildPlayer(){
 // ════════════════════════════════════════════════
 // ENEMIES & BOSS
 // ════════════════════════════════════════════════
-function mkDog(col,sz){const g=new THREE.Group(),mt=new THREE.MeshLambertMaterial({color:col});const b=new THREE.Mesh(new THREE.BoxGeometry(sz,.65*sz,1.7*sz),mt);b.position.y=.65*sz;g.add(b);const h=new THREE.Mesh(new THREE.BoxGeometry(.72*sz,.68*sz,.8*sz),mt);h.position.set(0,1.25*sz,.65*sz);g.add(h);const sn=new THREE.Mesh(new THREE.BoxGeometry(.32*sz,.28*sz,.38*sz),new THREE.MeshLambertMaterial({color:dk(col,.7)}));sn.position.set(0,1.08*sz,1.04*sz);g.add(sn);return g;}
+function mkDog(col,sz){
+  const g=new THREE.Group();
+  const mt=new THREE.MeshLambertMaterial({color:col});
+  const dk2=new THREE.MeshLambertMaterial({color:dk(col,.62)});
+  const eyM=new THREE.MeshLambertMaterial({color:0x060304});
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.6*sz,.5*sz,1.35*sz),mt);
+  b.position.y=.65*sz; g.add(b);
+  const bel=new THREE.Mesh(new THREE.BoxGeometry(.52*sz,.26*sz,1.05*sz),dk2);
+  bel.position.set(0,.44*sz,.04*sz); g.add(bel);
+  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.18*sz,.22*sz,.3*sz,7),mt);
+  nk.position.set(0,.82*sz,.56*sz); nk.rotation.x=-.3; g.add(nk);
+  const h=new THREE.Mesh(new THREE.BoxGeometry(.64*sz,.58*sz,.6*sz),mt);
+  h.position.set(0,1.08*sz,.85*sz); g.add(h);
+  const sn=new THREE.Mesh(new THREE.BoxGeometry(.36*sz,.24*sz,.42*sz),dk2);
+  sn.position.set(0,.95*sz,1.14*sz); g.add(sn);
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.075*sz,6,5),new THREE.MeshLambertMaterial({color:0x080404}));
+  nose.scale.set(1,.65,.75); nose.position.set(0,.98*sz,1.34*sz); g.add(nose);
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.1*sz,.32*sz,.22*sz),dk2);
+    ear.position.set(s*.34*sz,1.38*sz,.74*sz); ear.rotation.z=s*.22; g.add(ear);
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.068*sz,6,5),eyM);
+    eye.position.set(s*.24*sz,1.12*sz,1.13*sz); g.add(eye);
+    const shine=new THREE.Mesh(new THREE.SphereGeometry(.022*sz,4,4),new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x888888}));
+    shine.position.set(s*.24*sz+.02*sz,1.14*sz,1.19*sz); g.add(shine);
+  });
+  [[.21,.34],[-.21,.34],[.21,-.37],[-.21,-.37]].forEach(([ex,ez])=>{
+    const lg=new THREE.Group(); lg.position.set(ex*sz,.65*sz,ez*sz); g.add(lg);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.17*sz,.38*sz,.16*sz),mt); up.position.y=-.19*sz; lg.add(up);
+    const knee=new THREE.Group(); knee.position.y=-.38*sz; lg.add(knee);
+    const lo=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.34*sz,.14*sz),mt); lo.position.y=-.17*sz; knee.add(lo);
+    const pw=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.1*sz,.24*sz),dk2); pw.position.set(0,-.36*sz,.03*sz); knee.add(pw);
+  });
+  const tl=new THREE.Mesh(new THREE.CylinderGeometry(.058*sz,.04*sz,.4*sz,6),mt);
+  tl.position.set(0,.72*sz,-.7*sz); tl.rotation.x=.65; g.add(tl);
+  return g;
+}
 function hpBar(g,w,y){const b=new THREE.Mesh(new THREE.BoxGeometry(w,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));b.position.set(0,y,0);g.add(b);return b;}
 function buildEnemies(){
   // 8 אויבים — פזורים בעיר, מתחילים נסתרים
@@ -691,6 +726,7 @@ function buildBoss(){
 // ════════════════════════════════════════════════
 let mosqueDoorMesh=null,mosqueDoorLocked=false;
 let mosqueGuards=[],mosqueCageInd=null,mosqueAlerted=false;
+let mosqueScene=null,mosqueCamera=null,mosqueObjects=[],mosqueBlds=[];
 const VILLA={  // שמרנו VILLA לתאימות עם שאר הקוד
   inVilla:false,
   playerX:0,playerZ:0,
@@ -726,6 +762,7 @@ function vmkCyl(sc,rt,rb,h,seg,col,x,y,z){
 }
 
 function buildMosqueScene(){
+  mosqueObjects=[];
   mosqueScene=new THREE.Scene();
   mosqueScene.background=new THREE.Color(0x0a0e18);
   mosqueScene.fog=new THREE.FogExp2(0x0a0e18,.022);
@@ -1015,39 +1052,73 @@ function buildMosqueScene(){
     hook.position.set(x,9-chainH,z);mosqueScene.add(hook);mosqueObjects.push(hook);
   });
 
-  // === גופות כלבים — שוכבות על הצד, נראות כמו גופות אמיתיות ===
-  [[-25,10,0.4],[20,-35,1.2],[-15,25,-0.3],[28,15,2.0],[-32,-18,-1.0]].forEach(([x,z,ry])=>{
+  // === גופות כלבים — ריאליסטיות ===
+  const corpseVariants=[[0x6a4828,0x8a6240],[0x3a3020,0x584838],[0x5c3a18,0x7a5230],[0x2a2018,0x3e2e1a],[0x704a2a,0x8c6040]];
+  [[-25,10,0.4],[20,-35,1.2],[-15,25,-0.3],[28,15,2.0],[-32,-18,-1.0]].forEach(([x,z,ry],ci)=>{
     const corpse=new THREE.Group();
-    const fur=new THREE.MeshLambertMaterial({color:0x5a4830});
-    const belly=new THREE.MeshLambertMaterial({color:0x7a6448});
-    // גוף שוכב על הצד
-    const body=new THREE.Mesh(new THREE.BoxGeometry(1.1,.55,2.2),fur);
-    body.position.set(0,.28,0);body.rotation.z=Math.PI/2;corpse.add(body);
-    // בטן — נראית כי שוכב על הצד
-    const bel=new THREE.Mesh(new THREE.BoxGeometry(.9,.3,1.8),belly);
-    bel.position.set(.28,.28,0);bel.rotation.z=Math.PI/2;corpse.add(bel);
-    // ראש — מוטה לצד
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.62,.55,.68),fur);
-    head.position.set(.1,.32,.95);head.rotation.z=.6;corpse.add(head);
-    const snout=new THREE.Mesh(new THREE.BoxGeometry(.32,.28,.38),new THREE.MeshLambertMaterial({color:0x3a2810}));
-    snout.position.set(.18,.18,1.28);snout.rotation.z=.4;corpse.add(snout);
-    // עיניים סגורות
-    [-1,1].forEach(sd=>{const ey=new THREE.Mesh(new THREE.BoxGeometry(.15,.04,.16),new THREE.MeshLambertMaterial({color:0x1a1008}));ey.position.set(.35+sd*.14,.48,.88);ey.rotation.z=.5;corpse.add(ey);});
-    // רגליים — פרושות ונוקשות
-    [[.3,.0,-.65,-.4],[.3,.0,.65,-.4],[-.25,.0,-.65,.3],[-.25,.0,.65,.3]].forEach(([lx,ly,lz,ra])=>{
-      const leg=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.42),fur);
-      leg.position.set(lx+.3,ly+.08,lz);leg.rotation.z=Math.PI/2+ra;corpse.add(leg);
+    const [fc,bc]=corpseVariants[ci%corpseVariants.length];
+    const fur=new THREE.MeshLambertMaterial({color:fc});
+    const belly=new THREE.MeshLambertMaterial({color:bc});
+    const darkM=new THREE.MeshLambertMaterial({color:dk(fc,.52)});
+    const eyM=new THREE.MeshLambertMaterial({color:0x080404});
+    const bloodM=new THREE.MeshLambertMaterial({color:0x4a0000});
+    const tongueM=new THREE.MeshLambertMaterial({color:0xcc4444});
+    // גוף — שוכב על הצד
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.58,.46,1.4),fur);
+    body.position.set(0,.28,0); body.rotation.z=Math.PI/2; corpse.add(body);
+    // בטן נחשפת
+    const bel=new THREE.Mesh(new THREE.BoxGeometry(.5,.28,1.1),belly);
+    bel.position.set(.2,.28,.02); bel.rotation.z=Math.PI/2; corpse.add(bel);
+    // צלעות נראות
+    [-1,0,1].forEach(i=>{
+      const rib=new THREE.Mesh(new THREE.BoxGeometry(.02,.26,.05),darkM);
+      rib.position.set(.32,.34,i*.32); rib.rotation.z=Math.PI/2-.28; corpse.add(rib);
     });
-    // זנב — פרוש
-    const tail=new THREE.Mesh(new THREE.CylinderGeometry(.06,.04,.45,6),fur);
-    tail.position.set(.05,.22,-1.1);tail.rotation.z=.8;tail.rotation.x=-.3;corpse.add(tail);
-    // כתם דם מתחת
-    const pool=new THREE.Mesh(new THREE.CircleGeometry(.55+Math.random()*.25,8),new THREE.MeshLambertMaterial({color:0x550000}));
-    pool.rotation.x=-Math.PI/2;pool.position.set(0,.01,0);corpse.add(pool);
-
+    // צוואר
+    const neck=new THREE.Mesh(new THREE.BoxGeometry(.36,.28,.24),fur);
+    neck.position.set(.08,.3,.74); neck.rotation.z=.38; corpse.add(neck);
+    // ראש נפול
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.56,.5,.56),fur);
+    head.position.set(.12,.31,.98); head.rotation.z=.65; corpse.add(head);
+    // snout
+    const snout=new THREE.Mesh(new THREE.BoxGeometry(.32,.2,.36),darkM);
+    snout.position.set(.18,.16,1.26); snout.rotation.z=.38; corpse.add(snout);
+    // לשון תלויה
+    const tongue=new THREE.Mesh(new THREE.BoxGeometry(.13,.04,.2),tongueM);
+    tongue.position.set(.28,.07,1.38); tongue.rotation.z=.28; tongue.rotation.x=.32; corpse.add(tongue);
+    // עיניים סגורות
+    [-1,1].forEach(sd=>{
+      const ey=new THREE.Mesh(new THREE.BoxGeometry(.14,.03,.13),eyM);
+      ey.position.set(.3+sd*.1,.46,.9); ey.rotation.z=.52; corpse.add(ey);
+    });
+    // אוזן תלויה לצד
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.1,.26,.2),darkM);
+    ear.position.set(.06,.5,.84); ear.rotation.z=.92; corpse.add(ear);
+    // 4 רגליים — קשות ופרושות
+    [[.3,.08,-.6,-.32],[.3,.08,.62,-.32],[-.22,.08,-.62,.22],[-.22,.08,.6,.22]].forEach(([lx,ly,lz,ra],i)=>{
+      const lg=new THREE.Group(); lg.position.set(lx+.22,ly+.06,lz); corpse.add(lg);
+      const upper=new THREE.Mesh(new THREE.BoxGeometry(.17,.11,.36),fur);
+      upper.rotation.z=Math.PI/2+ra+(i<2?.1:-.1); lg.add(upper);
+      const lower=new THREE.Mesh(new THREE.BoxGeometry(.14,.1,.3),fur);
+      lower.position.set(0,0,.28+(Math.random()*.06)); lower.rotation.z=Math.PI/2+ra*.5; lg.add(lower);
+      const paw=new THREE.Mesh(new THREE.BoxGeometry(.2,.1,.2),darkM);
+      paw.position.set(0,.0,.44); lg.add(paw);
+    });
+    // זנב פרוש
+    const tail=new THREE.Mesh(new THREE.CylinderGeometry(.052,.036,.4,6),fur);
+    tail.position.set(.05,.22,-1.1); tail.rotation.z=.88; tail.rotation.x=-.26; corpse.add(tail);
+    // שלולית דם
+    const pool=new THREE.Mesh(new THREE.CircleGeometry(.68+Math.random()*.32,10),bloodM);
+    pool.rotation.x=-Math.PI/2; pool.position.set(.1,.01,0); corpse.add(pool);
+    // טפטופים
+    for(let i=0;i<4;i++){
+      const drop=new THREE.Mesh(new THREE.CircleGeometry(.07+Math.random()*.1,6),bloodM);
+      const ang=Math.random()*Math.PI*2, dist=.72+Math.random()*.55;
+      drop.rotation.x=-Math.PI/2; drop.position.set(.1+Math.cos(ang)*dist,.012,Math.sin(ang)*dist); corpse.add(drop);
+    }
     corpse.position.set(x,0,z);
     corpse.rotation.y=ry;
-    mosqueScene.add(corpse);mosqueObjects.push(corpse);
+    mosqueScene.add(corpse); mosqueObjects.push(corpse);
   });
 
   // === סמלים מוסלמיים ===
@@ -1126,7 +1197,7 @@ function buildMosqueGuards(){
   addGuard(mosqueScene,wps3,32,0,-20,3,mosqueGuards);
 
   // ברונו — מסתובב ליד הכיפה
-  const brunoMesh=mkDog(0x0d0505,1.9);brunoMesh.position.set(0,0,0);mosqueScene.add(brunoMesh);
+  const brunoMesh=mkDog(0x0d0505,1.9);brunoMesh.position.set(-2,0,20);brunoMesh.rotation.y=Math.PI;brunoMesh.visible=false;mosqueScene.add(brunoMesh);
   const chain=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,6,12),new THREE.MeshLambertMaterial({color:0x888888}));
   chain.position.set(0,1.35*1.9,.4*1.9);chain.rotation.x=Math.PI/2;brunoMesh.add(chain);
   const brunoBar=new THREE.Mesh(new THREE.BoxGeometry(2.8,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));brunoBar.position.set(0,4.5,0);brunoMesh.add(brunoBar);
@@ -1295,18 +1366,19 @@ function updVilla(dt){
       setTimeout(()=>{
         mosqueAlerted=true;
         mosqueGuards.forEach(g=>g.state='chase');
-        // ברונו — מתעורר בזעם, מכפיל מהירות,돌진 מיידי
+        // ברונו נכנס מהדלת — spawn דרמטי
         if(G.bruno&&!G.bruno.dead){
-          G.bruno.alert=999;G.bruno.spd=8.5;G.bruno.dashT=0; // 돌진 מיידי
-          // flash אדום על ברונו
-          if(G.bruno.mesh.children[0]){
-            const origCol=G.bruno.mesh.children[0].material.color.getHex();
-            G.bruno.mesh.children[0].material.color.setHex(0xff0000);
-            setTimeout(()=>{if(G.bruno.mesh.children[0])G.bruno.mesh.children[0].material.color.setHex(origCol);},600);
-          }
-          spawnVFX(G.bruno.mesh.position.x,2,G.bruno.mesh.position.z,0xff2200,18);
+          // מקם אותו ממש מחוץ לדלת
+          G.bruno.mesh.position.set(-2,0,17.5);
+          G.bruno.mesh.rotation.y=Math.PI; // מסתכל פנימה
+          G.bruno.mesh.visible=true;
+          G.bruno.alert=999; G.bruno.spd=8.5; G.bruno.dashT=0;
+          // אפקט כניסה — VFX + ניפוץ הדלת
+          spawnVFX(-2,1.5,17,0xff3300,22);
+          spawnVFX(-2,1,16,0xff6600,14);
+          if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x1a0404);}
+          showN('💢 BOOM! ברונו שובר את הדלת!\nברונו: "אַנْتُمْ مَيِّتُون!" (אתם מתים!)');
         }
-        showN('💢 ברונו מתפרע! הדלת נעולה — הבס אותו!');
       },1500);
     }
   }
@@ -1359,14 +1431,8 @@ function updVillaBruno(dt){
   const px=VILLA.playerX,pz=VILLA.playerZ;
   const bx=b.mesh.position.x,bz=b.mesh.position.z;
   const dd=d2(bx,bz,px,pz);
-  // ברונו מגיע רק אחרי שמומו שוחרר — לא קשור ל-mosqueAlerted
-  if(!G.momoFreed){
-    b.patrolAngle=(b.patrolAngle||0)+dt*.3;
-    b.mesh.position.x=Math.sin(b.patrolAngle)*12;
-    b.mesh.position.z=Math.cos(b.patrolAngle)*12-8;
-    b.mesh.rotation.y=b.patrolAngle+Math.PI/2;
-    return;
-  }
+  // ברונו מגיע רק אחרי שמומו שוחרר
+  if(!G.momoFreed){return;}
   if(b.hp<b.mhp*.4&&b.phase===1){b.phase=2;b.spd=7.5;showN('⚠️ ברונו מתפרע!');}
   if(dd<b.alert){
     b.dashT-=dt;
