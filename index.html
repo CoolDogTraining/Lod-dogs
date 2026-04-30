@@ -7,7 +7,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#000;overflow:hidden;font-family:'Arial Hebrew',Arial,sans-serif;touch-action:none;}
-canvas#cv{display:block;width:100vw;height:100vh;}
+canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(1.12);}
 #hf{position:fixed;inset:0;background:rgba(231,76,60,0);pointer-events:none;z-index:5;transition:background .08s;}
 #hf.on{background:rgba(231,76,60,.38);}
 
@@ -183,6 +183,192 @@ canvas#cv{display:block;width:100vw;height:100vh;}
 .lu-v{font-size:18px;font-weight:bold;color:#f5c518;}
 .lu-l{font-size:10px;color:#aaa;margin-top:2px;}
 #lu-btn{background:#f5c518;color:#000;border:none;border-radius:10px;padding:10px 28px;font-size:15px;font-weight:bold;cursor:pointer;}
+
+/* ══════════════════════════════════════════════════
+   LANDSCAPE MODE — כל הדיאלוגים מותאמים למסך רוחב
+   ══════════════════════════════════════════════════ */
+@media (max-height:520px) and (orientation:landscape){
+
+  /* ── STORY ── */
+  #story{
+    flex-direction:row;flex-wrap:wrap;
+    padding:8px 20px;gap:0;
+    align-items:center;justify-content:center;
+  }
+  .st-ti{
+    font-size:clamp(13px,2.8vw,18px);
+    margin-bottom:6px;width:100%;
+  }
+  .st-tx{
+    font-size:clamp(10px,1.9vw,13px);
+    line-height:1.55;margin-bottom:8px;
+    max-height:46vh;overflow-y:auto;
+    max-width:68vw;
+  }
+  #st-btn{
+    padding:7px 22px;font-size:13px;
+    min-width:110px;
+  }
+
+  /* ── CUTSCENE ── */
+  #cut{
+    flex-direction:row;flex-wrap:wrap;
+    padding:8px 24px;gap:0;
+    align-items:center;justify-content:center;
+  }
+  .cut-ch{
+    font-size:9px;letter-spacing:2px;
+    margin-bottom:3px;width:100%;
+  }
+  .cut-ti{
+    font-size:clamp(13px,2.8vw,18px);
+    margin-bottom:6px;width:100%;
+  }
+  .cut-tx{
+    font-size:clamp(10px,1.9vw,12px);
+    line-height:1.5;margin-bottom:8px;
+    max-height:40vh;overflow-y:auto;
+    max-width:70vw;
+  }
+  #cut-btn{
+    padding:7px 22px;font-size:13px;
+    min-width:110px;
+  }
+
+  /* ── DIALOG (NPC שיחה) ── */
+  #dlg-ov{
+    padding:0 10px 6px;
+    align-items:flex-end;
+  }
+  #dlg-box{
+    padding:8px 12px;
+    max-height:58vh;
+    overflow-y:auto;
+    display:grid;
+    grid-template-columns:1fr;
+  }
+  #dlg-sp{
+    font-size:11px;margin-bottom:3px;
+  }
+  #dlg-av{font-size:18px;}
+  #dlg-tx{
+    font-size:clamp(10px,1.9vw,12px);
+    line-height:1.5;margin-bottom:6px;
+  }
+  #dlg-ch{gap:4px;}
+  .dc{
+    padding:6px 10px;
+    font-size:clamp(10px,1.8vw,12px);
+  }
+
+  /* ── LEVEL UP ── */
+  #lu{
+    padding:10px 20px;
+    flex-direction:row;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  .lu-ti{
+    font-size:clamp(15px,3.5vw,22px);
+    margin-bottom:0;width:100%;
+  }
+  .lu-su{
+    font-size:clamp(11px,2.2vw,14px);
+    margin-bottom:0;
+  }
+  .lu-st{
+    gap:8px;margin-bottom:0;
+    flex-wrap:nowrap;
+  }
+  .lu-s{
+    padding:6px 10px;
+  }
+  .lu-v{font-size:14px;}
+  .lu-l{font-size:9px;}
+  #lu-btn{
+    padding:7px 22px;font-size:13px;
+    min-width:110px;
+  }
+
+  /* ── CHAR SELECT ── */
+  #cs-scr{
+    padding:8px 14px;
+    justify-content:flex-start;
+    overflow-y:auto;
+    gap:0;
+  }
+  #cs-scr h1{
+    font-size:clamp(16px,3.5vw,22px);
+    margin-bottom:3px;
+  }
+  #cs-scr .sub{
+    font-size:clamp(9px,2vw,12px);
+    margin-bottom:8px;
+  }
+  #cs-continue{
+    padding:6px 14px;
+    margin-bottom:8px;
+  }
+  #cs-continue div:first-child{font-size:13px;}
+  #cs-save-info{font-size:10px !important;}
+  .cc-wrap{
+    gap:8px;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    max-width:100%;
+    padding-bottom:4px;
+    justify-content:flex-start;
+  }
+  .cc{
+    width:clamp(120px,23vw,155px);
+    padding:10px 8px;
+    flex-shrink:0;
+  }
+  .cc-ico{
+    font-size:clamp(22px,4.5vw,30px);
+    margin-bottom:4px;
+  }
+  .cc-name{font-size:clamp(12px,2.5vw,14px);}
+  .cc-sub{font-size:9px;margin-bottom:5px;}
+  .cc-ab{font-size:9px;padding:5px;}
+  .sb{height:3px;}
+  .sf{height:3px;}
+
+  /* ── SHOP ── */
+  #shop-box{
+    max-height:90vh;
+    overflow-y:auto;
+    padding:10px 12px;
+    width:min(560px,94vw);
+  }
+  .sh-title{font-size:clamp(13px,3vw,16px);}
+  .sh-sub{margin-bottom:6px;}
+  .sh-coins{padding:4px;margin-bottom:8px;}
+  .sh-item{
+    padding:6px 8px;
+    margin-bottom:4px;
+  }
+  .sh-ico{font-size:clamp(16px,3.5vw,22px);}
+  .sh-name{font-size:clamp(11px,2.2vw,13px);}
+  .sh-desc{font-size:9px;}
+  .sh-cost{font-size:clamp(11px,2.2vw,13px);}
+  .sh-close{padding:6px;font-size:12px;}
+
+  /* ── ROTATE OVERLAY ── */
+  #rotate-ov{padding:12px 20px;gap:6px;}
+  #rot-icon{font-size:44px;margin-bottom:6px;}
+  .rot-ti{font-size:clamp(16px,4vw,22px);}
+  .rot-sub{font-size:clamp(10px,2vw,13px);margin-bottom:12px;line-height:1.4;}
+  #rot-fs-btn{
+    padding:clamp(10px,2.5vw,13px) clamp(24px,7vw,44px);
+    font-size:clamp(13px,3.5vw,17px);
+    margin-bottom:8px;
+  }
+  #rot-dismiss{font-size:11px;}
+}
 </style>
 </head>
 <body>
@@ -393,7 +579,7 @@ function closeDlg(){G.dlgOpen=false;document.getElementById('mm-wrap').style.dis
 // ════════════════════════════════════════════════
 const isMob=('ontouchstart' in window);
 const GRAV=-22, XP_TO_LVL=[0,80,200,380,600];
-const BLDCOLS=[0xd4a574,0xc8b8a2,0xa0856b,0x8fa88f,0xb8a090,0xd4c4b0];
+const BLDCOLS=[0xddd4c0,0xc8bfb0,0xe2d8c8,0xb8b0a4,0xd0c4b8,0xc4bcb0,0xe0d4c4,0xbab2a8,0xccc4b8,0xd8cfc4];
 
 // ════════════════════════════════════════════════
 // MISSION DEFINITIONS — single source of truth
@@ -628,13 +814,12 @@ function sPickup(){tone(440,.1,'sine',.12);setTimeout(()=>tone(660,.15,'sine',.1
 function sCapture(){[330,440,550,660].forEach((f,i)=>setTimeout(()=>tone(f,.2,'sine',.15),i*80));}
 function sLvlUp(){[330,440,550,660,770].forEach((f,i)=>setTimeout(()=>tone(f,.25,'triangle',.18),i*70));}
 function sEDie(){tone(200,.05,'sawtooth',.2);tone(100,.3,'square',.15);}
-function sAlert(){tone(440,.08,'square',.18);setTimeout(()=>tone(330,.12,'square',.15),100);}
 
 // ════════════════════════════════════════════════
 // PARTICLES
 // ════════════════════════════════════════════════
-function spawnPfx(x,y,z,col,n=8){for(let i=0;i<n;i++){const pivot=new THREE.Object3D();pivot.position.set(x,y,z);const m=new THREE.Mesh(new THREE.SphereGeometry(.08,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));pivot.add(m);scene.add(pivot);G.particles.push({mesh:pivot,_mat:m.material,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8});}}
-function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles[i];p.life-=dt;if(p.life<=0){const sc=p.villa?mosqueScene:p.city?cityScene:scene;if(sc)sc.remove(p.mesh);G.particles.splice(i,1);continue;}const pos=p.mesh.position;pos.set(pos.x+p.vx*dt,pos.y+p.vy*dt,pos.z+p.vz*dt);p.vy-=12*dt;if(p._mat)p._mat.opacity=p.life/.8;}}
+function spawnPfx(x,y,z,col,n=8){for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.08,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));m.position.set(x,y,z);scene.add(m);G.particles.push({mesh:m,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8});}}
+function updPfx(dt){for(let i=G.particles.length-1;i>=0;i--){const p=G.particles[i];p.life-=dt;if(p.life<=0){(p.villa?mosqueScene:scene).remove(p.mesh);G.particles.splice(i,1);continue;}p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.vy-=12*dt;p.mesh.position.z+=p.vz*dt;p.mesh.material.opacity=p.life/.8;}}
 
 // ════════════════════════════════════════════════
 // SELECT DOG
@@ -646,13 +831,19 @@ function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none
 // ════════════════════════════════════════════════
 function init(){
   const cv=document.getElementById('cv');
-  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:!isMob});
-  renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.5:2));
-  scene=new THREE.Scene();scene.background=new THREE.Color(0xf4a44a);scene.fog=new THREE.FogExp2(0xe8956a,.018);
+  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.5:2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=0.78;
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,90,260);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildWorld();buildCityHall();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
+  buildLights();buildSky();buildWorld();buildCityHall();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
   setupInput();
   cacheHUD();
   // start everything hidden — gates will show what's needed
@@ -669,24 +860,114 @@ function init(){
 // ════════════════════════════════════════════════
 // LIGHTS
 // ════════════════════════════════════════════════
+function buildSky(){
+  // רקע שמיים — צבע אחיד כחול ישראלי (scene.background)
+  // השמיים עצמם נעשים כ-background של הסצנה
+  scene.background=new THREE.Color(0x4a90d0);
+
+  // עננים — billboards שטוחים מצוירים על canvas נפרד לכל ענן
+  function makeCloudTex(w,h){
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const x=c.getContext('2d');
+    // bumps עגולות — קומולוס
+    const bumps=[
+      [w*.5, h*.42, w*.38, h*.42],
+      [w*.28,h*.52, w*.30, h*.38],
+      [w*.72,h*.50, w*.28, h*.36],
+      [w*.18,h*.60, w*.22, h*.30],
+      [w*.82,h*.58, w*.20, h*.28],
+      [w*.50,h*.28, w*.26, h*.32],
+      [w*.38,h*.36, w*.22, h*.28],
+      [w*.62,h*.34, w*.24, h*.28],
+    ];
+    bumps.forEach(([cx,cy,rw,rh])=>{
+      const g=x.createRadialGradient(cx,cy-rh*.1,0,cx,cy,Math.max(rw,rh));
+      g.addColorStop(0,'rgba(255,255,255,1)');
+      g.addColorStop(.5,'rgba(248,252,255,.85)');
+      g.addColorStop(1,'rgba(220,238,255,0)');
+      x.fillStyle=g;
+      x.beginPath();x.ellipse(cx,cy,rw,rh,0,0,Math.PI*2);x.fill();
+    });
+    // בסיס שטוח
+    const base=x.createLinearGradient(0,h*.55,0,h);
+    base.addColorStop(0,'rgba(230,242,255,.8)');
+    base.addColorStop(.5,'rgba(200,225,248,.5)');
+    base.addColorStop(1,'rgba(180,215,245,0)');
+    x.fillStyle=base;
+    x.beginPath();x.ellipse(w*.5,h*.65,w*.45,h*.2,0,0,Math.PI*2);x.fill();
+    // צל תחתון אפור
+    const sh=x.createLinearGradient(0,h*.6,0,h*.82);
+    sh.addColorStop(0,'rgba(140,168,200,0)');
+    sh.addColorStop(.5,'rgba(120,155,192,.38)');
+    sh.addColorStop(1,'rgba(110,148,188,0)');
+    x.fillStyle=sh;
+    x.beginPath();x.ellipse(w*.5,h*.72,w*.38,h*.12,0,0,Math.PI*2);x.fill();
+    return new THREE.CanvasTexture(c);
+  }
+
+  // עננים בגדלים שונים — ממוקמים בשמיים
+  const clouds=[
+    // [x, y, z,  scaleX, scaleY]  — y גבוה = גבוה בשמיים
+    [-120, 55,-200,  90, 45],
+    [ 30,  65,-210,  75, 38],
+    [ 160, 50,-195,  85, 42],
+    [-60,  42,-190,  60, 30],
+    [ 220, 60,-200,  70, 35],
+    [-200, 48,-185,  80, 40],
+    [ 90,  35,-195,  55, 28],
+    [-150, 38,-188,  65, 32],
+    [ 0,   28,-192,  50, 25],
+    // עננים צדדיים
+    [ 180, 45, -50,  70, 35],
+    [-180, 48,  -60, 75, 38],
+    [ 50,  38,  180, 65, 32],
+    [-80,  42,  170, 70, 35],
+    // עננים אחוריים
+    [ 100, 50,  200, 80, 40],
+    [-100, 45,  195, 72, 36],
+  ];
+
+  clouds.forEach(([cx,cy,cz,sw,sh])=>{
+    const tex=makeCloudTex(512,256);
+    const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(sw,sh),mat);
+    mesh.position.set(cx,cy,cz);
+    // פנה תמיד לכיוון המרכז (billboard)
+    mesh.lookAt(0,0,0);
+    scene.add(mesh);
+  });
+
+  // שמש
+  const sunDisc=new THREE.Mesh(new THREE.CircleGeometry(4,24),
+    new THREE.MeshBasicMaterial({color:0xfffef0,side:THREE.DoubleSide,depthWrite:false}));
+  sunDisc.position.set(110,65,-190);sunDisc.lookAt(0,0,0);scene.add(sunDisc);
+  [10,18,28].forEach((r,i)=>{
+    const h=new THREE.Mesh(new THREE.CircleGeometry(r,24),
+      new THREE.MeshBasicMaterial({color:0xfff8e0,transparent:true,opacity:[.08,.04,.015][i],side:THREE.DoubleSide,depthWrite:false}));
+    h.position.set(110,65,-190);h.lookAt(0,0,0);scene.add(h);
+  });
+}
 function buildLights(){
-  // אור אמביינט חם — שעת ערב
-  scene.add(new THREE.AmbientLight(0xffe5b0,.45));
-  // שמש נמוכה — צבע זהוב-כתום
-  const sun=new THREE.DirectionalLight(0xff9a3c,1.3);sun.position.set(80,60,30);sun.castShadow=true;
-  sun.shadow.mapSize.set(isMob?1024:2048,isMob?1024:2048);
-  ['left','right','top','bottom'].forEach((k,i)=>sun.shadow.camera[k]=[-120,120,120,-120][i]);
-  sun.shadow.camera.far=280;scene.add(sun);
-  // אור fill מהצד הנגדי — תכלת קל
-  const fill=new THREE.DirectionalLight(0x8ab4d4,.3);fill.position.set(-60,40,-20);scene.add(fill);
-  // bounce מהקרקע — חום אדמה
-  const bounce=new THREE.HemisphereLight(0xffd080,0x6b4a1a,.35);scene.add(bounce);
+  // אמביינט שמיימי — תכלת עדין
+  scene.add(new THREE.AmbientLight(0xc8ddf0,.25));
+  // שמש ראשית — לבן-צהוב חם, לא חזק מדי
+  const sun=new THREE.DirectionalLight(0xfff4e0,1.1);
+  sun.position.set(130,100,60);sun.castShadow=true;
+  sun.shadow.mapSize.set(isMob?1024:4096,isMob?1024:4096);
+  sun.shadow.camera.left=-160;sun.shadow.camera.right=160;
+  sun.shadow.camera.top=160;sun.shadow.camera.bottom=-160;
+  sun.shadow.camera.far=400;sun.shadow.bias=-0.0002;sun.shadow.normalBias=0.015;
+  scene.add(sun);
+  // fill — תכלת עדין מהצד הנגדי
+  const fill=new THREE.DirectionalLight(0x8ab0d8,.22);fill.position.set(-80,50,-30);scene.add(fill);
+  // hemisphere — שמיים vs אדמה, עדין
+  scene.add(new THREE.HemisphereLight(0xa8c8e8,0x687848,.3));
 }
 
 // ════════════════════════════════════════════════
 // HELPERS
 // ════════════════════════════════════════════════
-function mmat(c,r,m){return new THREE.MeshStandardMaterial({color:c,roughness:r||.85,metalness:m||0});}
+function mmat(c,r,m){return new THREE.MeshStandardMaterial({color:c,roughness:r!=null?r:.82,metalness:m||0});}
 function madd(geo,mat,px,py,pz,par){const m=new THREE.Mesh(geo,mat);m.position.set(px||0,py||0,pz||0);m.castShadow=true;m.receiveShadow=true;(par||dogModel).add(m);return m;}
 function mkB(w,h,d,c,x,y,z){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:c}));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;}
 function dk(c,f){return((Math.floor(((c>>16)&0xff)*f)<<16)|(Math.floor(((c>>8)&0xff)*f)<<8)|Math.floor((c&0xff)*f));}
@@ -698,9 +979,40 @@ function d2(ax,az,bx,bz){return Math.sqrt((ax-bx)**2+(az-bz)**2);}
 // צפון: רמת אשכול | דרום: גני אביב | מערב: תחנה | מזרח: עיר עתיקה
 // ════════════════════════════════════════════════
 function buildWorld(){
-  // קרקע — צבע אדמה חמה
-  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400),new THREE.MeshLambertMaterial({color:0x4a6e2a}));
-  gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+  // קרקע — דשא ריאליסטי עם טקסטורה עשירה
+  (()=>{
+    const sz=512,tc=document.createElement('canvas');tc.width=tc.height=sz;
+    const tx=tc.getContext('2d');
+    // בסיס דשא ירוק
+    const g0=tx.createLinearGradient(0,0,sz,sz);
+    g0.addColorStop(0,'#4a7a28');g0.addColorStop(.5,'#3d6e22');g0.addColorStop(1,'#527a2e');
+    tx.fillStyle=g0;tx.fillRect(0,0,sz,sz);
+    // גבעולי דשא קצרים — ירוק כהה/בהיר
+    for(let i=0;i<8000;i++){
+      const x=Math.random()*sz,y=Math.random()*sz;
+      const h=2+Math.random()*6,w=.8+Math.random()*1.5;
+      const gr=100+Math.floor(Math.random()*60),gn=Math.floor(Math.random()*20);
+      tx.fillStyle=`rgb(${gn},${gr},${gn+20})`;
+      tx.fillRect(x,y,w,h);
+    }
+    // כתמי אדמה חומה
+    for(let i=0;i<300;i++){
+      const x=Math.random()*sz,y=Math.random()*sz,r=.8+Math.random()*2.5;
+      tx.fillStyle=`rgba(${100+Math.floor(Math.random()*40)},${80+Math.floor(Math.random()*30)},${50+Math.floor(Math.random()*20)},${.1+Math.random()*.2})`;
+      tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
+    }
+    // אבנים קטנות
+    for(let i=0;i<120;i++){
+      const x=Math.random()*sz,y=Math.random()*sz,r=.5+Math.random()*2;
+      tx.fillStyle=`rgba(150,140,120,${.12+Math.random()*.18})`;
+      tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
+    }
+    const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(50,50);
+    const roughTex=new THREE.CanvasTexture(tc);roughTex.wrapS=roughTex.wrapT=THREE.RepeatWrapping;roughTex.repeat.set(50,50);
+    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400,1,1),
+      new THREE.MeshStandardMaterial({map:tex,roughness:.98,metalness:0,color:0xffffff}));
+    gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+  })();
 
   // === רחובות ראשיים ===
   mkRd(0,0,300,12,false);   // רחוב הרצל — E-W
@@ -741,19 +1053,121 @@ function buildWorld(){
   addStreetDeco();
 }
 
+// טקסטורת אספלט גלובלית
+function _mkRoadTex(){
+  const sz=256,tc=document.createElement('canvas');tc.width=tc.height=sz;
+  const tx=tc.getContext('2d');
+  tx.fillStyle='#2a2a2a';tx.fillRect(0,0,sz,sz);
+  for(let i=0;i<2000;i++){
+    const x=Math.random()*sz,y=Math.random()*sz,r=.3+Math.random()*1.2;
+    const v=Math.floor(25+Math.random()*30);
+    tx.fillStyle=`rgb(${v},${v},${v})`;
+    tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
+  }
+  // קווים דרך האספלט
+  for(let i=0;i<40;i++){
+    const x1=Math.random()*sz,y1=Math.random()*sz;
+    tx.strokeStyle=`rgba(${40+Math.floor(Math.random()*20)},${40+Math.floor(Math.random()*20)},${40+Math.floor(Math.random()*20)},0.4)`;
+    tx.lineWidth=.5+Math.random()*1.5;
+    tx.beginPath();tx.moveTo(x1,y1);tx.lineTo(x1+(Math.random()-.5)*30,y1+(Math.random()-.5)*30);tx.stroke();
+  }
+  const t=new THREE.CanvasTexture(tc);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+// טקסטורת מדרכה — אריחי בטון
+function _mkSidewalkTex(){
+  const sz=128,tc=document.createElement('canvas');tc.width=tc.height=sz;
+  const tx=tc.getContext('2d');
+  tx.fillStyle='#b0a898';tx.fillRect(0,0,sz,sz);
+  // קווי אריחים
+  tx.strokeStyle='rgba(80,75,68,0.55)';tx.lineWidth=1.5;
+  for(let x=0;x<sz;x+=24){tx.beginPath();tx.moveTo(x,0);tx.lineTo(x,sz);tx.stroke();}
+  for(let y=0;y<sz;y+=24){tx.beginPath();tx.moveTo(0,y);tx.lineTo(sz,y);tx.stroke();}
+  // כתמי לכלוך קלים
+  for(let i=0;i<80;i++){
+    const px=Math.random()*sz,py=Math.random()*sz,r=.3+Math.random()*1.5;
+    tx.fillStyle=`rgba(90,85,78,${.04+Math.random()*.08})`;
+    tx.beginPath();tx.arc(px,py,r,0,Math.PI*2);tx.fill();
+  }
+  const t=new THREE.CanvasTexture(tc);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+let _roadTex=null,_swTex=null;
 function mkRd(x,z,w,d,vert){
-  mkB(w,.1,d,0x3a3a3a,x,.05,z);
-  const dm=new THREE.MeshLambertMaterial({color:0xffffff});
-  if(!vert)for(let i=-140;i<150;i+=12){const m=new THREE.Mesh(new THREE.BoxGeometry(5,.01,.35),dm);m.position.set(x+i,.12,z);scene.add(m);}
+  if(!_roadTex)_roadTex=_mkRoadTex();
+  if(!_swTex)_swTex=_mkSidewalkTex();
+  // כביש — אספלט כהה עם טקסטורה
+  const rClone=_roadTex.clone();rClone.needsUpdate=true;
+  if(!vert){rClone.repeat.set(w/8,d/8);}else{rClone.repeat.set(w/8,d/8);}
+  const rm=new THREE.MeshStandardMaterial({map:rClone,roughness:.94,metalness:0,color:0xdddddd});
+  const road=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d),rm);
+  road.position.set(x,.06,z);road.receiveShadow=true;road.castShadow=false;scene.add(road);
+  // קו מרכזי צהוב
+  const ylMat=new THREE.MeshLambertMaterial({color:0xffdd00});
+  if(!vert){
+    const yl=new THREE.Mesh(new THREE.BoxGeometry(w,.01,.12),ylMat);yl.position.set(x,.14,z);scene.add(yl);
+    // קווים לבנים
+    const wMat=new THREE.MeshLambertMaterial({color:0xf0f0f0});
+    for(let i=x-w/2+6;i<x+w/2-4;i+=10){const m=new THREE.Mesh(new THREE.BoxGeometry(4.5,.01,.22),wMat);m.position.set(i,.14,z);scene.add(m);}
+  } else {
+    const yl=new THREE.Mesh(new THREE.BoxGeometry(.12,.01,d),ylMat);yl.position.set(x,.14,z);scene.add(yl);
+  }
+  // מדרכות — בטון אריחים
+  const swW=2.8;
+  const swClone=_swTex.clone();swClone.needsUpdate=true;
+  const swMat=new THREE.MeshStandardMaterial({map:swClone,roughness:.88,metalness:0,color:0xffffff});
+  if(!vert){
+    [d/2+swW/2,-d/2-swW/2].forEach(oz=>{
+      const sw=new THREE.Mesh(new THREE.BoxGeometry(w,.16,swW),swMat.clone());
+      sw.position.set(x,.08,z+oz);sw.receiveShadow=true;scene.add(sw);
+      // שוליים בטון כהה
+      const curb=new THREE.Mesh(new THREE.BoxGeometry(w,.1,.18),new THREE.MeshLambertMaterial({color:0x888880}));
+      curb.position.set(x,.2,z+oz+(oz>0?.9:-.9));scene.add(curb);
+    });
+  } else {
+    [w/2+swW/2,-w/2-swW/2].forEach(ox=>{
+      const sw=new THREE.Mesh(new THREE.BoxGeometry(swW,.16,d),swMat.clone());
+      sw.position.set(x+ox,.08,z);sw.receiveShadow=true;scene.add(sw);
+      const curb=new THREE.Mesh(new THREE.BoxGeometry(.18,.1,d),new THREE.MeshLambertMaterial({color:0x888880}));
+      curb.position.set(x+ox+(ox>0?.9:-.9),.2,z);scene.add(curb);
+    });
+  }
 }
 function bldBlock(x,z,w,d,h){
-  const c=BLDCOLS[Math.floor(Math.random()*BLDCOLS.length)];mkB(w,h,d,c,x,h/2,z);blds.push({x,z,w,d});
-  const wm=new THREE.MeshLambertMaterial({color:0x88b4cc,emissive:0x223344});
-  for(let wy=1.5;wy<h-.5;wy+=2)for(let wx=-w/2+1.3;wx<w/2-.5;wx+=2.2){const wn=new THREE.Mesh(new THREE.BoxGeometry(.8,.8,.04),wm);wn.position.set(x+wx,wy,z-d/2-.05);scene.add(wn);}
+  const c=BLDCOLS[Math.floor(Math.random()*BLDCOLS.length)];
+  const wallMat=new THREE.MeshLambertMaterial({color:c});
+  const bld=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);
+  bld.position.set(x,h/2,z);bld.castShadow=true;bld.receiveShadow=true;scene.add(bld);blds.push({x,z,w,d});
+  // גג שטוח כהה
+  const rf=new THREE.Mesh(new THREE.BoxGeometry(w+.3,.25,d+.3),new THREE.MeshLambertMaterial({color:0x888880}));
+  rf.position.set(x,h+.12,z);scene.add(rf);
+  // חלונות — זכוכית מחוח
+  const wm=new THREE.MeshStandardMaterial({color:0x9ec8e0,roughness:.08,metalness:.15,transparent:true,opacity:.75,emissive:0x0a1a28});
+  const wmFrame=new THREE.MeshStandardMaterial({color:0x888880,roughness:.85,metalness:.1});
+  for(let wy=1.5;wy<h-.8;wy+=2.1){
+    for(let wx=-w/2+1.4;wx<w/2-.8;wx+=2.2){
+      const wn=new THREE.Mesh(new THREE.BoxGeometry(.85,.9,.06),wm);wn.position.set(x+wx,wy,z-d/2-.04);scene.add(wn);
+      // מסגרת חלון
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(.95,1.0,.04),wmFrame);fr.position.set(x+wx,wy,z-d/2-.06);scene.add(fr);
+    }
+  }
 }
 function bldHouse(x,z,h){
-  mkB(9,h,9,BLDCOLS[Math.floor(Math.random()*BLDCOLS.length)],x,h/2,z);
-  const r=new THREE.Mesh(new THREE.ConeGeometry(6.5,2.5,4),new THREE.MeshLambertMaterial({color:0x8B2500}));r.rotation.y=Math.PI/4;r.position.set(x,h+1.3,z);scene.add(r);blds.push({x,z,w:9,d:9});
+  const c=BLDCOLS[Math.floor(Math.random()*BLDCOLS.length)];
+  const wallMat=new THREE.MeshLambertMaterial({color:c});
+  const bld=new THREE.Mesh(new THREE.BoxGeometry(9,h,9),wallMat);
+  bld.position.set(x,h/2,z);bld.castShadow=true;bld.receiveShadow=true;scene.add(bld);
+  // גג רעפים — אדום-חרס
+  const roofCol=Math.random()<.6?0x8B3010:Math.random()<.5?0x6a4020:0xa04020;
+  const rf=new THREE.Mesh(new THREE.ConeGeometry(6.8,2.2,4),new THREE.MeshLambertMaterial({color:roofCol}));
+  rf.rotation.y=Math.PI/4;rf.position.set(x,h+1.1,z);rf.castShadow=true;scene.add(rf);
+  // 2 חלונות קדמיים
+  const wm=new THREE.MeshStandardMaterial({color:0xa8cce0,roughness:.1,metalness:.1,transparent:true,opacity:.7});
+  [-1.8,1.8].forEach(wx=>{
+    const wn=new THREE.Mesh(new THREE.BoxGeometry(.9,1.0,.05),wm);wn.position.set(x+wx,h/2,z-4.52);scene.add(wn);
+  });
+  // דלת
+  const dr=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.8,.06),new THREE.MeshStandardMaterial({color:0x5a3010,roughness:.85,metalness:.05}));
+  dr.position.set(x,h/2-.4,z-4.54);scene.add(dr);
+  blds.push({x,z,w:9,d:9});
 }
 function bldPark(x,z){
   const pg=new THREE.Mesh(new THREE.PlaneGeometry(40,35),new THREE.MeshLambertMaterial({color:0x3d8a2a}));pg.rotation.x=-Math.PI/2;pg.position.set(x,.07,z);scene.add(pg);
@@ -761,17 +1175,69 @@ function bldPark(x,z){
   mkB(2.5,.35,.8,0x5c3317,x-5,.2,z-7);
 }
 function bldMarket(x,z){
-  const cols=[0xe74c3c,0x3498db,0x2ecc71,0xe67e22,0x9b59b6];
-  for(let i=0;i<5;i++){mkB(3.5,2.2,2.5,0xF5DEB3,x+i*6,1.1,z);mkB(4.2,.18,3.3,cols[i],x+i*6,2.4,z);}
+  const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133];
+  for(let i=0;i<6;i++){
+    const stallMat=new THREE.MeshLambertMaterial({color:0xede0c8});
+    const stall=new THREE.Mesh(new THREE.BoxGeometry(3.8,2.4,2.8),stallMat);
+    stall.position.set(x+i*6,1.2,z);stall.castShadow=true;stall.receiveShadow=true;scene.add(stall);
+    // גג מרקיזה — צבעוני
+    const awCol=awningCols[i%awningCols.length];
+    const aw=new THREE.Mesh(new THREE.BoxGeometry(4.4,.12,3.4),new THREE.MeshLambertMaterial({color:awCol}));
+    aw.position.set(x+i*6,2.5,z);scene.add(aw);
+    // פסים לבנים על הגג
+    for(let s=0;s<3;s++){
+      const strip=new THREE.Mesh(new THREE.BoxGeometry(.3,.14,3.4),new THREE.MeshLambertMaterial({color:0xffffff}));
+      strip.position.set(x+i*6-1.2+s*1.2,2.52,z);scene.add(strip);
+    }
+    // דוכן
+    const counter=new THREE.Mesh(new THREE.BoxGeometry(3.4,.6,1.0),new THREE.MeshLambertMaterial({color:0x8B5a2a}));
+    counter.position.set(x+i*6,.3,z-1.4);scene.add(counter);
+  }
 }
 function bldStation(x,z){
-  mkB(35,8,18,0xc8c0b0,x,4,z);mkB(42,.7,2.5,0x555,x,.4,z-10);mkB(42,.7,2.5,0x555,x,.4,z+10);mkB(3.5,10,3.5,0x888,x-15,5,z);blds.push({x,z,w:35,d:18});
+  // גוף תחנה — בטון
+  const sMat=new THREE.MeshLambertMaterial({color:0xc0b8a8});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(35,8,18),sMat);
+  body.position.set(x,4,z);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+  // גג רעפים אפור
+  const rf=new THREE.Mesh(new THREE.BoxGeometry(36,.5,19),new THREE.MeshLambertMaterial({color:0x888078}));
+  rf.position.set(x,8.25,z);scene.add(rf);
+  // רציפים
+  const platMat=new THREE.MeshLambertMaterial({color:0xaaa898});
+  [[x,.4,z-10],[x,.4,z+10]].forEach(([px,py,pz])=>{
+    const pl=new THREE.Mesh(new THREE.BoxGeometry(42,.7,2.5),platMat);pl.position.set(px,py,pz);pl.receiveShadow=true;scene.add(pl);
+    // קווים צהובים על הרציף
+    for(let xi=px-18;xi<px+18;xi+=4){
+      const yl=new THREE.Mesh(new THREE.BoxGeometry(.3,.01,2.5),new THREE.MeshLambertMaterial({color:0xffcc00}));
+      yl.position.set(xi,.76,pz);scene.add(yl);
+    }
+  });
+  // מגדל שעון
+  const tower=new THREE.Mesh(new THREE.BoxGeometry(3.5,11,3.5),sMat);tower.position.set(x-15,5.5,z);tower.castShadow=true;scene.add(tower);
+  // שלט "תחנת לוד"
+  const sg=new THREE.Mesh(new THREE.BoxGeometry(8,.8,.15),new THREE.MeshLambertMaterial({color:0x1a3a8a}));sg.position.set(x,8.8,z-9.1);scene.add(sg);
+  blds.push({x,z,w:35,d:18});
 }
 function bldMosque(x,z){
-  mkB(15,7,15,0xd4c4a8,x,3.5,z);
-  const dome=new THREE.Mesh(new THREE.SphereGeometry(6.5,10,10,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0x2e8b57}));dome.position.set(x,7.5,z);scene.add(dome);
-  mkB(2,15,2,0xd4c4a8,x+9,7.5,z);
-  const cap=new THREE.Mesh(new THREE.ConeGeometry(1.8,3.5,8),new THREE.MeshLambertMaterial({color:0x2e8b57}));cap.position.set(x+9,17,z);scene.add(cap);
+  const stoneMat=new THREE.MeshLambertMaterial({color:0xd4c8b0});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(15,7,15),stoneMat);
+  body.position.set(x,3.5,z);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+  // כיפה — ירוק ריאליסטי
+  const domeMat=new THREE.MeshStandardMaterial({color:0x2e7a50,roughness:.4,metalness:.15});
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(6.5,16,12,0,Math.PI*2,0,Math.PI/2),domeMat);
+  dome.position.set(x,7.5,z);dome.castShadow=true;scene.add(dome);
+  // בסיס כיפה
+  const dBase=new THREE.Mesh(new THREE.CylinderGeometry(6.6,6.6,.4,16),stoneMat);dBase.position.set(x,7.3,z);scene.add(dBase);
+  // מינרט
+  const mMat=new THREE.MeshLambertMaterial({color:0xcfc0a0});
+  const mn=new THREE.Mesh(new THREE.CylinderGeometry(.8,1.0,16,10),mMat);mn.position.set(x+9,8,z);mn.castShadow=true;scene.add(mn);
+  const capMat=new THREE.MeshStandardMaterial({color:0x2e7a50,roughness:.4,metalness:.15});
+  const cap=new THREE.Mesh(new THREE.ConeGeometry(1.6,3.5,10),capMat);cap.position.set(x+9,17,z);cap.castShadow=true;scene.add(cap);
+  // קשתות על קיר קדמי
+  [-4,0,4].forEach(ox=>{
+    const arch=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.8,.12),new THREE.MeshLambertMaterial({color:0xb8a888}));
+    arch.position.set(x+ox,2,z-7.6);scene.add(arch);
+  });
   blds.push({x,z,w:15,d:15});
 }
 function bldBallsSquare(cx,cz){
@@ -849,8 +1315,7 @@ function bldBallsSquare(cx,cz){
     arm.position.set(cx+ox*.5,oy-.4,cz+oz*.5);
     arm.rotation.z=Math.atan2(ox,oy-3.1)*.4;
     scene.add(arm);
-    // אור צבעוני קלוש מהכדור
-    const pl=new THREE.PointLight(col,.5,7);pl.position.set(cx+ox,oy,cz+oz);scene.add(pl);
+    // no per-ball lights
   });
 
   // פרחים צהובים סביב האי
@@ -889,14 +1354,71 @@ function bldBigMosque(){
   // רישום ל-blds — מיניאפ + קוליזיון
   blds.push({x:0,z:-70,w:20,d:20}); // גוף בלבד
 }
-function bldTree(x,z){mkB(.45,3.5,.45,0x4a3000,x,1.75,z);const l=new THREE.Mesh(new THREE.SphereGeometry(2,6,6),new THREE.MeshLambertMaterial({color:0x2d6a2d}));l.position.set(x,4.2,z);scene.add(l);}
+function bldTree(x,z){
+  const h=3+Math.random()*2.5;
+  const trCol=new THREE.Color(0x3a2000).offsetHSL(0,(Math.random()-.5)*.1,(Math.random()-.5)*.05);
+  const trM=new THREE.MeshLambertMaterial({color:trCol});
+  const tr=new THREE.Mesh(new THREE.CylinderGeometry(.18+Math.random()*.08,.28+Math.random()*.1,h,8),trM);
+  tr.position.set(x,h/2,z);tr.castShadow=true;tr.receiveShadow=true;scene.add(tr);
+  // כותרת — 3 שכבות עם וריאציה
+  const baseCol=new THREE.Color(0x2a6020).offsetHSL((Math.random()-.5)*.12,(Math.random()-.5)*.15,(Math.random()*.1-.02));
+  const leafSizes=[[2.2,.9],[1.7,1.6],[1.2,2.2]];
+  leafSizes.forEach(([r,dy],i)=>{
+    const lc=baseCol.clone().offsetHSL(0,0,(i*.04-.04));
+    const lM=new THREE.MeshLambertMaterial({color:lc});
+    const ox=(Math.random()-.5)*.4,oz=(Math.random()-.5)*.4;
+    const l=new THREE.Mesh(new THREE.SphereGeometry(r,8,6),lM);
+    l.position.set(x+ox,h+dy,z+oz);l.castShadow=true;l.receiveShadow=true;scene.add(l);
+  });
+}
 function addTerr(x,z,r,name){
   mkB(.25,4.5,.25,0x888,x,2.25,z);
   const flag=new THREE.Mesh(new THREE.PlaneGeometry(2,1.2),new THREE.MeshLambertMaterial({color:0x9b59b6,side:THREE.DoubleSide}));flag.position.set(x+1,5.2,z);scene.add(flag);
   G.terrs.push({x,z,r,name,cap:false,flag,defTimer:0});
 }
+function _mkStreetSign(x,y,z,name,rotY){
+  // עמוד שלט
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,3,6),new THREE.MeshStandardMaterial({color:0x888888,roughness:.7,metalness:.4}));
+  pole.position.set(x,y+1.5,z);scene.add(pole);
+  // לוחית שלט — כחול ממשלתי
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(2.2,.55,.08),new THREE.MeshStandardMaterial({color:0x1a3a8a,roughness:.6,metalness:.1}));
+  sign.position.set(x,y+3.1,z);if(rotY)sign.rotation.y=rotY;scene.add(sign);
+  // מסגרת לבנה
+  const fr=new THREE.Mesh(new THREE.BoxGeometry(2.3,.65,.06),new THREE.MeshStandardMaterial({color:0xdddddd,roughness:.7,metalness:.05}));
+  fr.position.set(x,y+3.1,z);if(rotY)fr.rotation.y=rotY;scene.add(fr);
+}
+function _mkLamp(x,z){
+  // עמוד פנס — Lambert (לא צריך PBR לעמוד פשוט)
+  const poleMat=new THREE.MeshLambertMaterial({color:0x555560});
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,5,6),poleMat);
+  pole.position.set(x,2.5,z);pole.castShadow=true;scene.add(pole);
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.8,5),poleMat);
+  arm.rotation.z=Math.PI/2;arm.position.set(x+.4,5,z);scene.add(arm);
+  const lamp=new THREE.Mesh(new THREE.CylinderGeometry(.2,.16,.32,7),new THREE.MeshLambertMaterial({color:0x333330}));
+  lamp.position.set(x+.8,4.9,z);scene.add(lamp);
+  // bulb בלבד — emissive, ללא PointLight (חוסך uniforms)
+  const bulb=new THREE.Mesh(new THREE.SphereGeometry(.13,5,4),new THREE.MeshLambertMaterial({color:0xffffaa,emissive:0x887744}));
+  bulb.position.set(x+.8,4.85,z);scene.add(bulb);
+}
 function addStreetDeco(){
-  for(let i=-130;i<140;i+=20){mkB(.2,4.5,.2,0x444,i,2.25,8);const lp=new THREE.Mesh(new THREE.SphereGeometry(.28,5,5),new THREE.MeshLambertMaterial({color:0xffffaa,emissive:0x444400}));lp.position.set(i,4.9,8);scene.add(lp);}
+  // פנסי רחוב הרצל (E-W) — משני הצדדים
+  for(let i=-120;i<130;i+=18){
+    _mkLamp(i,7.8);   // צד צפון
+    _mkLamp(i,-7.8);  // צד דרום
+  }
+  // פנסי שדרות ירושלים (N-S)
+  for(let i=-120;i<130;i+=18){
+    _mkLamp(7.8,i);
+    _mkLamp(-7.8,i);
+  }
+  // שלטי רחוב בצמתים מרכזיים
+  _mkStreetSign(12,0,6,'רח׳ הרצל / שד׳ ירושלים',0);
+  _mkStreetSign(-12,0,6,'שד׳ ירושלים',0);
+  _mkStreetSign(12,0,-6,'שד׳ ירושלים',Math.PI/2);
+  _mkStreetSign(42,0,6,'רח׳ הרצל / רח׳ הדקל',0);
+  _mkStreetSign(-42,0,6,'רח׳ הרצל / רח׳ הגפן',0);
+  _mkStreetSign(12,0,50,'רח׳ וייצמן',0);
+  _mkStreetSign(12,0,-50,'רח׳ בן גוריון',0);
 }
 
 // ════════════════════════════════════════════════
@@ -1399,262 +1921,124 @@ function cmkCyl(rt,rb,h,seg,col,x,y,z){
 function buildCityScene(){
   cityObjects=[];cityBlds=[];cityGuards=[];cityAlerted=false;citySafeFound=false;cityBroadcastDone=false;cityPalto=null;
   cityScene=new THREE.Scene();
-  cityScene.background=new THREE.Color(0x2a1f0e);
-  cityScene.fog=new THREE.Fog(0x2a1f0e,50,130);
+  cityScene.background=new THREE.Color(0x1a1f2e);
+  cityScene.fog=new THREE.Fog(0x1a1f2e,40,120);
 
-  // ══ תאורה — ערב ישראלי חם ══
-  cityScene.add(new THREE.AmbientLight(0xffe0b0,1.1));
-  const sun=new THREE.DirectionalLight(0xff9955,1.4);sun.position.set(-15,25,18);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);cityScene.add(sun);
-  // פנסי פלואורסנט ישנים — צהוב-ירוק, אופייני למשרדי ממשלה ישנים
-  [[-12,8,4],[0,8,4],[12,8,4],[-12,8,-18],[0,8,-18],[12,8,-18],[0,8,-36],[-16,8,-36],[16,8,-36]].forEach(([x,y,z])=>{
-    const nl=new THREE.PointLight(0xffe8aa,1.8,18);nl.position.set(x,y,z);cityScene.add(nl);
-    const tube=new THREE.Mesh(new THREE.BoxGeometry(3.5,.1,.12),new THREE.MeshLambertMaterial({color:0xfffde8,emissive:0x887744}));
-    tube.position.set(x,y+.05,z);cityScene.add(tube);cityObjects.push(tube);
+  // ══ תאורה בהירה ══
+  cityScene.add(new THREE.AmbientLight(0xffffff,2.2));
+  const sun=new THREE.DirectionalLight(0xffeedd,1.5);sun.position.set(10,30,10);cityScene.add(sun);
+
+  // ניאונים כחולים-לבנים בתקרה — מפוזרים בכל הבניין
+  [[-15,0],[0,0],[15,0],[-15,-20],[0,-20],[15,-20],[-15,-40],[0,-40],[15,-40]].forEach(([x,z])=>{
+    const nl=new THREE.PointLight(0xaaccff,2.5,22);nl.position.set(x,8,z);cityScene.add(nl);
+    const nb=new THREE.Mesh(new THREE.BoxGeometry(4,.12,.4),new THREE.MeshLambertMaterial({color:0xddeeff,emissive:0x4466aa}));
+    nb.position.set(x,8.1,z);cityScene.add(nb);cityObjects.push(nb);
   });
-  // אור ירוק — כספת (מסמן סכנה)
-  const safeL=new THREE.PointLight(0x44ff88,2.5,10);safeL.position.set(20,3,-40);cityScene.add(safeL);
-  // אור אדום — חדר שידור
-  const redL=new THREE.PointLight(0xff2200,2.5,10);redL.position.set(-18,3,-40);cityScene.add(redL);
-  // כחול קר — פלטו
-  cityScene.add(Object.assign(new THREE.PointLight(0x3366ff,3,16),{position:{x:0,y:5,z:-42,isVector3:true}}));
-  const bossL=new THREE.PointLight(0x3366ff,3,16);bossL.position.set(0,5,-42);cityScene.add(bossL);
+  // אורות ירוקים — כספת
+  const safeL=new THREE.PointLight(0x00ff88,3,12);safeL.position.set(20,3,-42);cityScene.add(safeL);
+  // אורות אדומים — חדר שידור
+  const redL=new THREE.PointLight(0xff3300,3,12);redL.position.set(-18,3,-42);cityScene.add(redL);
+  // אור כחול — משרד פלטו
+  const bossL=new THREE.PointLight(0x4488ff,3,14);bossL.position.set(0,4,-42);cityScene.add(bossL);
 
-  // ══ רצפה — שיש ישן בז'/שמנת, אריחים 2x2 ══
-  const floorMat=new THREE.MeshLambertMaterial({color:0xd4c8b0});
-  const floorGeo=new THREE.PlaneGeometry(52,65);
-  const floor=new THREE.Mesh(floorGeo,floorMat);floor.rotation.x=-Math.PI/2;floor.position.set(0,.01,-20);floor.receiveShadow=true;cityScene.add(floor);cityObjects.push(floor);
-  // פסי אריחים — אופקיים ואנכיים
-  const groutMat=new THREE.MeshLambertMaterial({color:0xaaa090});
-  for(let xi=-24;xi<=26;xi+=3){const g=new THREE.Mesh(new THREE.PlaneGeometry(.06,65),groutMat);g.rotation.x=-Math.PI/2;g.position.set(xi,.03,-20);cityScene.add(g);cityObjects.push(g);}
-  for(let zi=-52;zi<=12;zi+=3){const g=new THREE.Mesh(new THREE.PlaneGeometry(52,.06),groutMat);g.rotation.x=-Math.PI/2;g.position.set(0,.03,zi);cityScene.add(g);cityObjects.push(g);}
-  // שטיח דהוי בלובי — אדום-חום
-  const rug=new THREE.Mesh(new THREE.PlaneGeometry(22,10),new THREE.MeshLambertMaterial({color:0x6a2010}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.03,-1);cityScene.add(rug);cityObjects.push(rug);
-  // פס זהב על שטיח
-  [[-10,0],[10,0],[0,-4],[0,4]].forEach(([x,z])=>{const b=new THREE.Mesh(new THREE.PlaneGeometry(x===0?22:.3,z===0?.3:10),new THREE.MeshLambertMaterial({color:0xcc9933}));b.rotation.x=-Math.PI/2;b.position.set(x,.04,z-1);cityScene.add(b);cityObjects.push(b);});
+  // ══ רצפה אחת — גדולה וסדורה ══
+  // לובי מרכזי
+  cmkB(50,.2,20,0x2a2f3e,0,.1,0);
+  // כנף מזרח — כספת
+  cmkB(16,.2,20,0x252a38,17,.1,-20);
+  // כנף מערב — שידור
+  cmkB(16,.2,20,0x252a38,-17,.1,-20);
+  // מסדרון מרכזי
+  cmkB(10,.2,20,0x2a2f3e,0,.1,-20);
+  // חדר פנימי — פלטו + כספת + שידור
+  cmkB(50,.2,20,0x252a38,0,.1,-40);
 
-  // ══ קירות — טיח ישן, קרם-שמנת ══
-  const wallMat=0xd8cdb8; // קרם-ישן
-  const wallDarkMat=0xc4b9a8;
-  // צפון (עומק)
-  cmkB(52,9,.5,wallMat,0,4.5,-52.7);cityBlds.push({x:0,z:-53,w:52,d:1});
-  // דרום — חזית עם כניסה מרכזית (פתח 10 רחב)
-  cmkB(21,9,.5,wallMat,-15.5,4.5,11.7);cityBlds.push({x:-15.5,z:12,w:21,d:1});
-  cmkB(21,9,.5,wallMat,15.5,4.5,11.7);cityBlds.push({x:15.5,z:12,w:21,d:1});
-  // מזרח
-  cmkB(.5,9,64,wallMat,26.2,4.5,-21);cityBlds.push({x:26,z:-21,w:1,d:64});
+  // ══ קירות חיצוניים ══
+  // צפון
+  cmkB(50,9,.5,0x3a4055,0,4.5,-51);cityBlds.push({x:0,z:-51,w:50,d:1});
+  // דרום (כניסה — פתוח באמצע)
+  cmkB(18,9,.5,0x3a4055,-16,4.5,11);cityBlds.push({x:-16,z:11,w:18,d:1});
+  cmkB(18,9,.5,0x3a4055,16,4.5,11);cityBlds.push({x:16,z:11,w:18,d:1});
   // מערב
-  cmkB(.5,9,64,wallMat,-26.2,4.5,-21);cityBlds.push({x:-26,z:-21,w:1,d:64});
-  // תקרה
-  cmkB(52,.4,64,0x2a2520,0,9,-21);
+  cmkB(.5,9,62,0x3a4055,-25,4.5,-20);cityBlds.push({x:-25,z:-20,w:1,d:62});
+  // מזרח
+  cmkB(.5,9,62,0x3a4055,25,4.5,-20);cityBlds.push({x:25,z:-20,w:1,d:62});
 
   // ══ קירות פנימיים — מחלקות ══
-  // מחיצה לובי—מסדרון (עם פתח מרכזי 8 ר׳)
-  cmkB(17,8,.4,wallDarkMat,-17.5,4,-8.7);cityBlds.push({x:-17.5,z:-9,w:17,d:.8});
-  cmkB(17,8,.4,wallDarkMat,17.5,4,-8.7);cityBlds.push({x:17.5,z:-9,w:17,d:.8});
-  // מסדרון—חדרים (פתח מרכזי 8 ר׳)
-  cmkB(17,8,.4,wallDarkMat,-17.5,4,-26.7);cityBlds.push({x:-17.5,z:-27,w:17,d:.8});
-  cmkB(17,8,.4,wallDarkMat,17.5,4,-26.7);cityBlds.push({x:17.5,z:-27,w:17,d:.8});
-  // מחיצה מרכזית — כספת vs שידור
-  cmkB(.4,8,10,wallDarkMat,6,4,-38.5);cityBlds.push({x:6,z:-38.5,w:.8,d:10});
-  cmkB(.4,8,10,wallDarkMat,-6,4,-38.5);cityBlds.push({x:-6,z:-38.5,w:.8,d:10});
+  // קיר מפריד לובי-פנים (עם פתח באמצע)
+  cmkB(18,8,.5,0x333a50,-16,4,-9);cityBlds.push({x:-16,z:-9,w:18,d:1});
+  cmkB(18,8,.5,0x333a50,16,4,-9);cityBlds.push({x:16,z:-9,w:18,d:1});
+  // מחיצה בין כנפות לחדר הפנימי
+  cmkB(12,8,.5,0x333a50,-13,4,-29);cityBlds.push({x:-13,z:-29,w:12,d:1});
+  cmkB(12,8,.5,0x333a50,13,4,-29);cityBlds.push({x:13,z:-29,w:12,d:1});
+  // מחיצה מרכזית בחדר הפנימי (מפרידה בין כספת לשידור)
+  cmkB(.5,8,8,0x333a50,8,4,-40);cityBlds.push({x:8,z:-40,w:1,d:8});
+  cmkB(.5,8,8,0x333a50,-8,4,-40);cityBlds.push({x:-8,z:-40,w:1,d:8});
 
-  // ══ כניסה ראשית — דלתות זכוכית ══
-  [-3,3].forEach(x=>{
-    const door=new THREE.Mesh(new THREE.BoxGeometry(2.8,4,.12),new THREE.MeshLambertMaterial({color:0x88bbcc,transparent:true,opacity:.55,emissive:0x112233}));
-    door.position.set(x,2,11.6);cityScene.add(door);cityObjects.push(door);
-    // מסגרת אלומיניום
-    cmkB(.12,4,.14,0x888880,x-1.4,2,11.55);cmkB(.12,4,.14,0x888880,x+1.4,2,11.55);
-    cmkB(2.8,.12,.14,0x888880,x,4,11.55);cmkB(2.8,.12,.14,0x888880,x,0,11.55);
+  // ══ לובי — עיצוב ══
+  // שולחן קבלה
+  cmkB(12,1,3,0x4a5570,0,.5,5);
+  cmkB(11.5,.08,2.8,0x5566aa,0,1.06,5);
+  [-4,4].forEach(x=>{
+    const scr=new THREE.Mesh(new THREE.BoxGeometry(1.2,.85,.06),new THREE.MeshLambertMaterial({color:0x3355cc,emissive:0x1122aa}));
+    scr.position.set(x,1.6,4.65);cityScene.add(scr);cityObjects.push(scr);
   });
-  // שלט עיריית לוד — כחול-לבן (ישראלי קלאסי)
-  cmkB(14,.6,.2,0x1a3a8a,0,7.2,11.5);  // רקע כחול
-  cmkB(12,.4,.22,0xffffff,0,7.2,11.5);  // שם לבן
-  cmkB(14,.08,.2,0xddaa00,0,6.88,11.5); // פס זהוב תחתון
+  cityBlds.push({x:0,z:5,w:12,d:3});
+  // עמודים דקורטיביים
+  [[-20,0],[20,0]].forEach(([x,z])=>{
+    cmkCyl(.4,.4,9,8,0x4a5066,x,4.5,z);
+    const ring=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,.3,8),new THREE.MeshLambertMaterial({color:0x5566aa}));ring.position.set(x,.15,z);cityScene.add(ring);cityObjects.push(ring);
+  });
+  // שלט מוסדי על הקיר
+  cmkB(14,.4,.15,0x2244aa,0,7.5,-8.7);
+  cmkB(13,.25,.16,0x3355cc,0,7,-8.7);
 
-  // ══ לובי — שולחן קבלה ישן ══
-  // דלפק עץ
-  cmkB(14,1.1,3.5,0x6a3a18,0,.55,4);    // גוף דלפק עץ
-  cmkB(14,.08,3.5,0x8a5a28,0,1.14,4);   // משטח עץ בהיר
-  cmkB(13.6,.06,3.2,0x3a5588,0,1.16,4); // פד כחול על דלפק
-  cityBlds.push({x:0,z:4,w:14,d:3.8});
-  // מחשבים ישנים על הדלפק
-  [-4,0,4].forEach(x=>{
-    cmkB(1,.7,.5,0xccccbb,x,1.7,3.8); // מסך CRT
-    cmkB(.8,.08,.7,0xaaaaaa,x,1.2,4.4); // מקלדת
-    cmkB(.3,.3,.3,0xbbbbaa,x+.8,1.2,3.9); // עכבר
+  // ══ כנף מזרח — כספת ══
+  // ארונות תיוק
+  [[14,-12],[14,-18],[14,-24],[20,-12],[20,-18],[20,-24]].forEach(([x,z])=>{
+    cmkB(2,3.5,1,0x2a3348,x,1.75,z);
+    cmkB(1.8,.05,.9,0x3a4466,x,3.52,z);
   });
-  // ספות המתנה — דמוי עור כחול
-  [[-20,4],[20,4]].forEach(([x,z])=>{
-    cmkB(5,.5,1.8,0x2a3a6a,x,.25,z); // בסיס ספה
-    cmkB(5,.8,.2,0x2a3a6a,x,.9,z-.8); // גב ספה
-    cmkB(4.6,.4,1.6,0x3a4a88,x,.52,z); // מושב (כחול בהיר)
-    cityBlds.push({x,z,w:5,d:2});
-  });
-  // שולחן קפה — פורמייקה
-  cmkB(2,.5,1.2,0xb8a888,0,.25,6.5);
-  // עמודים — בטון חשוף, ריאליסטי ישראלי
-  [[-22,4],[22,4],[-22,-14],[22,-14],[-22,-28],[22,-28],[-22,-44],[22,-44]].forEach(([x,z])=>{
-    cmkB(1.2,9,1.2,0xb0a898,x,4.5,z);
-  });
-  // לוח מודעות — ממשלתי ישן
-  const boardBg=new THREE.Mesh(new THREE.BoxGeometry(6,3,.1),new THREE.MeshLambertMaterial({color:0xc8b880}));boardBg.position.set(-18,5,11.4);cityScene.add(boardBg);cityObjects.push(boardBg);
-  const boardFr=new THREE.Mesh(new THREE.BoxGeometry(6.2,3.2,.08),new THREE.MeshLambertMaterial({color:0x4a3010}));boardFr.position.set(-18,5,11.35);cityScene.add(boardFr);cityObjects.push(boardFr);
-  // נייר מודעות על הלוח
-  ['#eee8c8','#d4cca4','#e8dcc0'].forEach((c,i)=>{
-    const p=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.9),new THREE.MeshLambertMaterial({color:parseInt(c.replace('#','0x'))||0xeeeecc,side:THREE.DoubleSide}));
-    p.position.set(-19.2+i*1.6,5.1,11.46);cityScene.add(p);cityObjects.push(p);
-  });
-
-  // ══ מסדרון מרכזי — שורת חדרים ══
-  // דלתות עץ ישנות לאורך הקיר
-  [[-20,-18],[-20,-22],[-20,-24],[-20,-30],[20,-18],[20,-22],[20,-30]].forEach(([x,z])=>{
-    cmkB(1.8,2.6,.1,0x6a4020,x,1.3,z);   // דלת עץ
-    cmkB(.12,2.6,.12,0xaaaaaa,x+.94,1.3,z); // מסגרת
-    cmkB(.12,2.6,.12,0xaaaaaa,x-.94,1.3,z);
-    cmkB(1.8,.12,.12,0xaaaaaa,x,2.6,z);
-    const knob=new THREE.Mesh(new THREE.SphereGeometry(.08,6,5),new THREE.MeshLambertMaterial({color:0xddcc88,emissive:0x221100}));
-    knob.position.set(x+(x>0?-.7:.7),.98,z-.06);cityScene.add(knob);cityObjects.push(knob);
-    // שלט חדר
-    cmkB(.7,.25,.06,0xd4c8a0,x+(x>0?-1.4:1.4),2.2,z-.06);
-  });
-  // תמונה של ראש הממשלה (מסגרת)
-  cmkB(2.4,3,.08,0x3a2a10,-12,4.5,-8.6); // מסגרת
-  cmkB(2,.25,.1,0x2a4a8a,-12,6.2,-8.6);  // שם
-  // צבע ישן מתקלף — רצועות טקסטורה
-  [[-5,3,-9],[8,-5,-9],[15,6,-27],[-18,4,-27]].forEach(([x,y,z])=>{
-    const peel=new THREE.Mesh(new THREE.PlaneGeometry(.4+Math.random()*.6,.15+Math.random()*.25),new THREE.MeshLambertMaterial({color:0xb8a890,side:THREE.DoubleSide}));
-    peel.position.set(x,y,z+.01);cityScene.add(peel);cityObjects.push(peel);
-  });
-
-  // ══ כנף מזרח — ארכיון וכספת ══
-  const archMat=0x5a3a1a; // ארונות עץ כהה
-  // ארונות תיוק — שורות
-  [[17,-12],[17,-16],[17,-20],[21,-12],[21,-16],[21,-20]].forEach(([x,z])=>{
-    cmkB(2.2,3.8,1,archMat,x,1.9,z);
-    cmkB(2,.04,.9,0x7a5a2a,x,3.82,z); // חתך עליון
-    // ידיות
-    [-1.1,.1,1.1].forEach(y=>{
-      const h=new THREE.Mesh(new THREE.BoxGeometry(.6,.06,.04),new THREE.MeshLambertMaterial({color:0xddcc88,emissive:0x110800}));
-      h.position.set(x,1.9+y,z-.5);cityScene.add(h);cityObjects.push(h);
-    });
-    cityBlds.push({x,z,w:2.4,d:1.2});
-  });
-  // שולחן עבודה — פורמייקה ירוק
-  cmkB(5,1,2.5,0x3a5520,18.5,.5,-32);
-  cmkB(4.8,.06,2.3,0x4a6a28,18.5,1.04,-32);
-  cityBlds.push({x:18.5,z:-32,w:5,d:2.6});
-  // ערמת נייר
-  [0,.04,.08].forEach(i=>{cmkB(1,.02+i,.7,0xeeeedd,19,1.06+i,-31.8);});
-
-  // ═══ כספת — מרכז תשומת הלב ═══
-  // בסיס בטון מוגבה
-  cmkB(3.5,.3,3.5,0x888880,22,.15,-42);
-  // גוף כספת — פלדה כבדה, אפור-ירקרק
-  const sfBody=new THREE.Mesh(new THREE.BoxGeometry(2.6,2.8,1.2),new THREE.MeshLambertMaterial({color:0x3a4438,emissive:0x0a100a}));
-  sfBody.position.set(22,1.55,-42);cityScene.add(sfBody);cityObjects.push(sfBody);
-  // דלת כספת — עבה ומוצקת
-  const sfDoor=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.4,.22),new THREE.MeshLambertMaterial({color:0x4a5848,emissive:0x0a120a}));
-  sfDoor.position.set(22,1.55,-41.4);cityScene.add(sfDoor);cityObjects.push(sfDoor);
-  // טבעת הנדל — מוכרומת
-  const sfRim=new THREE.Mesh(new THREE.TorusGeometry(.42,.06,8,16),new THREE.MeshLambertMaterial({color:0xccddcc,emissive:0x112211}));
-  sfRim.position.set(22,1.55,-41.3);cityScene.add(sfRim);cityObjects.push(sfRim);
-  // ידית כספת — צלב
-  const handleMat=new THREE.MeshLambertMaterial({color:0xbbccbb,emissive:0x111811});
-  ['h','v'].forEach(d=>{
-    const h=new THREE.Mesh(new THREE.BoxGeometry(d==='h'?.8:.12,d==='h'?.12:.8,.1),handleMat);
-    h.position.set(22,1.55,-41.28);cityScene.add(h);cityObjects.push(h);
-  });
-  // LED ירוק — אחד בלבד, בולט
-  const sfLed=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.1),new THREE.MeshLambertMaterial({color:0x00ff44,emissive:0x00cc33}));
-  sfLed.position.set(22.75,2.6,-41.32);cityScene.add(sfLed);cityObjects.push(sfLed);
-  // מסגרת לוחית מספר
-  cmkB(.9,.22,.12,0x222a22,22,2.6,-41.3);
-  // לוחית פח מקורקעת בצד
-  const plateGeo=new THREE.Mesh(new THREE.BoxGeometry(.08,.6,1.4),new THREE.MeshLambertMaterial({color:0x556655,emissive:0x060806}));
-  plateGeo.position.set(23.35,.8,-42);cityScene.add(plateGeo);cityObjects.push(plateGeo);
+  // כספת
+  const sf=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.2,1),new THREE.MeshLambertMaterial({color:0x2a3040}));
+  sf.position.set(22,1.1,-42);cityScene.add(sf);cityObjects.push(sf);
+  const sfD=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.9,.12),new THREE.MeshLambertMaterial({color:0x3a4455}));
+  sfD.position.set(22,1.1,-41.45);cityScene.add(sfD);cityObjects.push(sfD);
+  const sfH=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.3,8),new THREE.MeshLambertMaterial({color:0xbbaa88,emissive:0x221100}));
+  sfH.rotation.z=Math.PI/2;sfH.position.set(22,1.1,-41.3);cityScene.add(sfH);cityObjects.push(sfH);
+  const sfLed=new THREE.Mesh(new THREE.SphereGeometry(.12,6,6),new THREE.MeshLambertMaterial({color:0x00ff44,emissive:0x00cc33}));
+  sfLed.position.set(22.8,1.9,-41.3);cityScene.add(sfLed);cityObjects.push(sfLed);
   G._citySafePos={x:22,z:-42};
-  cityBlds.push({x:22,z:-42,w:3,d:1.5});
+  cityBlds.push({x:22,z:-42,w:2.5,d:1.2});
 
   // ══ כנף מערב — חדר שידור ══
-  // שולחן שידור — ישן, עמוס ציוד
-  cmkB(6,1,3,0x3a2a18,-18,.5,-42);cmkB(5.6,.06,2.8,0x4a3a22,-18,1.04,-42);
-  cityBlds.push({x:-18,z:-42,w:6.5,d:3.2});
-  // ציוד שידור — ראוטרים, VCR, שקעים
-  [[-21,.7,-41.4],[-20,.7,-41.4],[-19,.7,-41.4]].forEach(([x,y,z])=>{
-    cmkB(.7,.35,.5,0x1a1a18,x,y,z);
-    const led=new THREE.Mesh(new THREE.SphereGeometry(.04,4,4),new THREE.MeshLambertMaterial({color:0xff4400,emissive:0xaa1100}));
-    led.position.set(x+.25,y+.14,z-.26);cityScene.add(led);cityObjects.push(led);
-  });
-  // אנטנה מרכזית — גבוהה ובולטת
-  cmkB(.08,.08,.08,0x888888,-18,1.5,-41.3);
-  const antBase=new THREE.Mesh(new THREE.CylinderGeometry(.1,.14,2.4,8),new THREE.MeshLambertMaterial({color:0x666660}));
-  antBase.position.set(-18,2.7,-41.3);cityScene.add(antBase);cityObjects.push(antBase);
-  // זרועות אנטנה
-  [-1,0,1].forEach(i=>{
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(1.2+Math.abs(i)*.4,.04,.04),new THREE.MeshLambertMaterial({color:0x777770}));
-    arm.position.set(-18,3.9-i*.3,-41.3);arm.rotation.y=i*.15;cityScene.add(arm);cityObjects.push(arm);
-  });
-  const antGlobe=new THREE.Mesh(new THREE.SphereGeometry(.22,8,8),new THREE.MeshLambertMaterial({color:0xff2200,emissive:0xaa0800}));
-  antGlobe.position.set(-18,4.05,-41.3);cityScene.add(antGlobe);cityObjects.push(antGlobe);
-  // כבלים על הרצפה — גאומטריה פשוטה
-  [[-20,-38],[-22,-40],[-16,-38]].forEach(([x,z])=>{
-    cmkB(.08,.06,2.5,0x222222,x,.04,z);
-  });
+  cmkB(4,1.5,2,0x1a1e2a,-18,.75,-42);  // מכשיר שידור
+  cmkB(1.5,1,.9,0x1a1e2a,-22,.5,-41);
+  const antG=new THREE.Mesh(new THREE.SphereGeometry(.45,8,8),new THREE.MeshLambertMaterial({color:0xff3300,emissive:0xaa1100}));
+  antG.position.set(-18,2.5,-42);cityScene.add(antG);cityObjects.push(antG);
+  const antPole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.8,6),new THREE.MeshLambertMaterial({color:0x888888}));
+  antPole.position.set(-18,1.7,-42);cityScene.add(antPole);cityObjects.push(antPole);
   G._cityBroadcastPos={x:-18,z:-42};
+  cityBlds.push({x:-18,z:-42,w:5,d:2.5});
 
-  // ══ חדר פלטו — מרכז ══
-  // שולחן מנהלים — מהגוני כהה, גדול
-  cmkB(9,1.1,4.5,0x3a1a08,0,.55,-43);
-  cmkB(8.6,.06,4.2,0x5a2a10,0,1.11,-43);   // פנים מהגוני
-  cmkB(8.2,.04,3.8,0x2a4a22,0,1.14,-43);    // לוח ירוק (שולחן מנהל ישראלי קלאסי)
-  cityBlds.push({x:0,z:-43,w:9.5,d:5});
-  // כיסא מנהלים — שחור, גבוה
-  cmkB(2,2.5,1.8,0x0e0e0e,0,.8,-47);
-  cmkB(1.8,.08,1.6,0x1a1a1a,0,2.5,-47);  // משענת ראש
-  cityBlds.push({x:0,z:-47,w:2.5,d:2});
-  // טלפון על השולחן
-  cmkB(.5,.15,.4,0x111111,1.5,1.15,-43);
-  cmkB(.35,.05,.3,0x222222,1.5,1.22,-43);
-  // מסמכים על השולחן
-  [[-2,1.15,-42.5],[0.5,1.15,-43.5],[-1,1.15,-43.8]].forEach(([x,y,z])=>{
-    cmkB(1.2,.02,.9,0xeeeedd,x,y,z);
-  });
-  // ארון ספרים — על קיר צפון
-  cmkB(12,6,.5,0x4a2a0a,-2,3,-52.5);
-  [0,1,2].forEach(row=>[0,1,2,3].forEach(col=>{
-    const bookCol=[0x8B0000,0x1a3a6a,0x2a5a2a,0x5a4010,0x4a1a4a,0x1a4a4a][Math.floor(Math.random()*6)];
-    cmkB(.8,1.2+Math.random()*.3,.4,bookCol,-7.5+col*3.5,row*1.35+.8,-52.3);
-  }));
-  // חלון גדול על קיר צפון — נוף מדומה
-  const winFrame=new THREE.Mesh(new THREE.BoxGeometry(8,4,.15),new THREE.MeshLambertMaterial({color:0x7a5a30}));
-  winFrame.position.set(10,5,-52.5);cityScene.add(winFrame);cityObjects.push(winFrame);
-  const winGlass=new THREE.Mesh(new THREE.BoxGeometry(7.4,3.4,.06),new THREE.MeshLambertMaterial({color:0x8ab4cc,transparent:true,opacity:.45,emissive:0x1a2a33,side:THREE.DoubleSide}));
-  winGlass.position.set(10,5,-52.45);cityScene.add(winGlass);cityObjects.push(winGlass);
-  // אור חיצוני דרך החלון
-  const winLight=new THREE.PointLight(0xff9944,2,20);winLight.position.set(10,5,-50);cityScene.add(winLight);
-
-  // ══ פרטים — ריאליסטיים ══
-  // מכשירי מים חמים / מזגנים ישנים על הקיר
-  [[-24,5,-10],[-24,5,-30],[24,5,-10],[24,5,-30]].forEach(([x,y,z])=>{
-    cmkB(2.5,.8,.5,0xd8d0c0,x,y,z);  // מזגן ישן
-    cmkB(2.4,.12,.52,0x8888aa,x,y-.46,z); // גריל
-  });
-  // שלטי חירום ירוקים
-  [[-10,8.5,-8.5],[10,8.5,-8.5],[-10,8.5,-26.5],[10,8.5,-26.5]].forEach(([x,y,z])=>{
-    cmkB(.8,.35,.06,0x006622,x,y,z);
-    const gl=new THREE.PointLight(0x00cc44,.6,3);gl.position.set(x,y,z);cityScene.add(gl);
-  });
-  // ממטרות תקרה
-  [[-8,8.8,0],[8,8.8,0],[0,8.8,-18],[-16,8.8,-18],[16,8.8,-18],[0,8.8,-36]].forEach(([x,y,z])=>{
-    cmkB(.15,.15,.15,0xcccccc,x,y,z);
-  });
+  // ══ מרכז — שולחן פלטו ══
+  cmkB(8,1,4,0x1e2438,0,.5,-42);cmkB(7.6,.08,3.6,0x2a3a60,0,1.06,-42);
+  cmkB(1.8,2.2,.9,0x111520,0,.8,-46);  // כיסא
+  cityBlds.push({x:0,z:-42,w:8,d:4});
+  // חלון ניאון על קיר צפון
+  const win=new THREE.Mesh(new THREE.PlaneGeometry(12,4),new THREE.MeshLambertMaterial({color:0x3366aa,emissive:0x112244,transparent:true,opacity:.8,side:THREE.DoubleSide}));
+  win.position.set(0,5.5,-50.7);cityScene.add(win);cityObjects.push(win);
 
   // ══ שומרים ══
-  addCityGuard(-8,0,[[-8,0],[-8,8],[8,8],[8,0]],2.6);
-  addCityGuard(8,0,[[8,0],[8,8],[-8,8],[-8,0]],2.6);
-  addCityGuard(18,0,[[18,-12],[18,-24],[23,-24],[23,-12]],2.8);
-  addCityGuard(-18,0,[[-18,-12],[-18,-24],[-23,-24],[-23,-12]],2.8);
-  addCityGuard(20,0,[[20,-36],[20,-48],[24,-48],[24,-36]],3.0);
+  // לובי — שניים שסורקים את הכניסה
+  addCityGuard(-10,0,[[-10,-2],[-10,6],[10,6],[10,-2]],2.8);
+  addCityGuard(10,0,[[10,-2],[10,6],[-10,6],[-10,-2]],2.8);
+  // כנף מזרח
+  addCityGuard(17,0,[[17,-12],[17,-24],[23,-24],[23,-12]],3.0);
+  // כנף מערב
+  addCityGuard(-17,0,[[-17,-12],[-17,-24],[-23,-24],[-23,-12]],3.0);
+  // שומר כספת
+  addCityGuard(18,0,[[18,-38],[18,-48],[24,-48],[24,-38]],3.2);
 
   cityCamera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,180);
   CITY.playerX=0;CITY.playerZ=8;CITY.playerYaw=Math.PI;
@@ -1695,7 +2079,6 @@ function exitCityHall(){
     cityObjects.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
     cityObjects.length=0;cityGuards.length=0;
     cityScene=null;cityCamera=null;cityAlerted=false;
-    citySafeFound=false;cityBroadcastDone=false;
     G.particles=G.particles.filter(p=>!p.city);
     G.paused=false;fadeIn();
   });
@@ -1725,13 +2108,10 @@ function spawnPaltoInCity(){
 
 function spawnCityVFX(x,y,z,col,n=8){
   if(!cityScene)return;
-  const geo=new THREE.SphereGeometry(.1,4,4);
   for(let i=0;i<n;i++){
-    const pivot=new THREE.Object3D();
-    pivot.position.set(x,y,z);
-    const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true}));
-    pivot.add(m);cityScene.add(pivot);
-    G.particles.push({mesh:pivot,_mat:m.material,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8,city:true});
+    const m=new THREE.Mesh(new THREE.SphereGeometry(.1,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true}));
+    m.position.set(x,y,z);cityScene.add(m);
+    G.particles.push({mesh:m,vx:(Math.random()-.5)*6,vy:Math.random()*5+2,vz:(Math.random()-.5)*6,life:.8,city:true});
   }
 }
 
@@ -3895,7 +4275,7 @@ function spawnPalto(){
   G.palto={mesh:pm,bar:barFg,x:80,z:-80,hp:300,mhp:300,dead:false,phase:1};
   G._paltoPos={x:80,z:-80};
   // Light on palto
-  const pl=new THREE.PointLight(0x4488ff,1.5,12);pl.position.set(80,8,-80);scene.add(pl);
+  // removed extra PointLight
   showN('🏛️ ד״ר פלטו נמצא! הכנעו אותו!');
 }
 
@@ -3911,13 +4291,13 @@ function buildCityHall(){
   // שלט "עיריית לוד"
   const sign=new THREE.Mesh(new THREE.BoxGeometry(10,.8,1.2),new THREE.MeshLambertMaterial({color:0x225588,emissive:0x001133}));sign.position.set(cx,15.5,cz+8.5);scene.add(sign);
   // נורות כחולות
-  [-1,1].forEach(s=>{const l=new THREE.PointLight(0x4488ff,.8,14);l.position.set(cx+s*10,12,cz+9);scene.add(l);});
+  // removed extra PointLights
   // דלת — צד דרום
   const door=new THREE.Mesh(new THREE.BoxGeometry(3,5,.3),new THREE.MeshLambertMaterial({color:0x334455}));door.position.set(cx,2.5,cz+10.2);scene.add(door);
   // סמן כניסה — כדור כחול לפני הדלת
   const entInd=new THREE.Mesh(new THREE.SphereGeometry(.55,8,8),new THREE.MeshLambertMaterial({color:0x4488ff,emissive:0x1133aa}));entInd.position.set(cx,3,cz+12);scene.add(entInd);
-  const entL=new THREE.PointLight(0x4488ff,3,10);entL.position.set(cx,4,cz+12);scene.add(entL);
-  G._cityHallDoor={mesh:entInd,light:entL,x:cx,z:cz+12};
+  // removed extra PointLight
+  G._cityHallDoor={mesh:entInd,x:cx,z:cz+12};
   // קולידר — קירות בלי לחסום את הדלת בדרום
   blds.push(
     {x:cx-9,z:cz,w:10,d:22},      // קיר מערב
@@ -3928,7 +4308,7 @@ function buildCityHall(){
   );
   // חדר שידור — בצד האחורי
   const broadcast=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshLambertMaterial({color:0xdd2200,emissive:0x660000}));broadcast.position.set(cx,2,cz-14);scene.add(broadcast);
-  const bpl=new THREE.PointLight(0xff2200,.8,8);bpl.position.set(cx,4,cz-14);scene.add(bpl);
+  // removed extra PointLight
 }
 
 // ════════════════════════════════════════════════
@@ -4101,24 +4481,22 @@ function spawnBlood(x,y,z,n=10){
   if(!scene)return;
   for(let i=0;i<n;i++){
     const sz=.05+Math.random()*.1;
-    const mat=new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true});
-    const pivot=new THREE.Object3D();
-    pivot.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
-    pivot.add(new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),mat));
-    scene.add(pivot);
+    const m=new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),
+      new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true}));
+    m.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
+    scene.add(m);
     const spd=2.5+Math.random()*5,ang=Math.random()*Math.PI*2;
-    G.particles.push({mesh:pivot,_mat:mat,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
+    G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
   }
   // splat שטוח על הקרקע
   for(let i=0;i<3;i++){
     const r=.08+Math.random()*.16;
-    const mat=new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false});
-    const pivot=new THREE.Object3D();
-    const splat=new THREE.Mesh(new THREE.CircleGeometry(r,6),mat);
-    splat.rotation.x=-Math.PI/2;
-    pivot.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
-    pivot.add(splat);scene.add(pivot);
-    G.particles.push({mesh:pivot,_mat:mat,vx:0,vy:0,vz:0,life:5+Math.random()*3});
+    const m=new THREE.Mesh(new THREE.CircleGeometry(r,6),
+      new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false}));
+    m.rotation.x=-Math.PI/2;
+    m.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
+    scene.add(m);
+    G.particles.push({mesh:m,vx:0,vy:0,vz:0,life:5+Math.random()*3});
   }
 }
 
@@ -4281,7 +4659,7 @@ function loadGame(){
     // הסתר char select, הצג HUD
     document.getElementById('cs-scr').style.display='none';
     document.getElementById('hud').style.display='block';
-    G.paused=false;G.cutOpen=false;G.dlgOpen=false;
+    // שחזר state
     G.dog=s.dog||'colin';
     G.mission=s.mission||0;
     G.score=s.score||0;G.coins=s.coins||0;G.gang=s.gang||0;
