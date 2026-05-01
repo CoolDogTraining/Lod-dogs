@@ -625,6 +625,43 @@ function _mkWallTexPlaster(){
 function wTexStone(){if(!_wTexSt)_wTexSt=_mkWallTexStone();return _wTexSt;}
 function wTexPlaster(){if(!_wTexPl)_wTexPl=_mkWallTexPlaster();return _wTexPl;}
 
+// ── מערכת טקסטורות מורחבת לבתי כנסת, מסגד, עירייה ──
+const _texCache={};
+function _mkTexStone(v){
+  const sz=256,tc=document.createElement('canvas');tc.width=tc.height=sz;
+  const tx=tc.getContext('2d');
+  const bases=['#d4c9a8','#cdc19f','#ddd2b0','#c8bc98','#e0d5b8','#d8cba6'];
+  tx.fillStyle=bases[v%bases.length];tx.fillRect(0,0,sz,sz);
+  const rowH=[24,28,26,30,22,28,32,26];let cy=0,ri=0;
+  while(cy<sz){const rh=rowH[ri%rowH.length];let cx=-(Math.random()*30);
+    while(cx<sz){const bw=42+Math.random()*52;const lv=Math.floor(Math.random()*22)-10;const br=195+lv;
+      tx.fillStyle=`rgb(${br},${br-14+Math.floor(Math.random()*6)},${br-26+Math.floor(Math.random()*5)})`;tx.fillRect(cx+.8,cy+.8,bw-1.6,rh-1.6);
+      if(Math.random()<.12){tx.fillStyle=`rgba(80,68,50,0.22)`;tx.beginPath();tx.moveTo(cx+bw-1,cy+1);tx.lineTo(cx+bw-4-Math.random()*5,cy+1);tx.lineTo(cx+bw-1,cy+5+Math.random()*7);tx.closePath();tx.fill();}
+      cx+=bw;}
+    tx.fillStyle=`rgba(70,58,42,${.45+Math.random()*.15})`;tx.fillRect(0,cy,sz,1.8);
+    cy+=rh;ri++;}
+  for(let i=0;i<14;i++){const g=tx.createRadialGradient(Math.random()*sz,Math.random()*sz,0,Math.random()*sz,Math.random()*sz,12+Math.random()*25);g.addColorStop(0,`rgba(55,48,35,${.06+Math.random()*.1})`);g.addColorStop(1,'rgba(55,48,35,0)');tx.fillStyle=g;tx.beginPath();tx.ellipse(Math.random()*sz,Math.random()*sz,14+Math.random()*22,7+Math.random()*14,Math.random()*Math.PI,0,Math.PI*2);tx.fill();}
+  const t=new THREE.CanvasTexture(tc);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+function _mkTexPlasterNew(v){
+  const sz=256,tc=document.createElement('canvas');tc.width=tc.height=sz;
+  const tx=tc.getContext('2d');
+  const bases=['#e8e2d8','#f0ece4','#e4dfd4','#eeeae2','#ddd8ce','#ede9e0'];
+  tx.fillStyle=bases[v%bases.length];tx.fillRect(0,0,sz,sz);
+  for(let i=0;i<4000;i++){const px=Math.random()*sz,py=Math.random()*sz,r=.15+Math.random()*.55;const vv=Math.floor(Math.random()*12)-6;tx.fillStyle=`rgba(${168+vv},${160+vv},${145+vv},0.07)`;tx.beginPath();tx.arc(px,py,r,0,Math.PI*2);tx.fill();}
+  for(let y=0;y<sz;y+=sz/4){tx.fillStyle='rgba(130,120,105,0.12)';tx.fillRect(0,y,sz,1.5);}
+  const t=new THREE.CanvasTexture(tc);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+function _getBldTex(style,variant){
+  const k=style+'_'+(variant%8);
+  if(_texCache[k])return _texCache[k];
+  let t;
+  if(style==='stone')t=_mkTexStone(variant);
+  else if(style==='plasterNew')t=_mkTexPlasterNew(variant);
+  else t=_mkTexStone(variant); // fallback
+  _texCache[k]=t;return t;
+}
+
 // ── בדיקה אם נקודה נמצאת בתוך מבנה ──
 function isInBuilding(x,z,margin=1.5){
   return blds.some(b=>Math.abs(x-b.x)<b.w/2+margin&&Math.abs(z-b.z)<b.d/2+margin);
@@ -1065,6 +1102,7 @@ function buildWorld(){
   bldMarket(-80,55);        // שוק לוד — SW
   bldStation(-5,-155);      // תחנת רכבת — מערב/דרום
   bldMosque(-55,75);        // מסגד ג'מעה — עיר עתיקה
+  bldSynagogue(-35,-55);    // בית כנסת גדול — מרכז לוד
   bldBigMosque();           // המסגד הגדול — פרק ב׳
   bldBallsSquare(52,28);    // כיכר הכדורים — מרכז-מזרח
 
@@ -1392,6 +1430,211 @@ function bldStation(x,z){
   const sg=new THREE.Mesh(new THREE.BoxGeometry(8,.8,.15),new THREE.MeshLambertMaterial({color:0x1a3a8a}));sg.position.set(x,8.8,z-9.1);scene.add(sg);
   blds.push({x,z,w:35,d:18});
 }
+// ════════════════════════════════════════════════
+// בית כנסת — Great Synagogue of Lod
+// ════════════════════════════════════════════════
+function bldSynagogue(x,z){
+  const stoneTex=_getBldTex('stone',4);
+  const mkST=(rep1,rep2,col=0xd8ceaa)=>{
+    const t=stoneTex.clone();t.needsUpdate=true;t.repeat.set(rep1,rep2);
+    return new THREE.MeshStandardMaterial({map:t,color:new THREE.Color(col),roughness:.9,metalness:0,bumpScale:.4});
+  };
+
+  // ── חומת גבול — אבן ──
+  const wallBM=mkST(3,.6,0xccbf98);
+  [[x,z-12,24,.8,.6],[x,z+12,24,.8,.6],[x-12,z,.6,.8,24],[x+12,z,.6,.8,24]].forEach(([px,pz,w,h,d])=>{
+    const wl=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallBM);
+    wl.position.set(px,h/2,pz);scene.add(wl);
+  });
+
+  // ── גוף ראשי — 2 קומות, אבן ירושלמית ──
+  const bodyM=mkST(5,2,0xddd4b0);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(18,10,16),bodyM);
+  body.position.set(x,5,z);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+
+  // כנף צדדית — היכל ──
+  const wingM=mkST(3,1.8,0xd8cea8);
+  const wingL=new THREE.Mesh(new THREE.BoxGeometry(5,7.5,14),wingM);
+  wingL.position.set(x-11.5,3.75,z);wingL.castShadow=true;scene.add(wingL);
+  const wingR=wingL.clone();wingR.position.x=x+11.5;scene.add(wingR);
+
+  // ── כיפות — עיצוב ייחודי לבית כנסת ──
+  const domeM=new THREE.MeshStandardMaterial({color:0x3a6080,roughness:.35,metalness:.2});
+  // כיפה ראשית — מרכזית
+  const drumM=mkST(1.5,1,0xccc0a0);
+  const drum=new THREE.Mesh(new THREE.CylinderGeometry(4.2,4.5,2,14),drumM);
+  drum.position.set(x,10.5,z);scene.add(drum);
+  // חלונות בטמבור — כחולים
+  for(let i=0;i<8;i++){
+    const ang=i/8*Math.PI*2;
+    const gw=new THREE.Mesh(new THREE.BoxGeometry(.7,1.0,.14),
+      new THREE.MeshStandardMaterial({color:0x5090c0,roughness:.05,metalness:.15,transparent:true,opacity:.72,emissive:0x0a1830}));
+    gw.position.set(x+Math.sin(ang)*4.0,11.2,z+Math.cos(ang)*4.0);gw.rotation.y=ang;scene.add(gw);
+  }
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(4.3,22,16,0,Math.PI*2,0,Math.PI/2),domeM);
+  dome.position.set(x,11.5,z);dome.castShadow=true;scene.add(dome);
+  // טבעת
+  const dRing=new THREE.Mesh(new THREE.CylinderGeometry(4.35,4.35,.2,22),
+    new THREE.MeshStandardMaterial({color:0x6a8899,roughness:.5,metalness:.3}));
+  dRing.position.set(x,11.5,z);scene.add(dRing);
+  // כוכב דוד בפינאל
+  const finM=new THREE.MeshStandardMaterial({color:0x4488dd,roughness:.25,metalness:.55,emissive:0x102040});
+  const finSphere=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),finM);
+  finSphere.position.set(x,16.0,z);scene.add(finSphere);
+  // מגן דוד — 2 משולשים משולבים (מקורב עם קצוות)
+  const starPts=[0,1.2, .9,-.5, -.9,-.5]; // משולש עליון
+  [0,Math.PI].forEach(rot=>{
+    for(let i=0;i<3;i++){
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(.1,.72,.08),finM);
+      const ang2=rot+i/3*Math.PI*2;
+      const bx2=Math.sin(ang2)*.5,bz2=Math.cos(ang2)*.5;
+      bar.position.set(x+bx2,16.0,z+bz2);
+      bar.rotation.y=ang2;bar.rotation.z=Math.PI/3;
+      scene.add(bar);
+    }
+  });
+
+  // כיפות קטנות — מעל הכנפות
+  [-11.5,11.5].forEach(ox=>{
+    const sdr2=new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.8,1.2,12),drumM.clone());
+    sdr2.position.set(x+ox,8.1,z);scene.add(sdr2);
+    const sd=new THREE.Mesh(new THREE.SphereGeometry(1.7,14,10,0,Math.PI*2,0,Math.PI/2),domeM);
+    sd.position.set(x+ox,8.7,z);sd.castShadow=true;scene.add(sd);
+    const sdf=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),finM);
+    sdf.position.set(x+ox,10.6,z);scene.add(sdf);
+  });
+
+  // ── חזית — קדמית (z-) — ייצוגית ──
+  const facM=mkST(3,1.8,0xe0d8bc);
+  // פורטל ראשי — גדול ומעוטר
+  const portalFr=new THREE.Mesh(new THREE.BoxGeometry(6,8.5,.6),facM);
+  portalFr.position.set(x,4.25,z-8.3);scene.add(portalFr);
+  const portalIn=new THREE.Mesh(new THREE.BoxGeometry(4,7,.65),
+    new THREE.MeshStandardMaterial({color:0x2a4a6a,roughness:.9}));
+  portalIn.position.set(x,3.8,z-8.2);scene.add(portalIn);
+
+  // קשת פורטל — רומנסקית/בציר
+  const archM2=new THREE.MeshStandardMaterial({color:0xd8caa2,roughness:.88,metalness:0});
+  const mainArch=new THREE.Mesh(new THREE.TorusGeometry(2.2,.32,8,20,Math.PI),archM2);
+  mainArch.position.set(x,7.8,z-8.1);scene.add(mainArch);
+  // עיטורי קשת — פסים לסירוגין
+  [[2.25,.22,0xc8b890],[2.55,.18,0x4a6a8a],[2.8,.15,0xd0c89a]].forEach(([r,t,col2])=>{
+    const strip=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,16,Math.PI),
+      new THREE.MeshStandardMaterial({color:col2,roughness:.9}));
+    strip.position.set(x,7.8,z-8.08);scene.add(strip);
+  });
+
+  // חלון ורד עגול מעל הפורטל (rose window) — אופייני לבתי כנסת
+  const roseBack=new THREE.Mesh(new THREE.CircleGeometry(1.6,16),
+    new THREE.MeshStandardMaterial({color:0x3366aa,roughness:.1,metalness:.1,side:THREE.DoubleSide,emissive:0x081830}));
+  roseBack.rotation.y=Math.PI;roseBack.position.set(x,9.5,z-8.25);scene.add(roseBack);
+  // גלגלי חלון ורד — 6 עלי כותרת
+  for(let i=0;i<6;i++){
+    const ang=i/6*Math.PI*2;
+    const petal=new THREE.Mesh(new THREE.TorusGeometry(.7,.1,6,10,Math.PI*2/3),
+      new THREE.MeshStandardMaterial({color:0x88aacc,roughness:.15,metalness:.15}));
+    petal.position.set(x+Math.sin(ang)*.7,9.5+Math.cos(ang)*.7,z-8.1);
+    petal.rotation.y=Math.PI/2;petal.rotation.z=ang;scene.add(petal);
+  }
+  const roseCenter=new THREE.Mesh(new THREE.CircleGeometry(.35,10),
+    new THREE.MeshStandardMaterial({color:0xddcc55,roughness:.2,emissive:0x332200,side:THREE.DoubleSide}));
+  roseCenter.rotation.y=Math.PI;roseCenter.position.set(x,9.5,z-8.15);scene.add(roseCenter);
+
+  // דלת עץ — כהה ומפוארת
+  const doorM=new THREE.MeshStandardMaterial({color:0x3a2010,roughness:.82,metalness:.06});
+  const doorL=new THREE.Mesh(new THREE.BoxGeometry(1.8,5.8,.12),doorM);
+  doorL.position.set(x-1,2.9,z-8.25);scene.add(doorL);
+  const doorR=doorL.clone();doorR.position.x=x+1;scene.add(doorR);
+  // עיטור מתכת על הדלת
+  const hingM=new THREE.MeshStandardMaterial({color:0xddaa33,roughness:.28,metalness:.65,emissive:0x221800});
+  [-1,1].forEach(sd=>{
+    [1.5,3.5].forEach(dy=>{
+      const hing=new THREE.Mesh(new THREE.BoxGeometry(.25,.08,.14),hingM);
+      hing.position.set(x+sd*.95,dy,z-8.22);scene.add(hing);
+    });
+    const knocker=new THREE.Mesh(new THREE.SphereGeometry(.12,8,8),hingM);
+    knocker.position.set(x+sd*.6,2.8,z-8.23);scene.add(knocker);
+  });
+
+  // ── עמודות קדמיות ──
+  const colM2=mkST(1,2,0xe0d8bc);
+  [-6.5,6.5].forEach(ox=>{
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.45,.55,9,12),colM2);
+    col.position.set(x+ox,4.5,z-8.5);col.castShadow=true;scene.add(col);
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(1.2,.35,1.2),colM2);
+    cap.position.set(x+ox,9.15,z-8.5);scene.add(cap);
+    const ba=new THREE.Mesh(new THREE.BoxGeometry(1.1,.25,1.1),colM2);
+    ba.position.set(x+ox,.12,z-8.5);scene.add(ba);
+  });
+
+  // ── חלונות צדדיים — ויטראז' (colored glass) ──
+  const vitColors=[0x88aadd,0xaabbdd,0x6699cc,0x99bbcc];
+  [z-5,z,z+5].forEach((wz,wi)=>{
+    [x-9.3,x+9.3].forEach(wx=>{
+      const col3=vitColors[wi%vitColors.length];
+      const fr2=new THREE.Mesh(new THREE.BoxGeometry(.32,1.8,1.5),facM.clone());
+      fr2.position.set(wx,5.5,wz);scene.add(fr2);
+      const gw=new THREE.Mesh(new THREE.BoxGeometry(.15,1.55,1.25),
+        new THREE.MeshStandardMaterial({color:col3,roughness:.05,metalness:.1,transparent:true,opacity:.72,emissive:new THREE.Color(col3).multiplyScalar(.35)}));
+      gw.position.set(wx,5.5,wz);scene.add(gw);
+      // פסים צבעוניים בוויטראז'
+      for(let p=0;p<3;p++){
+        const strip=new THREE.Mesh(new THREE.BoxGeometry(.16,.06,1.25),
+          new THREE.MeshStandardMaterial({color:vitColors[(wi+p+1)%4],roughness:.1,emissive:new THREE.Color(vitColors[(wi+p+1)%4]).multiplyScalar(.2)}));
+        strip.position.set(wx,4.3+p*.55,wz);scene.add(strip);
+      }
+    });
+  });
+
+  // ── מדרגות ──
+  const stepM=mkST(3,.5,0xd0c8a8);
+  [0,1,2].forEach(i=>{
+    const st=new THREE.Mesh(new THREE.BoxGeometry(16,.2,(i+1)*.5),stepM);
+    st.position.set(x,i*.22,z-9.0-i*.3);st.receiveShadow=true;scene.add(st);
+  });
+  const plaza=new THREE.Mesh(new THREE.BoxGeometry(18,.15,2.5),stepM);
+  plaza.position.set(x,.07,z-10.2);plaza.receiveShadow=true;scene.add(plaza);
+
+  // ── פנסי כניסה ──
+  [-6,6].forEach(ox=>{
+    const pol=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,3.8,6),
+      new THREE.MeshStandardMaterial({color:0x5a5860,roughness:.7,metalness:.35}));
+    pol.position.set(x+ox,1.9,z-11);scene.add(pol);
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(.25,7,6),
+      new THREE.MeshStandardMaterial({color:0x333030,roughness:.6,metalness:.28}));
+    lamp.position.set(x+ox,3.9,z-11);scene.add(lamp);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.14,6,5),
+      new THREE.MeshStandardMaterial({color:0xffffdd,roughness:.2,emissive:0x887733}));
+    bulb.position.set(x+ox,3.85,z-11);scene.add(bulb);
+  });
+
+  // ── לוח זיכרון + שלט ──
+  const signBg=new THREE.Mesh(new THREE.BoxGeometry(7,.7,.2),
+    new THREE.MeshStandardMaterial({color:0x224488,roughness:.55,emissive:0x041020}));
+  signBg.position.set(x,8.0,z-8.5);scene.add(signBg);
+  const signFr=new THREE.Mesh(new THREE.BoxGeometry(7.3,.95,.18),
+    new THREE.MeshStandardMaterial({color:0xd0c8a4,roughness:.82}));
+  signFr.position.set(x,8.0,z-8.48);scene.add(signFr);
+
+  // ── עצי זית משני הצדדים ──
+  [-10,10].forEach(ox=>{
+    const trM=new THREE.MeshStandardMaterial({color:0x3a2810,roughness:.95});
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.22,.32,3.8,8),trM);
+    tr.position.set(x+ox,1.9,z-10.5);tr.castShadow=true;scene.add(tr);
+    // כדור עלים — ירוק-אפור (זית)
+    const lM=new THREE.MeshStandardMaterial({color:0x5a7040,roughness:.95});
+    const l1=new THREE.Mesh(new THREE.SphereGeometry(2.0,10,8),lM);
+    l1.scale.y=.68;l1.position.set(x+ox,5.2,z-10.5);l1.castShadow=true;scene.add(l1);
+    const l2=new THREE.Mesh(new THREE.SphereGeometry(1.4,9,7),
+      new THREE.MeshStandardMaterial({color:0x4e6438,roughness:.95}));
+    l2.scale.y=.62;l2.position.set(x+ox+.4,5.8,z-10.2);scene.add(l2);
+  });
+
+  blds.push({x,z,w:18,d:16});
+  blds.push({x:x-11.5,z,w:5,d:14});
+  blds.push({x:x+11.5,z,w:5,d:14});
+}
+
 function bldMosque(x,z){
   // ── קירות — אבן חוואר עם טקסטורה ──
   const stTex=wTexStone();
@@ -1568,23 +1811,244 @@ function bldBallsSquare(cx,cz){
   // !! לא מוסיפים ל-blds — כך הכיכר ניתנת להליכה
 }
 function bldBigMosque(){
-  // המסגד הגדול — תמיד גלוי במפה, מרכז העיר (0,-65 בערך)
-  // doorArch
-  const minaretTop=new THREE.Mesh(new THREE.ConeGeometry(2,5,8),new THREE.MeshLambertMaterial({color:0x2d7a3a}));
-  minaretTop.position.set(0,20,-55);scene.add(minaretTop);
-  const dome2=new THREE.Mesh(new THREE.SphereGeometry(8,12,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshLambertMaterial({color:0xf0e6d0}));
-  dome2.position.set(0,6,-70);scene.add(dome2);
-  const domeBase=new THREE.Mesh(new THREE.BoxGeometry(18,6,18),new THREE.MeshLambertMaterial({color:0xe8dcc8}));
-  domeBase.position.set(0,3,-70);domeBase.castShadow=true;domeBase.receiveShadow=true;scene.add(domeBase);
-  // דלת ירוקה — תמיד גלויה
-  const door=new THREE.Mesh(new THREE.BoxGeometry(3,5,0.3),new THREE.MeshLambertMaterial({color:0x1a5c1a}));
-  door.position.set(0,2.5,-60);scene.add(door);
-  const doorArch=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,0.3,8,1,false,0,Math.PI),new THREE.MeshLambertMaterial({color:0x1a5c1a}));
-  doorArch.rotation.z=Math.PI/2;doorArch.position.set(0,5,-60);scene.add(doorArch);
-  const sign=new THREE.Mesh(new THREE.BoxGeometry(5,.5,1),new THREE.MeshLambertMaterial({color:0x2d7a3a}));
-  sign.position.set(0,8.2,-60);scene.add(sign);
-  // רישום ל-blds — מיניאפ + קוליזיון
-  blds.push({x:0,z:-70,w:20,d:20}); // גוף בלבד
+  // ══════════════════════════════════════════════════
+  // המסגד הגדול — ג'אמע לוד — exterior מפואר
+  // מיקום: 0, -65 (מרכז/צפון)
+  // ══════════════════════════════════════════════════
+  const MX=0, MZ=-68;
+  const stoneTex=_getBldTex('stone',2);
+
+  // ── קיר חיצוני — חומה סביב המתחם ──
+  const wallM=new THREE.MeshStandardMaterial({map:stoneTex.clone(),color:0xd8ceb0,roughness:.92,metalness:0,bumpScale:.4});
+  wallM.map.needsUpdate=true; wallM.map.repeat.set(6,1);
+  const wallH=2.8;
+  const wallSegs=[
+    [MX,    MZ-14, 40, wallH, .8],   // צפון
+    [MX,    MZ+14, 40, wallH, .8],   // דרום
+    [MX-20, MZ,    .8, wallH, 28],   // מערב
+    [MX+20, MZ,    .8, wallH, 28],   // מזרח
+  ];
+  wallSegs.forEach(([x,z,w,h,d])=>{
+    const wm2=wallM.clone();wm2.map=stoneTex.clone();wm2.map.needsUpdate=true;wm2.map.repeat.set(w/3,1);
+    const w3=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wm2);
+    w3.position.set(x,h/2,z);w3.castShadow=true;w3.receiveShadow=true;scene.add(w3);
+    // כרכוב עליון על החומה
+    const crown=new THREE.Mesh(new THREE.BoxGeometry(w+.4,.35,d+.4),new THREE.MeshStandardMaterial({color:0xc8c0a0,roughness:.9}));
+    crown.position.set(x,h+.17,z);scene.add(crown);
+    // מגדלוני חומה — פינות
+  });
+
+  // ── גוף ראשי — אבן חוואר ──
+  const bodyTexM=new THREE.MeshStandardMaterial({
+    map:(()=>{const t=stoneTex.clone();t.needsUpdate=true;t.repeat.set(5,2);return t;})(),
+    color:0xddd4b8,roughness:.9,metalness:0,bumpScale:.45
+  });
+  const body=new THREE.Mesh(new THREE.BoxGeometry(22,9,22),bodyTexM);
+  body.position.set(MX,4.5,MZ);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+
+  // קומה שנייה מצומצמת — ייחודית לג'אמע
+  const body2M=bodyTexM.clone();body2M.map=stoneTex.clone();body2M.map.needsUpdate=true;body2M.map.repeat.set(3,1.5);
+  const body2=new THREE.Mesh(new THREE.BoxGeometry(16,4,16),body2M);
+  body2.position.set(MX,11,MZ);body2.castShadow=true;scene.add(body2);
+
+  // פרפט — חומה עליונה מסביב לגג
+  const parapetM=new THREE.MeshStandardMaterial({color:0xc8c0a0,roughness:.92,metalness:0});
+  [[MX,MZ-11,16,.7,.8],[MX,MZ+11,16,.7,.8],[MX-8.5,MZ,.8,.7,22],[MX+8.5,MZ,.8,.7,22]].forEach(([x,z,w,h,d])=>{
+    const p=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),parapetM);p.position.set(x,13.35,z);scene.add(p);
+  });
+  // מרלונים — שיניים על הפרפט (סגנון איסלאמי)
+  for(let i=-7;i<=7;i+=2){
+    const merl=new THREE.Mesh(new THREE.BoxGeometry(.6,.55,.5),parapetM);
+    merl.position.set(MX+i,13.85,MZ-11.2);scene.add(merl);
+    const merl2=merl.clone();merl2.position.z=MZ+11.2;scene.add(merl2);
+  }
+  for(let i=-10;i<=10;i+=2){
+    const merl=new THREE.Mesh(new THREE.BoxGeometry(.5,.55,.6),parapetM);
+    merl.rotation.y=Math.PI/2;merl.position.set(MX-11.2,13.85,MZ+i);scene.add(merl);
+    const merl2=merl.clone();merl2.position.x=MX+11.2;scene.add(merl2);
+  }
+
+  // ── כיפה ראשית — ירוק מוסלמי עם טבעות ──
+  const domeGreen=new THREE.MeshStandardMaterial({color:0x2a6840,roughness:.32,metalness:.18,envMapIntensity:.3});
+  // בסיס כיפה — טמבור מתומן
+  const drum=new THREE.Mesh(new THREE.CylinderGeometry(5.2,5.5,2.5,16),
+    new THREE.MeshStandardMaterial({map:(()=>{const t=stoneTex.clone();t.needsUpdate=true;t.repeat.set(4,1);return t;})(),color:0xd0c8a8,roughness:.88}));
+  drum.position.set(MX,14.2,MZ);scene.add(drum);
+  // חלונות בטמבור — 8 כיוונים
+  for(let i=0;i<8;i++){
+    const ang=i/8*Math.PI*2;
+    const gw=new THREE.Mesh(new THREE.BoxGeometry(.8,1.2,.15),
+      new THREE.MeshStandardMaterial({color:0x7abccc,roughness:.05,metalness:.15,transparent:true,opacity:.72,emissive:0x061a22}));
+    gw.position.set(MX+Math.sin(ang)*5.0,15.0,MZ+Math.cos(ang)*5.0);
+    gw.rotation.y=ang;scene.add(gw);
+  }
+  // הכיפה עצמה
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(5.5,24,18,0,Math.PI*2,0,Math.PI/2),domeGreen);
+  dome.position.set(MX,15.5,MZ);dome.castShadow=true;scene.add(dome);
+  // טבעת כסף-ירוק — מפריד בין הכיפה לבסיס
+  const domeRing=new THREE.Mesh(new THREE.CylinderGeometry(5.55,5.55,.22,24),
+    new THREE.MeshStandardMaterial({color:0x8aaa88,roughness:.45,metalness:.35}));
+  domeRing.position.set(MX,15.5,MZ);scene.add(domeRing);
+  // פינאל — ירח בראש הכיפה
+  const finial=new THREE.Mesh(new THREE.SphereGeometry(.38,8,8),
+    new THREE.MeshStandardMaterial({color:0xddcc44,roughness:.2,metalness:.6,emissive:0x443300}));
+  finial.position.set(MX,21.2,MZ);scene.add(finial);
+  const crescent=new THREE.Mesh(new THREE.TorusGeometry(.38,.07,6,16,Math.PI*1.4),
+    new THREE.MeshStandardMaterial({color:0xffdd44,roughness:.15,metalness:.65,emissive:0x443200}));
+  crescent.position.set(MX,22.1,MZ);crescent.rotation.z=.4;scene.add(crescent);
+
+  // ── כיפות קטנות בפינות גוף ──
+  const smDomeM=new THREE.MeshStandardMaterial({color:0x2e6e45,roughness:.38,metalness:.15});
+  [[-7.5,-7.5],[7.5,-7.5],[-7.5,7.5],[7.5,7.5]].forEach(([ox,oz])=>{
+    // טמבור קטן
+    const sdr=new THREE.Mesh(new THREE.CylinderGeometry(1.8,2,1.4,12),
+      new THREE.MeshStandardMaterial({color:0xd2c8a4,roughness:.9}));
+    sdr.position.set(MX+ox,9.7,MZ+oz);scene.add(sdr);
+    const sd=new THREE.Mesh(new THREE.SphereGeometry(1.9,14,10,0,Math.PI*2,0,Math.PI/2),smDomeM);
+    sd.position.set(MX+ox,10.7,MZ+oz);sd.castShadow=true;scene.add(sd);
+    const srf=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),
+      new THREE.MeshStandardMaterial({color:0xffdd44,roughness:.2,metalness:.6,emissive:0x332200}));
+    srf.position.set(MX+ox,12.8,MZ+oz);scene.add(srf);
+  });
+
+  // ── 2 מינרטים — גבוהים ומפורטים ──
+  [-13,13].forEach(ox=>{
+    const colM=new THREE.MeshStandardMaterial({
+      map:(()=>{const t=stoneTex.clone();t.needsUpdate=true;t.repeat.set(1,5);return t;})(),
+      color:0xd8d0b4,roughness:.88,metalness:0
+    });
+    // בסיס מרובע
+    const base=new THREE.Mesh(new THREE.BoxGeometry(2.5,3,2.5),colM);
+    base.position.set(MX+ox,1.5,MZ+2);base.castShadow=true;scene.add(base);
+    // גוף עגול — עולה
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.85,.95,16,14),colM);
+    shaft.position.set(MX+ox,11,MZ+2);shaft.castShadow=true;scene.add(shaft);
+    // כרכוב מרפסת — 2 שלבים
+    [16.5,20].forEach(y=>{
+      const balc=new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.2,.3,14),
+        new THREE.MeshStandardMaterial({color:0xb8b0901,roughness:.85}));
+      balc.position.set(MX+ox,y,MZ+2);scene.add(balc);
+      // מרלונים מסביב
+      for(let i=0;i<12;i++){
+        const ang=i/12*Math.PI*2;
+        const mer=new THREE.Mesh(new THREE.BoxGeometry(.2,.3,.2),parapetM);
+        mer.position.set(MX+ox+Math.sin(ang)*1.28,y+.25,MZ+2+Math.cos(ang)*1.28);
+        scene.add(mer);
+      }
+    });
+    // ראש מינרט — גוף צר
+    const top=new THREE.Mesh(new THREE.CylinderGeometry(.45,.85,4.5,12),colM);
+    top.position.set(MX+ox,22.5,MZ+2);scene.add(top);
+    // כיפת מינרט — ירוקה
+    const mnCap=new THREE.Mesh(new THREE.ConeGeometry(.88,4,12),domeGreen);
+    mnCap.position.set(MX+ox,27,MZ+2);mnCap.castShadow=true;scene.add(mnCap);
+    // ירח על המינרט
+    const mnFin=new THREE.Mesh(new THREE.SphereGeometry(.18,6,6),
+      new THREE.MeshStandardMaterial({color:0xffdd44,roughness:.2,metalness:.6,emissive:0x443200}));
+    mnFin.position.set(MX+ox,29.2,MZ+2);scene.add(mnFin);
+    const mnCr=new THREE.Mesh(new THREE.TorusGeometry(.2,.04,5,12,Math.PI*1.4),
+      new THREE.MeshStandardMaterial({color:0xffdd44,roughness:.15,metalness:.65,emissive:0x443200}));
+    mnCr.position.set(MX+ox,29.9,MZ+2);mnCr.rotation.z=.4;scene.add(mnCr);
+  });
+
+  // ── חזית דרום — קשתות כניסה מחודדות ──
+  const archM=new THREE.MeshStandardMaterial({color:0xe8e0c8,roughness:.88,metalness:0});
+  // פורטל ראשי — גדול ומרכזי
+  const portalFr=new THREE.Mesh(new THREE.BoxGeometry(5.5,8,.55),archM);
+  portalFr.position.set(MX,4,MZ+11.3);scene.add(portalFr);
+  // חלל פורטל
+  const portalIn=new THREE.Mesh(new THREE.BoxGeometry(3.6,6.8,.62),
+    new THREE.MeshStandardMaterial({color:0x1a3a20,roughness:.9}));
+  portalIn.position.set(MX,3.5,MZ+11.2);scene.add(portalIn);
+  // קשת חדה (pointed arch) — טורוס חצאי מוגבה
+  const archGeo=new THREE.TorusGeometry(1.9,.28,8,18,Math.PI);
+  const archMesh=new THREE.Mesh(archGeo,archM);
+  archMesh.position.set(MX,7.0,MZ+11.0);scene.add(archMesh);
+  // עיטורי קשת — פסים ירוקים-אבן לסירוגין
+  for(let i=0;i<5;i++){
+    const stripCol=i%2===0?0xccc0a0:0x3a6840;
+    const strip=new THREE.Mesh(new THREE.TorusGeometry(1.9+i*.22,.12,5,14,Math.PI),
+      new THREE.MeshStandardMaterial({color:stripCol,roughness:.88}));
+    strip.position.set(MX,7.0,MZ+10.9-i*.08);scene.add(strip);
+  }
+  // קשתות צדדיות קטנות — 2 משני הצדדים
+  [-5,5].forEach(ox=>{
+    const saf=new THREE.Mesh(new THREE.BoxGeometry(3,5.5,.45),archM);
+    saf.position.set(MX+ox,2.75,MZ+11.3);scene.add(saf);
+    const sain=new THREE.Mesh(new THREE.BoxGeometry(2,4.5,.5),
+      new THREE.MeshStandardMaterial({color:0x2a4a30,roughness:.9}));
+    sain.position.set(MX+ox,2.5,MZ+11.2);scene.add(sain);
+    const sar=new THREE.Mesh(new THREE.TorusGeometry(1.1,.18,7,14,Math.PI),archM);
+    sar.position.set(MX+ox,5.2,MZ+11.0);scene.add(sar);
+  });
+  // דלת ראשית — ירוקה מפוארת
+  const mainDoor=new THREE.Mesh(new THREE.BoxGeometry(3.2,6.2,.18),
+    new THREE.MeshStandardMaterial({color:0x1a5028,roughness:.72,metalness:.08}));
+  mainDoor.position.set(MX,3.1,MZ+11.1);scene.add(mainDoor);
+  // קישוטי הדלת — ציר/ידית
+  const handle=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.8,6),
+    new THREE.MeshStandardMaterial({color:0xddcc44,roughness:.3,metalness:.6,emissive:0x332200}));
+  handle.rotation.z=Math.PI/2;handle.position.set(MX+.8,3.0,MZ+11.2);scene.add(handle);
+
+  // ── פסים קישוטיים אופקיים על גוף ──
+  [2.5,4.5,6.5].forEach(y=>{
+    const band=new THREE.Mesh(new THREE.BoxGeometry(22.4,.2,22.4),
+      new THREE.MeshStandardMaterial({color:0xb8b090,roughness:.92}));
+    band.position.set(MX,y,MZ);scene.add(band);
+  });
+
+  // ── חלונות בולטים — עם מסגרות אבן ──
+  const glassM=new THREE.MeshStandardMaterial({color:0x7abccc,roughness:.05,metalness:.15,transparent:true,opacity:.72,emissive:0x061a22});
+  const winFrM=new THREE.MeshStandardMaterial({color:0xd0c8a4,roughness:.88});
+  [[-7,6],[-7,-6],[7,6],[7,-6],[0,-11]].forEach(([ox,oz])=>{
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.2,.35),winFrM);
+    fr.position.set(MX+ox,6.0,MZ+oz);scene.add(fr);
+    const gw=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.7,.18),glassM);
+    gw.position.set(MX+ox,6.0,MZ+oz+.1);scene.add(gw);
+    // קשת קטנה על כל חלון
+    const war=new THREE.Mesh(new THREE.TorusGeometry(.6,.1,6,10,Math.PI),winFrM);
+    war.position.set(MX+ox,7.1,MZ+oz+.05);scene.add(war);
+  });
+
+  // ── עמודות כניסה — פורטיקו מרשים ──
+  const colTexM=new THREE.MeshStandardMaterial({color:0xe0d8bc,roughness:.9,metalness:0});
+  [-4.5,4.5].forEach(ox=>{
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.5,.6,9,14),colTexM);
+    col.position.set(MX+ox,4.5,MZ+12.5);col.castShadow=true;scene.add(col);
+    // כרכוב ראש עמוד
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(1.4,.4,1.4),colTexM);
+    cap.position.set(MX+ox,9.2,MZ+12.5);scene.add(cap);
+    const base2=new THREE.Mesh(new THREE.BoxGeometry(1.3,.3,1.3),colTexM);
+    base2.position.set(MX+ox,.15,MZ+12.5);scene.add(base2);
+  });
+
+  // ── מרצפת הכניסה — אבן + מדרגות ──
+  const stepsM=new THREE.MeshStandardMaterial({color:0xd4caa8,roughness:.9,metalness:0});
+  [1,.65,.35].forEach((w,i)=>{
+    const step=new THREE.Mesh(new THREE.BoxGeometry(14,0.18+i*.05,w*2.5),stepsM);
+    step.position.set(MX,i*.24,MZ+12.2+i*.5);scene.add(step);
+  });
+  const platform=new THREE.Mesh(new THREE.BoxGeometry(18,.25,4),stepsM);
+  platform.position.set(MX,.12,MZ+13.2);platform.receiveShadow=true;scene.add(platform);
+
+  // ── עצי ברוש משני הצדדים ──
+  [-15,15].forEach(ox=>{
+    const trM=new THREE.MeshStandardMaterial({color:0x2a1808,roughness:.95});
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.18,.28,4.5,7),trM);
+    tr.position.set(MX+ox,2.25,MZ+13);tr.castShadow=true;scene.add(tr);
+    const leafM=new THREE.MeshStandardMaterial({color:0x1e5010,roughness:.95});
+    const lf=new THREE.Mesh(new THREE.ConeGeometry(.7,5.5,7),leafM);
+    lf.position.set(MX+ox,7.5,MZ+13);lf.castShadow=true;scene.add(lf);
+    const lf2=new THREE.Mesh(new THREE.ConeGeometry(.45,4,6),
+      new THREE.MeshStandardMaterial({color:0x245a14,roughness:.95}));
+    lf2.position.set(MX+ox,9.5,MZ+13);scene.add(lf2);
+  });
+
+  // ── סמן כניסה ──
+  G.gateMarker={x:MX,z:MZ+14};
+  blds.push({x:MX,z:MZ,w:22,d:22});
+  blds.push({x:MX-13,z:MZ+2,w:2.5,d:4});  // מינרט שמאל
+  blds.push({x:MX+13,z:MZ+2,w:2.5,d:4});  // מינרט ימין
 }
 function bldTree(x,z){
   const h=3.2+Math.random()*3;
@@ -4421,7 +4885,7 @@ function mkCommander(sz){
   const armor=new THREE.MeshLambertMaterial({color:0x223366}); // שריון כחול-כהה
   const gold=new THREE.MeshLambertMaterial({color:0xddaa33,emissive:0x221100}); // זהב — דרגות
   // גוף
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.42*sz,.44*sz,.88*sz),WH),{position:{x:0,y:.44*sz,z:0}}));
+  {const _m=new THREE.Mesh(new THREE.BoxGeometry(.42*sz,.44*sz,.88*sz),WH);_m.position.set(0,.44*sz,0);g.add(_m);}
   const armorVest=new THREE.Mesh(new THREE.BoxGeometry(.46*sz,.4*sz,.5*sz),armor);armorVest.position.set(0,.52*sz,.22*sz);g.add(armorVest);
   // דרגות זהב על שרוול
   [-1,1].forEach(s=>{
@@ -4429,7 +4893,7 @@ function mkCommander(sz){
   });
   // צוואר
   const nkG=new THREE.Group();nkG.position.set(0,.72*sz,.28*sz);nkG.rotation.x=-.22;g.add(nkG);
-  nkG.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.32*sz,.28*sz,.3*sz),WH),{position:{x:0,y:.1*sz,z:0}}));
+  {const _m=new THREE.Mesh(new THREE.BoxGeometry(.32*sz,.28*sz,.3*sz),WH);_m.position.set(0,.1*sz,0);nkG.add(_m);}
   // ראש — כמו מומו
   const hG=new THREE.Group();hG.position.set(0,1.*sz,.4*sz);hG.rotation.x=.06;g.add(hG);
   const sk=new THREE.Mesh(new THREE.SphereGeometry(.26*sz,12,10),WH);sk.scale.set(1,1.05,.95);sk.castShadow=true;hG.add(sk);
@@ -4439,12 +4903,12 @@ function mkCommander(sz){
   const star=new THREE.Mesh(new THREE.SphereGeometry(.05*sz,5,4),gold);star.position.set(0,.28*sz,.22*sz);hG.add(star);
   // חרטום
   const mz=new THREE.Group();mz.position.set(0,-.1*sz,.22*sz);hG.add(mz);
-  mz.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.16*sz,.22*sz),WH),{position:{x:0,y:0,z:0}}));
+  {const _m=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.16*sz,.22*sz),WH);_m.position.set(0,0,0);mz.add(_m);}
   const nm=new THREE.Mesh(new THREE.SphereGeometry(.055*sz,10,8),BK);nm.scale.set(1,.65,.8);nm.position.set(0,.06*sz,.12*sz);mz.add(nm);
   // עיניים רציניות
   [-1,1].forEach(sd=>{
     const eg=new THREE.Group();eg.position.set(sd*.13*sz,.06*sz,.2*sz);hG.add(eg);
-    eg.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.096*sz,12,12),EY),{}));
+    eg.add(new THREE.Mesh(new THREE.SphereGeometry(.096*sz,12,12),EY));
     // ניצוץ
     const sh=new THREE.Mesh(new THREE.SphereGeometry(.03*sz,5,5),new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x888888}));sh.position.set(sd*.02,.04*sz,.09*sz);eg.add(sh);
   });
@@ -4461,7 +4925,7 @@ function mkCommander(sz){
     const pw=new THREE.Mesh(new THREE.BoxGeometry(.16*sz,.08*sz,.2*sz),WH);pw.position.set(0,-.32*sz,.02*sz);lg.add(pw);
   });
   const tG=new THREE.Group();tG.position.set(0,.44*sz,-.44*sz);tG.rotation.x=.8;g.add(tG);
-  tG.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.055*sz,.04*sz,.25*sz,8),WH),{position:{x:0,y:.12*sz,z:0}}));
+  {const _m=new THREE.Mesh(new THREE.CylinderGeometry(.055*sz,.04*sz,.25*sz,8),WH);_m.position.set(0,.12*sz,0);tG.add(_m);}
   return g;
 }
 
@@ -4581,35 +5045,218 @@ function spawnPalto(){
 }
 
 function buildCityHall(){
-  // עיריית לוד — מבנה ממשלתי בצפון-מזרח (80,-80)
+  // ══════════════════════════════════════════════════
+  // עיריית לוד — Lod Municipality — exterior מרשים
+  // מיקום: 80,-80 (צפון-מזרח)
+  // ══════════════════════════════════════════════════
   const cx=80,cz=-80;
-  // גוף ראשי — אבן בהירה
-  const base=new THREE.Mesh(new THREE.BoxGeometry(28,14,20),new THREE.MeshLambertMaterial({color:0xd8d0b8}));base.position.set(cx,7,cz);base.castShadow=true;base.receiveShadow=true;scene.add(base);
-  // קומה שנייה מצומצמת
-  const top=new THREE.Mesh(new THREE.BoxGeometry(22,8,16),new THREE.MeshLambertMaterial({color:0xccc4aa}));top.position.set(cx,18,cz);top.castShadow=true;scene.add(top);
-  // עמודות בכניסה — צד דרום (כיוון השחקן)
-  [-1,0,1].forEach(i=>{const col=new THREE.Mesh(new THREE.CylinderGeometry(.6,.7,14,8),new THREE.MeshLambertMaterial({color:0xe8e0cc}));col.position.set(cx+i*5,7,cz+10.5);scene.add(col);});
-  // שלט "עיריית לוד"
-  const sign=new THREE.Mesh(new THREE.BoxGeometry(10,.8,1.2),new THREE.MeshLambertMaterial({color:0x225588,emissive:0x001133}));sign.position.set(cx,15.5,cz+8.5);scene.add(sign);
-  // נורות כחולות
-  // removed extra PointLights
-  // דלת — צד דרום
-  const door=new THREE.Mesh(new THREE.BoxGeometry(3,5,.3),new THREE.MeshLambertMaterial({color:0x334455}));door.position.set(cx,2.5,cz+10.2);scene.add(door);
-  // סמן כניסה — כדור כחול לפני הדלת
-  const entInd=new THREE.Mesh(new THREE.SphereGeometry(.55,8,8),new THREE.MeshLambertMaterial({color:0x4488ff,emissive:0x1133aa}));entInd.position.set(cx,3,cz+12);scene.add(entInd);
-  // removed extra PointLight
-  G._cityHallDoor={mesh:entInd,x:cx,z:cz+12};
-  // קולידר — קירות בלי לחסום את הדלת בדרום
+  const stoneTex=_getBldTex('plasterNew',1);
+  const stoneOld=_getBldTex('stone',0);
+
+  // ── גוף ראשי — בניין ממשלתי ישראלי, 3 קומות ──
+  const bodyM=new THREE.MeshStandardMaterial({
+    map:(()=>{const t=stoneTex.clone();t.needsUpdate=true;t.repeat.set(5,2.5);return t;})(),
+    color:0xe2dece,roughness:.72,metalness:.02
+  });
+  const body=new THREE.Mesh(new THREE.BoxGeometry(32,14,22),bodyM);
+  body.position.set(cx,7,cz);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+
+  // קומה שלישית — מצומצמת (penthouse ממשלתי)
+  const top3M=bodyM.clone();top3M.map=stoneTex.clone();top3M.map.needsUpdate=true;top3M.map.repeat.set(3.5,1.2);
+  const top3=new THREE.Mesh(new THREE.BoxGeometry(26,5,18),top3M);
+  top3.position.set(cx,17,cz);top3.castShadow=true;scene.add(top3);
+
+  // ── מרפסת ראשית על גג קומה 2 ──
+  const balcM=new THREE.MeshStandardMaterial({color:0xd5cfc3,roughness:.82,metalness:.04});
+  const balcFloor=new THREE.Mesh(new THREE.BoxGeometry(32.8,.3,23),balcM);
+  balcFloor.position.set(cx,14.15,cz);scene.add(balcFloor);
+  // מעקה
+  const railM=new THREE.MeshStandardMaterial({color:0xb8b0a0,roughness:.65,metalness:.15});
+  [[cx,14.6,cz-11.6,33,.18,.2],[cx,14.6,cz+11.6,33,.18,.2],
+   [cx-16.5,14.6,cz,.2,.18,23],[cx+16.5,14.6,cz,.2,.18,23]].forEach(([x,y,z,w,h,d])=>{
+    {const _m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),railM);_m.position.set(x,y,z);scene.add(_m);}
+  });
+  // עמודוני מעקה
+  for(let i=-15;i<=15;i+=2){
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.55,5),railM);
+    p.position.set(cx+i,14.45,cz-11.5);scene.add(p);
+    const p2=p.clone();p2.position.z=cz+11.5;scene.add(p2);
+  }
+
+  // ── עמודות סגנון ממשלתי — קדמיות ──
+  const colM=new THREE.MeshStandardMaterial({color:0xeae4d8,roughness:.82,metalness:.02});
+  [-10,-5,0,5,10].forEach(ox=>{
+    // עמוד עצמו
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.5,.6,14,14),colM);
+    col.position.set(cx+ox,7,cz+11.5);col.castShadow=true;scene.add(col);
+    // כרכוב
+    const cap=new THREE.Mesh(new THREE.BoxGeometry(1.3,.4,1.3),colM);
+    cap.position.set(cx+ox,14.2,cz+11.5);scene.add(cap);
+    const base=new THREE.Mesh(new THREE.BoxGeometry(1.3,.3,1.3),colM);
+    base.position.set(cx+ox,.15,cz+11.5);scene.add(base);
+  });
+
+  // ── פורטיקו — גג מעל הכניסה ──
+  const porticoM=new THREE.MeshStandardMaterial({color:0xd8d2c4,roughness:.8,metalness:.03});
+  const portFloor=new THREE.Mesh(new THREE.BoxGeometry(26,.5,4.5),porticoM);
+  portFloor.position.set(cx,14.3,cz+13.8);scene.add(portFloor);
+  // קירטון על הפורטיקו — פרונטון קלאסי
+  const pediment=new THREE.Mesh(new THREE.BoxGeometry(26,.6,.5),
+    new THREE.MeshStandardMaterial({color:0xd0cab8,roughness:.85}));
+  pediment.position.set(cx,14.6,cz+13.3);scene.add(pediment);
+  // משולש פרונטון
+  const triGeo=new THREE.BufferGeometry();
+  const verts=new Float32Array([-13,0,0, 13,0,0, 0,2.2,0]);
+  triGeo.setAttribute('position',new THREE.BufferAttribute(verts,3));
+  triGeo.computeVertexNormals();
+  const tri=new THREE.Mesh(triGeo,new THREE.MeshStandardMaterial({color:0xd4ceb8,roughness:.85,side:THREE.DoubleSide}));
+  tri.position.set(cx,14.6,cz+13.3);scene.add(tri);
+
+  // ── פסים קומות — חלוקה ויזואלית ──
+  const bandM=new THREE.MeshStandardMaterial({color:0xc8c2b2,roughness:.9,metalness:.02});
+  [4.8,9.6,14.1].forEach(y=>{
+    const band=new THREE.Mesh(new THREE.BoxGeometry(32.4,.3,22.4),bandM);
+    band.position.set(cx,y,cz);scene.add(band);
+  });
+
+  // ── חלונות — שלוש קומות, מפורטים ──
+  const glM=new THREE.MeshStandardMaterial({color:0xa8cce0,roughness:.04,metalness:.22,transparent:true,opacity:.8,emissive:0x0c1e2a});
+  const frM2=new THREE.MeshStandardMaterial({color:0xe8e4da,roughness:.8,metalness:.04});
+  const shutBlue=new THREE.MeshStandardMaterial({color:0x3355aa,roughness:.85});
+
+  [[2.2,3.5],[2.2,7.8],[2.2,12.2]].forEach(([wW,wY])=>{
+    for(let wx=-13;wx<=13;wx+=4.5){
+      if(Math.abs(wx)<6&&wY<6)continue; // דלג על אזור כניסה בקומה ראשונה
+      // מסגרת
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(wW+.2,1.5,.22),frM2);
+      fr.position.set(cx+wx,wY,cz+11.05);scene.add(fr);
+      // זכוכית
+      const gw=new THREE.Mesh(new THREE.BoxGeometry(wW,1.3,.1),glM.clone());
+      gw.position.set(cx+wx,wY,cz+11.1);scene.add(gw);
+      // תריסים כחולים — ~40% מהחלונות
+      if(Math.random()<.4){
+        const sh=new THREE.Mesh(new THREE.BoxGeometry(wW*.48,1.35,.08),shutBlue);
+        sh.position.set(cx+wx-wW*.26,wY,cz+11.15);scene.add(sh);
+        const sh2=sh.clone();sh2.position.x=cx+wx+wW*.26;scene.add(sh2);
+      }
+    }
+    // חלונות אחוריים
+    for(let wx=-12;wx<=12;wx+=4.5){
+      const gw=new THREE.Mesh(new THREE.BoxGeometry(wW,1.3,.08),glM.clone());
+      gw.position.set(cx+wx,wY,cz-11.05);scene.add(gw);
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(wW+.2,1.5,.18),frM2);
+      fr.position.set(cx+wx,wY,cz-11.08);scene.add(fr);
+    }
+  });
+
+  // ── שלט "עיריית לוד" — כחול ממשלתי ──
+  const signBg=new THREE.Mesh(new THREE.BoxGeometry(12,.9,.25),
+    new THREE.MeshStandardMaterial({color:0x1a3a8a,roughness:.55,emissive:0x041020}));
+  signBg.position.set(cx,16.0,cz+13.3);scene.add(signBg);
+  // מסגרת שלט — לבנה
+  const signFr=new THREE.Mesh(new THREE.BoxGeometry(12.4,1.1,.22),
+    new THREE.MeshStandardMaterial({color:0xf0ece4,roughness:.75}));
+  signFr.position.set(cx,16.0,cz+13.2);scene.add(signFr);
+  // דגל ישראל מעל הבניין
+  const flagPole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,5.5,6),
+    new THREE.MeshStandardMaterial({color:0x888888,roughness:.6,metalness:.4}));
+  flagPole.position.set(cx,22.8,cz);scene.add(flagPole);
+  const flagWhite=new THREE.Mesh(new THREE.BoxGeometry(2.8,.08,1.5),
+    new THREE.MeshStandardMaterial({color:0xf0f4f8,roughness:.8}));
+  flagWhite.position.set(cx+1.4,24.2,cz);scene.add(flagWhite);
+  const stripe1=new THREE.Mesh(new THREE.BoxGeometry(2.8,.08,.28),
+    new THREE.MeshStandardMaterial({color:0x002288,roughness:.8}));
+  stripe1.position.set(cx+1.4,24.2,cz+.5);scene.add(stripe1);
+  const stripe2=stripe1.clone();stripe2.position.z=cz-.5;scene.add(stripe2);
+
+  // ── כניסה ראשית — מרשימה ──
+  // ארקאד — 3 קשתות
+  [-5,0,5].forEach(ox=>{
+    const archFr=new THREE.Mesh(new THREE.BoxGeometry(3.5,5,.45),
+      new THREE.MeshStandardMaterial({color:0xdcd6c6,roughness:.86}));
+    archFr.position.set(cx+ox,2.5,cz+11.0);scene.add(archFr);
+    if(ox===0){
+      // חלל הכניסה הראשית
+      const archIn=new THREE.Mesh(new THREE.BoxGeometry(2.8,4.5,.5),
+        new THREE.MeshStandardMaterial({color:0x485878,roughness:.9,metalness:.06}));
+      archIn.position.set(cx,2.3,cz+10.9);scene.add(archIn);
+    }
+    // קשת עליונה
+    const archTop=new THREE.Mesh(new THREE.BoxGeometry(3.5,.4,3.5),
+      new THREE.MeshStandardMaterial({color:0xd8d2c2,roughness:.88}));
+    archTop.position.set(cx+ox,5.3,cz+12);scene.add(archTop);
+  });
+  // מרקיזה / גגון כניסה
+  const canopy=new THREE.Mesh(new THREE.BoxGeometry(14.5,.2,2.5),
+    new THREE.MeshStandardMaterial({color:0x1a3a8a,roughness:.65}));
+  canopy.position.set(cx,5.8,cz+12.8);scene.add(canopy);
+
+  // דלת כניסה
+  const mainDoor=new THREE.Mesh(new THREE.BoxGeometry(2.8,4.5,.15),
+    new THREE.MeshStandardMaterial({color:0x2a3a55,roughness:.72,metalness:.12}));
+  mainDoor.position.set(cx,2.25,cz+11.05);scene.add(mainDoor);
+  // ידית דלת — מוט זהב
+  const dh=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.8,6),
+    new THREE.MeshStandardMaterial({color:0xddcc44,roughness:.28,metalness:.65,emissive:0x221800}));
+  dh.rotation.z=Math.PI/2;dh.position.set(cx+.8,2.3,cz+11.15);scene.add(dh);
+
+  // ── מדרגות כניסה ──
+  const stepM2=new THREE.MeshStandardMaterial({color:0xd4ceba,roughness:.9,metalness:0});
+  [0,1,2].forEach(i=>{
+    const st=new THREE.Mesh(new THREE.BoxGeometry(20,.2,i*.45+.6),stepM2);
+    st.position.set(cx,i*.22,cz+12.2+i*.5);st.receiveShadow=true;scene.add(st);
+  });
+  const plaza=new THREE.Mesh(new THREE.BoxGeometry(22,.18,3),stepM2);
+  plaza.position.set(cx,.09,cz+13.8);plaza.receiveShadow=true;scene.add(plaza);
+
+  // ── פנסי כניסה ──
+  [-9,9].forEach(ox=>{
+    const pol=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,4.5,6),
+      new THREE.MeshStandardMaterial({color:0x6a6a70,roughness:.7,metalness:.35}));
+    pol.position.set(cx+ox,2.25,cz+14);scene.add(pol);
+    const lamp=new THREE.Mesh(new THREE.BoxGeometry(.45,.5,.45),
+      new THREE.MeshStandardMaterial({color:0x3a3840,roughness:.6,metalness:.3}));
+    lamp.position.set(cx+ox,4.7,cz+14);scene.add(lamp);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),
+      new THREE.MeshStandardMaterial({color:0xffffcc,roughness:.2,emissive:0xaa9933}));
+    bulb.position.set(cx+ox,4.6,cz+14);scene.add(bulb);
+  });
+
+  // ── מזגן גדול על הגג ──
+  const acBig=new THREE.Mesh(new THREE.BoxGeometry(3,.8,2),
+    new THREE.MeshStandardMaterial({color:0xd8d0c8,roughness:.7,metalness:.12}));
+  acBig.position.set(cx+8,19.7,cz-4);scene.add(acBig);
+  const acFin=new THREE.Mesh(new THREE.BoxGeometry(2.8,.12,1.6),
+    new THREE.MeshStandardMaterial({color:0xa8a0a0,roughness:.5,metalness:.2}));
+  acFin.position.set(cx+8,20.15,cz-4);scene.add(acFin);
+
+  // ── אנטנת שידור ──
+  const ant=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,4,5),
+    new THREE.MeshStandardMaterial({color:0x888880,roughness:.65,metalness:.4}));
+  ant.position.set(cx-10,22,cz+2);scene.add(ant);
+  const antTop=new THREE.Mesh(new THREE.SphereGeometry(.18,6,5),
+    new THREE.MeshStandardMaterial({color:0xff2200,emissive:0x880000}));
+  antTop.position.set(cx-10,24.2,cz+2);scene.add(antTop);
+
+  // ── סמן כניסה ──
+  const entInd=new THREE.Mesh(new THREE.SphereGeometry(.55,8,8),
+    new THREE.MeshStandardMaterial({color:0x4488ff,emissive:0x1133aa}));
+  entInd.position.set(cx,2.8,cz+15.5);scene.add(entInd);
+  G._cityHallDoor={mesh:entInd,x:cx,z:cz+14};
+
+  // ── קולידר ──
   blds.push(
-    {x:cx-9,z:cz,w:10,d:22},      // קיר מערב
-    {x:cx+9,z:cz,w:10,d:22},      // קיר מזרח
-    {x:cx,z:cz-11,w:28,d:.5},     // קיר צפון
-    {x:cx-7,z:cz+10,w:14,d:.5},   // קיר דרום — מערב (לא חוסם דלת)
-    {x:cx+7,z:cz+10,w:14,d:.5}    // קיר דרום — מזרח (לא חוסם דלת)
+    {x:cx-9,z:cz,w:14,d:22},
+    {x:cx+9,z:cz,w:14,d:22},
+    {x:cx,z:cz-11,w:32,d:.5},
+    {x:cx-9,z:cz+10,w:14,d:.5},
+    {x:cx+9,z:cz+10,w:14,d:.5}
   );
-  // חדר שידור — בצד האחורי
-  const broadcast=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshLambertMaterial({color:0xdd2200,emissive:0x660000}));broadcast.position.set(cx,2,cz-14);scene.add(broadcast);
-  // removed extra PointLight
+
+  // סמן שידור
+  const broadcast=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),
+    new THREE.MeshLambertMaterial({color:0xdd2200,emissive:0x660000}));
+  broadcast.position.set(cx,2,cz-16);scene.add(broadcast);
 }
 
 // ════════════════════════════════════════════════
@@ -5010,5 +5657,4 @@ const _origSetMission=setMission;
 </script>
 </body>
 </html>
- 
  
