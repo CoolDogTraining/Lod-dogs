@@ -792,7 +792,7 @@ const MISSIONS=[
    }},
   // 13 — זיפו רודף אחרי פישקה לכיכר הכדורים
   {txt:'1️⃣3️⃣ זיפו: רדוף אחרי פישקה לכיכר הכדורים! 🟡',hint:'כיכר הכדורים',
-   targetFn:()=>({x:52,z:28}),
+   targetFn:()=>({x:40,z:0}),
    unlock:()=>{
      showCut('fishka_reveal',()=>{
        // פישקה כבר רצה (הופעלה מיד בסיום bella_dead)
@@ -1086,34 +1086,37 @@ function buildWorld(){
   mkRd(0,-50,300,10,false); // רחוב בן גוריון
 
   // === בלוקי מרכז העיר ===
-  // צפון לרחוב הרצל — צמוד למדרכה הצפונית
-  [[-60,-18,22,14,14],[-32,-18,18,12,12],[-5,-19,20,14,16],[22,-18,16,11,10]].forEach(a=>bldBlock(...a));
-  // דרום לרחוב הרצל — צמוד למדרכה הדרומית
-  [[-60,15,20,10,9],[-34,15,16,13,10],[-8,15,18,14,11],[18,15,16,11,8],[44,15,17,12,9]].forEach(a=>bldBlock(...a));
+  // צפון לרחוב הרצל — עם מרווח גדול מהמדרכה
+  [[-70,-26,18,12,12],[-42,-26,16,10,10],[-10,-26,18,13,13],[24,-26,14,9,9],[54,-26,15,10,9]].forEach(a=>bldBlock(...a));
+  // דרום לרחוב הרצל — עם מרווח גדול מהמדרכה
+  [[-70,23,17,9,9],[-40,23,15,11,9],[-8,23,17,12,10],[22,23,14,10,8],[50,23,15,11,9]].forEach(a=>bldBlock(...a));
 
   // === רמת אשכול — צפון ===
-  for(let x=-70;x<=70;x+=22)for(let z=-80;z>=-135;z-=22){if(Math.abs(x)<14)continue;bldHouse(x,z,4+Math.random()*2.5);}
+  for(let x=-85;x<=85;x+=32)for(let z=-95;z>=-155;z-=32){if(Math.abs(x)<16)continue;bldHouse(x,z,4+Math.random()*2.5);}
 
   // === גני אביב — דרום ===
-  for(let x=-70;x<=70;x+=22)for(let z=68;z<=130;z+=22){if(Math.abs(x)<14)continue;bldHouse(x,z,3.5+Math.random()*2);}
+  for(let x=-85;x<=85;x+=32)for(let z=80;z<=150;z+=32){if(Math.abs(x)<16)continue;bldHouse(x,z,3.5+Math.random()*2);}
 
   // === מקומות מפתח ===
-  bldPark(65,-10);          // גן ציבורי — מזרח מרכז
+  bldPark(80,-22);          // גן ציבורי — מזרח מרכז
   bldMarket(-80,55);        // שוק לוד — SW
   bldStation(-5,-155);      // תחנת רכבת — מערב/דרום
   bldMosque(-55,75);        // מסגד ג'מעה — עיר עתיקה
-  bldSynagogue(-35,-55);    // בית כנסת גדול — מרכז לוד
+  bldSynagogue(72,96);    // בית כנסת גדול — גני אביב דרום-מזרח
+  mkRd(72,71,12,60,true); // שדרות בית הכנסת — N-S כניסה
   bldBigMosque();           // המסגד הגדול — פרק ב׳
-  bldBallsSquare(52,28);    // כיכר הכדורים — מרכז-מזרח
+  bldBallsSquare(40,0);    // כיכר הכדורים — צומת רחוב הרצל/הדקל
 
   // שטחי כיבוש
+  addTerr(40,0,18,'כיכר הכדורים');
   addTerr(0,-5,20,'כיכר רחוב הרצל');
   addTerr(-68,52,22,'שוק לוד');
-  addTerr(63,-12,20,'פארק גני איילון');
+  addTerr(80,-22,20,'פארק גני איילון');
   addTerr(0,-145,22,'רמת אשכול');
   addTerr(-5,-150,25,'תחנת הרכבת');
   addTerr(-52,73,20,'העיר העתיקה');
 
+  addTerr(72,96,18,'שכונת גני אביב — בית הכנסת');
   addStreetDeco();
 }
 
@@ -1279,7 +1282,7 @@ function bldBlock(x,z,w,d,h){
   }
 
   // מזגן (AC) — קיר קדמי
-  if(Math.random()<.7){
+  if(Math.random()<.25){
     const acx=x+(Math.random()-.5)*(w*.55);
     const acy=h*.35+Math.random()*h*.3;
     const ac=new THREE.Mesh(new THREE.BoxGeometry(.72,.42,.32),new THREE.MeshStandardMaterial({color:0xe8e5dd,roughness:.55}));
@@ -1365,7 +1368,7 @@ function bldHouse(x,z,h){
     const bal=new THREE.Mesh(new THREE.BoxGeometry(balW,.12,1.05),new THREE.MeshLambertMaterial({color:dk(c,.88)}));
     bal.position.set(x,h*.55+.18,z-4.54-.52);scene.add(bal);
     // מעקה
-    for(let pi=-balW/2+.25;pi<=balW/2-.25;pi+=.5){
+    for(let pi=-balW/2+.25;pi<=balW/2-.25;pi+=1.0){
       const p=new THREE.Mesh(new THREE.BoxGeometry(.06,.55,.06),new THREE.MeshLambertMaterial({color:0x707068}));
       p.position.set(x+pi,h*.55+.46,z-4.54-1.0);scene.add(p);
     }
@@ -1373,8 +1376,8 @@ function bldHouse(x,z,h){
     rail.position.set(x,h*.55+.75,z-4.54-1.0);scene.add(rail);
   }
 
-  // מזגן על קיר
-  if(Math.random()<.5){
+  // מזגן על קיר — רק ב-25% מהבתים
+  if(Math.random()<.25){
     const ac=new THREE.Mesh(new THREE.BoxGeometry(.65,.38,.28),new THREE.MeshStandardMaterial({color:0xe5e2da,roughness:.55}));
     ac.position.set(x+1.2,h*.55,z-4.54-.16);scene.add(ac);
   }
@@ -1612,7 +1615,7 @@ function bldSynagogue(x,z){
     dPanel.position.set(x+sd*1.0,3.5,z-9.25);scene.add(dPanel);
     // עיטורי לוח — פאנלים שקועים
     [[0,2.2],[0,0],[0,-2.2]].forEach(([px2,py2])=>{
-      const pan=new THREE.Mesh(new THREE.BoxGeometry(1.4,.0001,1.5),new THREE.MeshStandardMaterial({color:0x3d2510,roughness:.7}));
+      const pan=new THREE.Mesh(new THREE.BoxGeometry(1.4,.04,1.5),new THREE.MeshStandardMaterial({color:0x3d2510,roughness:.7}));
       pan.position.set(x+sd*1.0+px2,3.5+py2,z-9.18);scene.add(pan);
     });
     // ציר זהב
@@ -1904,7 +1907,7 @@ function bldMosque(x,z){
   // 3 קשתות מחודדות
   [-5.5,0,5.5].forEach((ox,idx)=>{
     // עמוד קשת
-    const col=new THREE.Mesh(new THREE.CylinderGeometry(.45,.5,7,.10),archStoneM);
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.45,.5,7,10),archStoneM);
     col.position.set(x+ox,3.5,z-9.15);scene.add(col);
     // כרכוב עמוד
     const cap=new THREE.Mesh(new THREE.BoxGeometry(1.05,.3,1.05),marbleTrimM);
@@ -1961,11 +1964,25 @@ function bldMosque(x,z){
 }
 
 function bldBallsSquare(cx,cz){
-  // ── כיכר הכדורים — עיצוב מדויק לפי המציאות ──
-  // רצפת כיכר — אספלט עם ריצוף
-  const pave=new THREE.Mesh(new THREE.PlaneGeometry(50,50),
-    new THREE.MeshLambertMaterial({color:0x6a7a4a})); // דשא סביב
-  pave.rotation.x=-Math.PI/2;pave.position.set(cx,.02,cz);scene.add(pave);
+  // ── כיכר הכדורים — כיכר תנועה אמיתית בצומת כבישים ──
+  // מדרכה עגולה סביב האי — אבן ריצוף בהירה
+  const roundaboutPave=new THREE.Mesh(new THREE.CylinderGeometry(20,20,.12,40),
+    new THREE.MeshLambertMaterial({color:0xb8b0a2}));
+  roundaboutPave.position.set(cx,.06,cz);roundaboutPave.receiveShadow=true;scene.add(roundaboutPave);
+  // כביש טבעתי — אספלט כהה רחב (לרכבים)
+  const roadRing=new THREE.Mesh(new THREE.CylinderGeometry(20,20,.08,40,1,true),
+    new THREE.MeshLambertMaterial({color:0x2e2e2e,side:THREE.DoubleSide}));
+  roadRing.position.set(cx,.07,cz);scene.add(roadRing);
+  // מדרכה פנימית ישירות סביב האי
+  const innerPave=new THREE.Mesh(new THREE.RingGeometry(7.8,11,40),
+    new THREE.MeshLambertMaterial({color:0xc8c0a8,side:THREE.DoubleSide}));
+  innerPave.rotation.x=-Math.PI/2;innerPave.position.set(cx,.13,cz);scene.add(innerPave);
+  // פסי אספלט המחברים לכבישים (4 כיוונים) — כך הכביש "נכנס" לכיכר
+  [{dx:1,dz:0},{dx:-1,dz:0},{dx:0,dz:1},{dx:0,dz:-1}].forEach(({dx,dz})=>{
+    const conn=new THREE.Mesh(new THREE.BoxGeometry(dx?80:13,0.09,dz?13:80),
+      new THREE.MeshLambertMaterial({color:0x2a2a2a}));
+    conn.position.set(cx+dx*50,0.05,cz+dz*50);scene.add(conn);
+  });
 
   // האי המרכזי — פלטפורמת בטון מוגבהת עגולה
   const island=new THREE.Mesh(new THREE.CylinderGeometry(7,7.4,.55,32),
@@ -2009,7 +2026,7 @@ function bldBallsSquare(cx,cz){
       new THREE.MeshLambertMaterial({color:col}));
     ball.position.set(cx+ox,oy,cz+oz);ball.castShadow=true;scene.add(ball);
     // פסיפס — אריחים קטנים על פני השטח
-    const tileCount=Math.floor(r*14);
+    const tileCount=Math.floor(r*5);
     for(let i=0;i<tileCount;i++){
       const phi=Math.random()*Math.PI*2,theta=Math.random()*Math.PI;
       const tr=r+.03;
@@ -2048,11 +2065,19 @@ function bldBallsSquare(cx,cz){
       new THREE.MeshLambertMaterial({color:0x2a7a2a}));
     st.position.set(cx+Math.cos(ang)*8.2,.1,cz+Math.sin(ang)*8.2);scene.add(st);
   }
-  // דשא ירוק בין הפרחים
-  const grass=new THREE.Mesh(new THREE.RingGeometry(7.6,10,32),
+  // דשא ירוק בין הפרחים — רצועה ירוקה על האי
+  const grassRing=new THREE.Mesh(new THREE.RingGeometry(7.6,9.8,32),
     new THREE.MeshLambertMaterial({color:0x3d8a2a,side:THREE.DoubleSide}));
-  grass.rotation.x=-Math.PI/2;grass.position.set(cx,.06,cz);scene.add(grass);
-
+  grassRing.rotation.x=-Math.PI/2;grassRing.position.set(cx,.14,cz);scene.add(grassRing);
+  // קווי מעבר חצייה לבנים — 4 כיוונים
+  [{dx:1,dz:0,a:0},{dx:-1,dz:0,a:0},{dx:0,dz:1,a:Math.PI/2},{dx:0,dz:-1,a:Math.PI/2}].forEach(({dx,dz,a})=>{
+    for(let s=-2;s<=2;s++){
+      const stripe=new THREE.Mesh(new THREE.BoxGeometry(a===0?.18:1.2,0.03,a===0?1.2:.18),
+        new THREE.MeshLambertMaterial({color:0xf0f0f0}));
+      stripe.position.set(cx+dx*11+(dz?s*.8:0),0.1,cz+dz*11+(dx?s*.8:0));
+      scene.add(stripe);
+    }
+  });
   // !! לא מוסיפים ל-blds — כך הכיכר ניתנת להליכה
 }
 function bldBigMosque(){
@@ -2323,9 +2348,9 @@ function bldTree(x,z){
   } else {
     // עץ מוריק פרוש — שטוח יותר
     const lc=baseCol.clone();
-    const l1=new THREE.Mesh(new THREE.SphereGeometry(2.8,.6,9,7),new THREE.MeshLambertMaterial({color:lc}));
+    const l1=new THREE.Mesh(new THREE.SphereGeometry(2.8,9,7),new THREE.MeshLambertMaterial({color:lc}));
     l1.scale.y=.55;l1.position.set(x,h+1.2,z);l1.castShadow=true;scene.add(l1);
-    const l2=new THREE.Mesh(new THREE.SphereGeometry(2.0,.45,8,6),new THREE.MeshLambertMaterial({color:lc.clone().offsetHSL(0,0,.05)}));
+    const l2=new THREE.Mesh(new THREE.SphereGeometry(2.0,8,6),new THREE.MeshLambertMaterial({color:lc.clone().offsetHSL(0,0,.05)}));
     l2.scale.y=.5;l2.position.set(x+(Math.random()-.5)*.8,h+1.8,z+(Math.random()-.5)*.8);l2.castShadow=true;scene.add(l2);
   }
 }
@@ -2360,12 +2385,12 @@ function _mkLamp(x,z){
 }
 function addStreetDeco(){
   // פנסי רחוב הרצל (E-W) — משני הצדדים
-  for(let i=-120;i<130;i+=18){
+  for(let i=-120;i<130;i+=28){
     _mkLamp(i,7.8);   // צד צפון
     _mkLamp(i,-7.8);  // צד דרום
   }
   // פנסי שדרות ירושלים (N-S)
-  for(let i=-120;i<130;i+=18){
+  for(let i=-120;i<130;i+=28){
     _mkLamp(7.8,i);
     _mkLamp(-7.8,i);
   }
@@ -4094,7 +4119,7 @@ function buildPickups(){
 }
 function buildBones(){
   // עצמות למשימת צד — על מדרכות ובגן
-  const candidates=[[65,-10],[32,88],[-40,-18],[8,-78],[44,2]];
+  const candidates=[[80,-22],[32,88],[-40,-18],[8,-78],[44,2]];
   const spots=candidates.filter(([x,z])=>!isInBuilding(x,z,2));
   spots.forEach(([x,z])=>{
     const g=new THREE.Group();
@@ -4821,7 +4846,20 @@ function drawMM(){
   const ctx=mmCtx,W=120,H=120,sc=.58;
   const px=PB.position.x,pz=PB.position.z,cx=W/2-px*sc,cy=H/2-pz*sc;
   ctx.clearRect(0,0,W,H);ctx.fillStyle='#152015';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#3a3a3a';ctx.fillRect(0,H/2-3,W,6);ctx.fillRect(W/2-3,0,6,H);ctx.fillRect(W/2-3-40*sc,0,6,H);ctx.fillRect(W/2-3+40*sc,0,6,H);
+  // כבישים — רחוב הרצל (z=0 E-W), שד' ירושלים (x=0 N-S)
+  ctx.fillStyle='#3a3a3a';
+  ctx.fillRect(0,cy-3,W,6);          // הרצל E-W
+  ctx.fillRect(cx-3,0,6,H);          // ירושלים N-S
+  ctx.fillRect(cx-3+40*sc,0,5,H);    // הדקל x=40
+  ctx.fillRect(cx-3-40*sc,0,5,H);    // הגפן x=-40
+  ctx.fillRect(0,cy-2+50*sc,W,5);    // וייצמן z=50
+  ctx.fillRect(0,cy-2-50*sc,W,5);    // בן גוריון z=-50
+  ctx.fillStyle='#2a2a2a';
+  ctx.fillRect(cx-2+72*sc,0,4,H);    // שד' בית הכנסת x=72
+  // כיכר הכדורים
+  ctx.fillStyle='#e8791a';ctx.beginPath();ctx.arc(cx+40*sc,cy,5,0,Math.PI*2);ctx.fill();
+  // בית כנסת
+  ctx.fillStyle='#5588ff';ctx.beginPath();ctx.arc(cx+72*sc,cy+96*sc,4,0,Math.PI*2);ctx.fill();
   G.terrs.forEach(t=>{ctx.fillStyle=t.cap?'#f5c518':'#9b59b6';ctx.beginPath();ctx.arc(cx+t.x*sc,cy+t.z*sc,4,0,Math.PI*2);ctx.fill();});
   if(G.mission>=3){ctx.fillStyle='#e74c3c';G.enemies.forEach(e=>{if(e.hp>0&&e.mesh.visible)ctx.fillRect(cx+e.mesh.position.x*sc-2,cy+e.mesh.position.z*sc-2,5,5);});}
   if(G.mission===6){ctx.fillStyle='#ff6600';G.bosses.forEach(b=>{if(!b.dead)ctx.beginPath(),ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,6,0,Math.PI*2),ctx.fill();});}
@@ -5016,8 +5054,24 @@ function drawBigMap(){
   for(let i=startZ;i<startZ+H/sc+grid;i+=grid){ctx.beginPath();ctx.moveTo(0,wz(i));ctx.lineTo(W,wz(i));ctx.stroke();}
   // רחובות ראשיים
   ctx.strokeStyle='#2e3e2e';ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(0,wz(0));ctx.lineTo(W,wz(0));ctx.stroke();
-  ctx.beginPath();ctx.moveTo(wx(0),0);ctx.lineTo(wx(0),H);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,wz(0));ctx.lineTo(W,wz(0));ctx.stroke();   // הרצל
+  ctx.beginPath();ctx.moveTo(wx(0),0);ctx.lineTo(wx(0),H);ctx.stroke();   // ירושלים
+  ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(wx(40),0);ctx.lineTo(wx(40),H);ctx.stroke(); // הדקל
+  ctx.beginPath();ctx.moveTo(wx(-40),0);ctx.lineTo(wx(-40),H);ctx.stroke();// הגפן
+  ctx.beginPath();ctx.moveTo(0,wz(50));ctx.lineTo(W,wz(50));ctx.stroke(); // וייצמן
+  ctx.beginPath();ctx.moveTo(0,wz(-50));ctx.lineTo(W,wz(-50));ctx.stroke();// בן גוריון
+  ctx.strokeStyle='#253525';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(wx(72),0);ctx.lineTo(wx(72),H);ctx.stroke(); // שד' בית הכנסת
+  // כיכר הכדורים — עיגול כתום
+  ctx.fillStyle='rgba(232,121,26,.7)';ctx.beginPath();ctx.arc(wx(40),wz(0),8*mapZoomLevel,0,Math.PI*2);ctx.fill();
+  // בית כנסת — עיגול כחול
+  ctx.fillStyle='rgba(85,136,255,.7)';ctx.beginPath();ctx.arc(wx(72),wz(96),6*mapZoomLevel,0,Math.PI*2);ctx.fill();
+  if(mapZoomLevel>=1){
+    ctx.fillStyle='#ffaa44';ctx.font=`bold ${Math.round(9*mapZoomLevel)}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText('כיכר הכדורים',wx(40),wz(0)-10*mapZoomLevel);
+    ctx.fillStyle='#88aaff';ctx.fillText('בית כנסת',wx(72),wz(96)-9*mapZoomLevel);
+  }
   // בניינים
   ctx.fillStyle='#253525';
   blds.forEach(b=>ctx.fillRect(wx(b.x)-b.w/2*sc,wz(b.z)-b.d/2*sc,b.w*sc,b.d*sc));
@@ -5231,7 +5285,7 @@ function spawnFishkaHostile(){
     }
   });
 
-  // פישקה עוינת — מתחילה בשוק ורצה לכיכר (52,28)
+  // פישקה עוינת — מתחילה בשוק ורצה לכיכר (40,0)
   const startX=-68,startZ=52;
   const fm=mkFishka(1.3); // גדולה יותר — קל לראות
   fm.position.set(startX,0,startZ);
