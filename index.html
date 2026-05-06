@@ -449,6 +449,16 @@ canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(
     <div id="cs-save-info" style="color:#aaa;font-size:11px;margin-top:3px;"></div>
   </div>
   <div class="cc-wrap">
+    <div style="width:100%;text-align:center;margin-bottom:14px;">
+      <div style="color:#aaa;font-size:11px;margin-bottom:7px;letter-spacing:1px;">📖 התחל מפרק</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="csStartChapter(0)"  style="background:#2a4a2a;color:#8f8;border:1.5px solid #4a8a4a;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;">פרק א׳</button>
+        <button onclick="csStartChapter(8)"  style="background:#2a3a4a;color:#8af;border:1.5px solid #4a6a8a;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;">פרק ב׳</button>
+        <button onclick="csStartChapter(12)" style="background:#4a2a2a;color:#f88;border:1.5px solid #8a4a4a;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;">פרק ג׳</button>
+        <button onclick="csStartChapter(15)" style="background:#3a3a1a;color:#ff8;border:1.5px solid #7a7a3a;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;">פרק ד׳</button>
+        <button onclick="csStartChapter(20)" style="background:#3a1a3a;color:#f8f;border:1.5px solid #7a3a7a;border-radius:8px;padding:7px 13px;cursor:pointer;font-size:13px;font-family:inherit;">פרק ה׳</button>
+      </div>
+    </div>
     <div class="cc" onclick="selDog('colin')">
       <div class="cc-ico">🦴</div><div class="cc-name">קולין</div><div class="cc-sub">לוחם הרחובות</div>
       <div class="cc-ab">כוח וקרב ישיר
@@ -939,13 +949,20 @@ const MISSIONS=[
    }},
   // 19 — סיום + אנדרטה לבלה
   {txt:'🏆 כלבי לוד — אגדה לעד! 🐕',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{
-    // הסר את גופת בלה ושים אנדרטה במקומה
-    const bellaPos={x:-60,z:60};
-    // מצא והסתר את meshים של בלה
-    G.npcs.forEach(n=>{ if(n.name==='בלה הזקנה'&&n.mesh) n.mesh.visible=false; });
-    _spawnBellaMonument(bellaPos.x, bellaPos.z);
+    // הסתר גופת בלה, סמן כמתה (למניעת דיאלוג)
+    G.npcs.forEach(n=>{
+      if(n.name==='בלה הזקנה'&&n.mesh){
+        n.mesh.visible=false;
+        n._dead=true;
+      }
+    });
+    _spawnBellaMonument(-60, 60);
     setTimeout(()=>showN('🗿 אנדרטה לזכר בלה הוקמה בשכונה'),1200);
-    // פרק ה׳ נפתח אחרי 5 שניות
+    // רקס ממתין בכיכר — נוצר עם מיקום קבוע, לא עוקב עד mission 21
+    if(!G._reksAlly){
+      _spawnReksAlly();
+      G._reksAlly._waitAtPlaza=true; // דגל: עמוד בכיכר, אל תעקוב
+    }
     setTimeout(()=>showCut('ch5_open',()=>setMission(20)),5000);
   }},
   // ── פרק ה׳ — שחר ──
@@ -954,40 +971,32 @@ const MISSIONS=[
    hint:'כיכר הכדורים',
    targetFn:()=>({x:40,z:0}),
    unlock:()=>{
-     showCut('reks_joins',()=>{
-       // הוסף רקס כ-NPC מלווה
-       _spawnReksAlly();
-       showN('🫡 רקס הצטרף לכנופייה!\nהוא מכיר את בריכת הנחת — עקבו אחריו.');
-     });
+     showN('🌅 פרק ה׳ — שחר\nרקס מחכה לכם בכיכר הכדורים.');
    }},
   // 21 — הכנע את גיסות טיטאן
   {txt:'2️⃣1️⃣ הכנע 5 כלבים מגיסות טיטאן 🐕⚔️  (הובסו: 0/5)',
-   hint:'גיסות צפון לוד',
-   targetFn:()=>G.enemies.find(e=>e.hp>0&&e.mesh.visible&&e._titan)||{x:-20,z:-60},
+   hint:'בריכת הנחת — צפון',
+   targetFn:()=>G.enemies.find(e=>e.hp>0&&e.mesh.visible&&e._titan)||{x:-120,z:130},
    unlock:()=>{
+     // ספוואן מיידי — לא מחכים לסגירת קאטסין
+     _spawnTitanScouts();
      showCut('new_threat',()=>{
-       _spawnTitanScouts();
-       showN('⚠️ גיסות טיטאן פשטו על הצפון!\nהכנע 5 מהם כדי להמשיך.');
+       showN('⚠️ גיסות טיטאן פשטו על בריכת הנחת!\nהגיעו לצפון הגשר והכניעו 5 מהם.');
      });
    }},
   // 22 — הגיעו לבריכת הנחת
   {txt:'2️⃣2️⃣ הגיעו לבריכת הנחת — צפון הגשר 💧',
    hint:'בריכת הנחת — צפון',
-   targetFn:()=>({x:-100,z:-110}),
+   targetFn:()=>({x:-120,z:130}),
    unlock:()=>{
      showN('💧 בריכת הנחת — רקס: "שם הוא מתכנן. נגיע לפניו."');
    }},
   // 23 — קרב טיטאן
   {txt:'2️⃣3️⃣ הכנעו את טיטאן! 💀🔥',
    hint:'טיטאן — בריכת הנחת',
-   targetFn:()=>G._titanEnemy?{x:G._titanEnemy.x,z:G._titanEnemy.z}:{x:-100,z:-110},
+   targetFn:()=>G._titanEnemy?{x:G._titanEnemy.x,z:G._titanEnemy.z}:{x:-120,z:130},
    unlock:()=>{
-     showCut('titan_reveal',()=>{
-       showCut('ch5_boss',()=>{
-         _spawnTitanBoss();
-         showN('💀 טיטאן כאן! הילחמו יחד — זהו הקרב האחרון!');
-       });
-     });
+     showN('💀 טיטאן כאן! הילחמו יחד — זהו הקרב האחרון!');
    }},
   // 24 — סיום אמיתי
   {txt:'🏆 לוד — לעד ולנצח! 🐾',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{
@@ -1162,7 +1171,7 @@ function updPfx(dt){
 // ════════════════════════════════════════════════
 // SELECT DOG
 // ════════════════════════════════════════════════
-function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';document.getElementById('sq-btn').style.display='flex';init();}
+function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';document.getElementById('sq-btn').style.display='flex';init();if(window._csChapter!=null){const _ch=window._csChapter;window._csChapter=null;setTimeout(()=>{if(isMob)document.getElementById('mob').style.display='block';if(typeof setMission==='function')setMission(_ch);},400);}}
 
 // ════════════════════════════════════════════════
 // INIT
@@ -1192,6 +1201,8 @@ function init(){
   G.enemies=[];G.bosses=[];G.pickups=[];G.npcs=[];G.particles=[];
   G.terrs=[];G.terrCnt=0;G.guardDogs=[];G.cityHallGuards=[];
   G._fishkaEnemy=null;G.bruno=null;G.palto=null;G.reks=null;
+  G._reksAlly=null;G._titanEnemy=null;G._titanScoutsSpawned=false;G._ch5ScoutsDone=false;
+  G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
 
   const cv=document.getElementById('cv');
   renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
@@ -1412,9 +1423,9 @@ function buildWorld(){
   // כבישים N-S ב-x=-40,0,40 (רוחב 12) → לא לבנות בטווח x=[-46..46] סביב כל ציר
   // בין כבישים: x ≈ -60 (בין -80 ל--40), x ≈ -20 (בין -40 ל-0), x ≈ 20 (0 ל-40), x ≈ 60 (40 ל-80)
   for(let bx=-85;bx<=85;bx+=32)for(let bz=-95;bz>=-155;bz-=32){
+    // הימנע מבנייה על כבישים N-S (x=-40,0,40 ±8) ומכביש E-W (z=-50 ±8)
     if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
     if(Math.abs(bz+50)<10)continue;
-    if(Math.abs(bx+100)<24&&Math.abs(bz+110)<24)continue;
     bldHouse(bx,bz,4+Math.random()*2.5);
   }
 
@@ -4822,6 +4833,7 @@ function setupInput(){
 }
 function setupJoy(){
   const jz=document.getElementById('jz'),jk=document.getElementById('jk'),cz=document.getElementById('cz'),R=58;
+  if(jz._joyReady)return; jz._joyReady=true; // מנע רישום כפול
   jz.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];G.joy={on:true,id:t.identifier,sx:t.clientX,sy:t.clientY,dx:0,dy:0};},{passive:false});
   jz.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){if(t.identifier!==G.joy.id)continue;let dx=t.clientX-G.joy.sx,dy=t.clientY-G.joy.sy,l=Math.sqrt(dx*dx+dy*dy);if(l>R){dx=dx/l*R;dy=dy/l*R;}G.joy.dx=dx/R;G.joy.dy=dy/R;jk.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;}},{passive:false});
   const ej=()=>{G.joy.on=false;G.joy.dx=0;G.joy.dy=0;jk.style.transform='translate(-50%,-50%)';};jz.addEventListener('touchend',ej);jz.addEventListener('touchcancel',ej);
@@ -4856,7 +4868,7 @@ function updateMissionHUD(){
 
 function updateNavArrow(){
   const nav=document.getElementById('nav');
-  if(G.mission>=20){nav.style.display='none';return;}
+  if(G.mission>=23){nav.style.display='none';return;}
   if(G.mission===7){nav.style.display='none';return;}
   const m=MISSIONS[G.mission];
   if(!m||!m.hint){nav.style.display='none';return;}
@@ -4876,7 +4888,7 @@ function nearestOf(arr,getFn){
 }
 
 function updateNavDirection(){
-  if(G.mission===7||G.mission===20)return;
+  if(G.mission===7)return;
   const m=MISSIONS[G.mission];if(!m)return;
   const px=PB.position.x,pz=PB.position.z;
   let tx,tz;
@@ -5056,10 +5068,12 @@ function doAtk(){
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
           const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
           updateMissionHUD();
+          // בדיקה מיידית לגיסות טיטאן
+          if(e._titan&&G.mission===21)_checkCh5Progress();
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
-          // ── respawn אויב חדש במקום אחר ──
-          setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+          // ── respawn אויב חדש — לא עבור גיסות טיטאן ──
+          if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
         }
       }
     });
@@ -5234,6 +5248,7 @@ function doInteract(){
 // DIALOGS
 // ════════════════════════════════════════════════
 function dlgElder(n){
+  if(n._dead)return; // בלה מתה — אין דיאלוג
   if(G.mission>0){openDlg(n.av,n.name,'כבר אמרתי לך — לך ותבצע את המשימות! 🐾',[{t:'בסדר!',fn:closeDlg}]);return;}
   openDlg(n.av,n.name,'אני בלה. הייתי מלכת הרחוב פעם...\n\nכנופיית "כלבי הגשר" שולטת בכל. כדי לנצח — אכלו, גייסו כלבים, ורק אז לחמו.\n\nהבנתם? אז קדימה!',
     [{t:'תודה בלה! קדימה',fn:()=>{closeDlg();setMission(1);showN('בלה: "קודם אכלו — כלב רעב לא לוחם!"');}},
@@ -5597,7 +5612,7 @@ function drawMM(){
   // בית כנסת
   ctx.fillStyle='#5588ff';ctx.beginPath();ctx.arc(cx+72*sc,cy+96*sc,4,0,Math.PI*2);ctx.fill();
   // בריכת הנחת (פרק ה׳)
-  ctx.fillStyle='#00aaff';ctx.beginPath();ctx.arc(cx-100*sc,cy-110*sc,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#00aaff';ctx.beginPath();ctx.arc(cx-120*sc,cy+130*sc,4,0,Math.PI*2);ctx.fill();
   // שטחים
   G.terrs.forEach(t=>{ctx.fillStyle=t.cap?'#f5c518':'#9b59b6';ctx.beginPath();ctx.arc(cx+t.x*sc,cy+t.z*sc,4,0,Math.PI*2);ctx.fill();});
   // אויבים
@@ -8193,130 +8208,471 @@ function _spawnReksAlly(){
 
 // ── גיסות טיטאן — 6 כלבים חזקים ──
 function _spawnTitanScouts(){
+  if(G._titanScoutsSpawned)return;
+  G._titanScoutsSpawned=true;
+  // מיקומים ליד בריכת הנחת (cx=-120, cz=130)
   const spots=[
-    [-18,-52],[-28,-58],[-12,-66],
-    [-35,-48],[-22,-72],[-8,-55],
+    [-108,118],[-120,115],[-132,118],
+    [-108,142],[-120,145],[-132,142],
   ];
-  spots.forEach(([x,z],i)=>{
-    const m=mkGuard(1.1); // רועה גרמני גדול
-    // צבע כהה יותר — גיסות
-    m.traverse(c=>{if(c.material)c.material.color&&c.material.color.multiplyScalar(.6);});
+  spots.forEach(([x,z])=>{
+    const m=mkTitanScout(1.15);
     m.position.set(x,0,z);
+    m.visible=true;
     scene.add(m);
-    // HP bar
-    const barBg=new THREE.Mesh(new THREE.BoxGeometry(1.8,.16,.1),new THREE.MeshLambertMaterial({color:0x330000}));
-    barBg.position.set(0,2.5,0);m.add(barBg);
-    const barFg=new THREE.Mesh(new THREE.BoxGeometry(1.8,.14,.12),new THREE.MeshLambertMaterial({color:0xff2200}));
-    barFg.position.set(0,2.5,.01);m.add(barFg);
-    // נורית אדומה כהה
-    const det=new THREE.Mesh(new THREE.SphereGeometry(.22,6,6),new THREE.MeshLambertMaterial({color:0xcc0000,emissive:0x660000}));
-    det.position.set(0,2.8,0);m.add(det);
+    // אור ענבר קטן — עיניים זוהרות בחושך
+    const sl=new THREE.PointLight(0xff6600,.65,7);sl.position.set(x,2,z);scene.add(sl);
+    const barBg=new THREE.Mesh(new THREE.BoxGeometry(1.8,.16,.1),new THREE.MeshLambertMaterial({color:0x222222}));
+    barBg.position.set(0,2.6,0);m.add(barBg);
+    const barFg=new THREE.Mesh(new THREE.BoxGeometry(1.8,.14,.12),new THREE.MeshLambertMaterial({color:0xcc4400}));
+    barFg.position.set(0,2.6,.01);m.add(barFg);
+    const det=new THREE.Mesh(new THREE.SphereGeometry(.32,8,8),new THREE.MeshLambertMaterial({color:0x554400,emissive:0x221a00}));
+    det.position.set(0,3.1,0);m.add(det);
     G.enemies.push({
       mesh:m,bar:barFg,
       x,z,homeX:x,homeZ:z,
       hp:80,mhp:80,
-      spd:5.2,atk:2.5,atkT:1.2,
-      alert:14,
+      spd:5.5,atk:2.5,atkT:1.2,
+      alert:22,
       state:'patrol',patAng:Math.random()*Math.PI*2,patT:0,
       searchT:0,lastSeenX:0,lastSeenZ:0,
-      _titan:true, // מסמן ששייך לגיסות טיטאן
+      _titan:true,
     });
   });
+  // ── ספאון טיטאן הבוס ליד הבריכה — קפוא עד שהסקאוטים יובסו ──
+  _spawnTitanBoss(true);
 }
 
-// ── מודל טיטאן — רוטווילר ענק ──
+// ── עזר: קוץ שמופנה החוצה מגליל (ציר Y) בזווית a ──
+function _radialSpike(R,colY,colZ,a,spikeLen,spikeR,mat,g){
+  const spk=new THREE.Mesh(new THREE.ConeGeometry(spikeR,spikeLen,5),mat);
+  spk.position.set(Math.cos(a)*R,colY,colZ+Math.sin(a)*R);
+  // Default cone tip=+Y. rotation.x=PI/2 → tip becomes +Z,
+  // rotation.y=PI/2-a → tip points in direction (cos a, 0, sin a)
+  spk.rotation.x=Math.PI/2;
+  spk.rotation.y=Math.PI/2-a;
+  g.add(spk);
+}
+
+// ── מודל טיטאן — רוטווילר ענק ומפחיד ──
 function mkTitan(sz){
   const g=new THREE.Group();
-  const fur=new THREE.MeshLambertMaterial({color:0x1a1208}); // שחור כמעט
-  const tan=new THREE.MeshLambertMaterial({color:0x6a4010}); // חום-זהב בלחיים
-  const scar=new THREE.MeshLambertMaterial({color:0x8a3030}); // צלקת
-  const eyM=new THREE.MeshLambertMaterial({color:0xddcc00,emissive:0x665500}); // עיניים צהובות
-  const ns=new THREE.MeshLambertMaterial({color:0x0a0606});
+  // ── חומרים ──
+  const fur  =new THREE.MeshLambertMaterial({color:0x0c0906,emissive:0x050302});
+  const muscle=new THREE.MeshLambertMaterial({color:0x180e06,emissive:0x060200});
+  const sTan =new THREE.MeshLambertMaterial({color:0x3c1a08,emissive:0x0e0400});   // לחיים
+  const sRed =new THREE.MeshLambertMaterial({color:0xa02020,emissive:0x500a0a});   // צלקות אדומות-חיות
+  const eyOuter=new THREE.MeshLambertMaterial({color:0x100000,emissive:0x060000});
+  const eyIris =new THREE.MeshLambertMaterial({color:0xff5500,emissive:0xff2200}); // כתום-אש
+  const eyPup  =new THREE.MeshLambertMaterial({color:0x000000});
+  const eyHl   =new THREE.MeshLambertMaterial({color:0xffffff,emissive:0xcccccc});
+  const ns    =new THREE.MeshLambertMaterial({color:0x060202});
+  const fangM =new THREE.MeshLambertMaterial({color:0xf0e0b0,emissive:0x1c1808}); // שנהב
+  const bloodM=new THREE.MeshLambertMaterial({color:0xc06060,emissive:0x3a1010}); // צבע דם בקצה ניב
+  const tongue=new THREE.MeshLambertMaterial({color:0x8a1c1c,emissive:0x280808});
+  const armorM=new THREE.MeshLambertMaterial({color:0x121008,emissive:0x060500});
+  const spikeM=new THREE.MeshLambertMaterial({color:0x302818,emissive:0x0c0a06});
+  const chainM=new THREE.MeshLambertMaterial({color:0x2c2c2c,emissive:0x0e0e0e});
 
-  // גוף ענק
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.72*sz,.6*sz,1.6*sz),fur);
-  body.position.y=.9*sz;g.add(body);
-  // חזה
-  const chest=new THREE.Mesh(new THREE.BoxGeometry(.66*sz,.5*sz,.5*sz),fur);
-  chest.position.set(0,.88*sz,.72*sz);g.add(chest);
-  // צוואר
-  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.24*sz,.3*sz,.4*sz,9),fur);
-  nk.position.set(0,1.2*sz,.72*sz);nk.rotation.x=-.28;g.add(nk);
-  // ראש מרובע
-  const hG=new THREE.Group();hG.position.set(0,1.62*sz,1.08*sz);hG.rotation.x=.08;g.add(hG);
-  const skull=new THREE.Mesh(new THREE.BoxGeometry(.74*sz,.64*sz,.68*sz),fur);hG.add(skull);
-  // לחיים חום
+  // ══════════════════════════════════
+  //  גוף
+  // ══════════════════════════════════
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.86*sz,.64*sz,1.76*sz),fur);
+  body.position.y=.92*sz;g.add(body);
+
+  // חזה בולט
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.82*sz,.62*sz,.62*sz),fur);
+  chest.position.set(0,.92*sz,.9*sz);g.add(chest);
+
+  // שרירי ירכיים בצדדים
   [-1,1].forEach(s=>{
-    const jw=new THREE.Mesh(new THREE.BoxGeometry(.22*sz,.4*sz,.52*sz),tan);
-    jw.position.set(s*.3*sz,-.1*sz,.02*sz);hG.add(jw);
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.54*sz,.92*sz),muscle);
+    fl.position.set(s*.52*sz,.96*sz,.1*sz);g.add(fl);
   });
-  // חרטום
-  const snout=new THREE.Mesh(new THREE.BoxGeometry(.44*sz,.26*sz,.4*sz),fur);
-  snout.position.set(0,-.12*sz,.36*sz);hG.add(snout);
-  const nose=new THREE.Mesh(new THREE.SphereGeometry(.1*sz,7,6),ns);
-  nose.scale.set(1,.65,.8);nose.position.set(0,.04*sz,.56*sz);hG.add(nose);
-  // צלקת על הלסת
-  const scarMesh=new THREE.Mesh(new THREE.BoxGeometry(.08*sz,.36*sz,.06*sz),scar);
-  scarMesh.position.set(.22*sz,-.05*sz,.28*sz);scarMesh.rotation.z=.3;hG.add(scarMesh);
-  // עיניים צהובות
+
+  // ══════════════════════════════════
+  //  שריון גב — 3 לוחות עם קוצים מעליהם
+  // ══════════════════════════════════
+  [-0.42,-0.04,0.38].forEach(oz=>{
+    const plateY=1.28*sz, plateZ=oz*sz;
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(.92*sz,.14*sz,.38*sz),armorM);
+    plate.position.set(0,plateY,plateZ);g.add(plate);
+    // שפה מורמת
+    [-1,1].forEach(sx=>{
+      const ridge=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.1*sz,.34*sz),spikeM);
+      ridge.position.set(sx*.49*sz,plateY+.11*sz,plateZ);g.add(ridge);
+    });
+    // קוצים — tip of cone is UP, base is DOWN (no rotation needed — default)
+    [-1,0,1].forEach(spx=>{
+      const spk=new THREE.Mesh(new THREE.ConeGeometry(.07*sz,.34*sz,5),spikeM);
+      // מרכז הקונוס ב־plateY+.07 (חצי גובה לוח) + .17 (חצי גובה קוץ)
+      spk.position.set(spx*.27*sz, plateY+.24*sz, plateZ);
+      g.add(spk); // tip points in default +Y ✓
+    });
+  });
+
+  // ══════════════════════════════════
+  //  צוואר שרירי
+  // ══════════════════════════════════
+  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.33*sz,.43*sz,.54*sz,10),fur);
+  nk.position.set(0,1.28*sz,.84*sz);nk.rotation.x=-.35;g.add(nk);
+  // כתפיים
   [-1,1].forEach(s=>{
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.11*sz,8,7),eyM);
-    eye.position.set(s*.26*sz,.12*sz,.34*sz);hG.add(eye);
-    // ניצוץ
-    const sh=new THREE.Mesh(new THREE.SphereGeometry(.04*sz,4,4),new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x888888}));
-    sh.position.set(s*.03,.07*sz,.1*sz);eye.add(sh);
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(.32*sz,7,5),fur);
+    sh.scale.set(1,.74,1.22);sh.position.set(s*.52*sz,1.14*sz,.46*sz);g.add(sh);
   });
-  // אוזניים קצוצות — רוטווילר
+
+  // ══════════════════════════════════
+  //  ראש — תנוחת תקיפה (נמוך קדימה)
+  // ══════════════════════════════════
+  const hG=new THREE.Group();
+  hG.position.set(0,1.62*sz,1.26*sz);hG.rotation.x=.28;g.add(hG);
+
+  // גולגולת רחבה ומרובעת
+  const skull=new THREE.Mesh(new THREE.BoxGeometry(.94*sz,.72*sz,.82*sz),fur);hG.add(skull);
+
+  // מצח כבד
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(.98*sz,.22*sz,.36*sz),fur);
+  brow.position.set(0,.38*sz,.36*sz);hG.add(brow);
+
+  // קמטי עצבנות מתחת למצח (V-shape)
   [-1,1].forEach(s=>{
-    const ear=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.18*sz,.14*sz),fur);
-    ear.position.set(s*.34*sz,.38*sz,-.1*sz);ear.rotation.z=s*.15;hG.add(ear);
+    const wr=new THREE.Mesh(new THREE.BoxGeometry(.09*sz,.3*sz,.09*sz),sTan);
+    wr.position.set(s*.19*sz,.24*sz,.5*sz);wr.rotation.z=s*.65;hG.add(wr);
   });
-  // 4 רגליים עבות
-  [[.26,.9,.44],[-.26,.9,.44],[.26,.9,-.5],[-.26,.9,-.5]].forEach(([lx,ly,lz])=>{
+
+  // לחיים שריריות בולטות
+  [-1,1].forEach(s=>{
+    const jw=new THREE.Mesh(new THREE.BoxGeometry(.34*sz,.54*sz,.64*sz),sTan);
+    jw.position.set(s*.34*sz,-.1*sz,.06*sz);hG.add(jw);
+    const cb=new THREE.Mesh(new THREE.SphereGeometry(.15*sz,6,5),muscle);
+    cb.scale.set(1,.6,1.2);cb.position.set(s*.4*sz,.12*sz,.24*sz);hG.add(cb);
+  });
+
+  // ══════════════════════════════════
+  //  חרטום + פה + שיניים
+  // ══════════════════════════════════
+  // לסת עליונה
+  const jawUp=new THREE.Mesh(new THREE.BoxGeometry(.58*sz,.3*sz,.54*sz),fur);
+  jawUp.position.set(0,-.06*sz,.46*sz);hG.add(jawUp);
+  const lipUp=new THREE.Mesh(new THREE.BoxGeometry(.56*sz,.1*sz,.52*sz),fur);
+  lipUp.position.set(0,-.24*sz,.46*sz);hG.add(lipUp);
+
+  // לסת תחתונה — פתוחה
+  const jawLo=new THREE.Mesh(new THREE.BoxGeometry(.54*sz,.2*sz,.48*sz),fur);
+  jawLo.position.set(0,-.42*sz,.44*sz);jawLo.rotation.x=.24;hG.add(jawLo);
+  const lipLo=new THREE.Mesh(new THREE.BoxGeometry(.52*sz,.1*sz,.46*sz),fur);
+  lipLo.position.set(0,-.56*sz,.44*sz);lipLo.rotation.x=.24;hG.add(lipLo);
+
+  // לשון — גלויה
+  const tng=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.07*sz,.32*sz),tongue);
+  tng.position.set(0,-.5*sz,.52*sz);tng.rotation.x=.18;hG.add(tng);
+
+  // ── ניבים עליונים (tip points DOWN = rotation.x=PI) ──
+  [-1,1].forEach(s=>{
+    // ניב ראשי — ענק
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.095*sz,.42*sz,6),fangM);
+    f.position.set(s*.17*sz,-.16*sz,.7*sz);f.rotation.x=Math.PI;hG.add(f);
+    // קצה דם
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.11*sz,5),bloodM);
+    tip.position.set(0,-.22*sz,0);f.add(tip); // relative to fang center
+  });
+  // ── ניבים תחתונים (tip points UP = no rotation) ──
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.078*sz,.34*sz,6),fangM);
+    f.position.set(s*.17*sz,-.54*sz,.66*sz);hG.add(f); // default tip +Y ✓
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.032*sz,.09*sz,5),bloodM);
+    tip.position.set(0,.18*sz,0);f.add(tip);
+  });
+  // שיניים קטנות — שורה עליונה
+  [-2,-1,0,1,2].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.046*sz,.2*sz,4),fangM);
+    t.position.set(ti*.085*sz,-.2*sz,.72*sz);t.rotation.x=Math.PI;hG.add(t);
+  });
+  // שיניים קטנות — שורה תחתונה
+  [-2,-1,0,1,2].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.16*sz,4),fangM);
+    t.position.set(ti*.085*sz,-.52*sz,.68*sz);hG.add(t);
+  });
+
+  // אף שטוח
+  const nose=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.18*sz,.14*sz),ns);
+  nose.position.set(0,.04*sz,.7*sz);hG.add(nose);
+  [-1,1].forEach(s=>{
+    const nr=new THREE.Mesh(new THREE.SphereGeometry(.066*sz,5,4),ns);
+    nr.scale.set(1,.55,.7);nr.position.set(s*.09*sz,.04*sz,.76*sz);hG.add(nr);
+  });
+
+  // ══════════════════════════════════
+  //  צלקות — רחבות וגלויות
+  // ══════════════════════════════════
+  // צלקת X ראשית על הלסת
+  const sc1=new THREE.Mesh(new THREE.BoxGeometry(.13*sz,.54*sz,.1*sz),sRed);
+  sc1.position.set(.31*sz,-.04*sz,.38*sz);sc1.rotation.z=.44;hG.add(sc1);
+  const sc1b=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.4*sz,.1*sz),sRed);
+  sc1b.position.set(.19*sz,-.16*sz,.40*sz);sc1b.rotation.z=-.32;hG.add(sc1b);
+  // צלקת מצח — אופקית
+  const sc2=new THREE.Mesh(new THREE.BoxGeometry(.46*sz,.11*sz,.1*sz),sRed);
+  sc2.position.set(-.05*sz,.38*sz,.4*sz);sc2.rotation.z=-.16;hG.add(sc2);
+  // צלקת על הגשר
+  const sc3=new THREE.Mesh(new THREE.BoxGeometry(.09*sz,.3*sz,.09*sz),sRed);
+  sc3.position.set(.13*sz,-.04*sz,.62*sz);sc3.rotation.z=.22;hG.add(sc3);
+  // דמעת מתחת לעין — "קרב ישן"
+  [-1,1].forEach(s=>{
+    const tear=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.24*sz,.07*sz),sRed);
+    tear.position.set(s*.28*sz,-.02*sz,.48*sz);tear.rotation.z=s*.18;hG.add(tear);
+  });
+
+  // ══════════════════════════════════
+  //  עיניים — כתום-אש עם אישון מאונך
+  // ══════════════════════════════════
+  [-1,1].forEach(s=>{
+    const socket=new THREE.Mesh(new THREE.SphereGeometry(.18*sz,9,8),eyOuter);
+    socket.position.set(s*.3*sz,.16*sz,.42*sz);hG.add(socket);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.135*sz,8,7),eyIris);
+    iris.position.set(s*.3*sz,.16*sz,.46*sz);hG.add(iris);
+    const pup=new THREE.Mesh(new THREE.BoxGeometry(.046*sz,.15*sz,.07*sz),eyPup);
+    pup.position.set(s*.3*sz,.16*sz,.54*sz);hG.add(pup);
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.03*sz,4,4),eyHl);
+    hl.position.set(s*.025,.05*sz,.12*sz);iris.add(hl);
+    // טבעת זוהר סביב העין
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.16*sz,.022*sz,5,9),eyIris);
+    ring.rotation.x=Math.PI/2;ring.position.set(s*.3*sz,.16*sz,.38*sz);hG.add(ring);
+  });
+
+  // אוזניים קרועות
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.28*sz,.18*sz),fur);
+    ear.position.set(s*.44*sz,.44*sz,-.08*sz);ear.rotation.z=s*.24;hG.add(ear);
+    const torn=new THREE.Mesh(new THREE.ConeGeometry(.1*sz,.2*sz,4),sTan);
+    torn.position.set(s*.44*sz,.68*sz,-.08*sz);torn.rotation.z=s*.38;hG.add(torn);
+    const notch=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.11*sz,.13*sz),sRed);
+    notch.position.set(s*.54*sz,.52*sz,-.08*sz);hG.add(notch);
+  });
+
+  // ══════════════════════════════════
+  //  4 רגליים — עמודים
+  // ══════════════════════════════════
+  [[.32,.92,.56],[-.32,.92,.56],[.32,.92,-.58],[-.32,.92,-.58]].forEach(([lx,ly,lz])=>{
     const lg=new THREE.Group();lg.position.set(lx*sz,ly*sz,lz*sz);g.add(lg);
-    const up=new THREE.Mesh(new THREE.BoxGeometry(.22*sz,.52*sz,.22*sz),fur);up.position.y=-.26*sz;lg.add(up);
-    const lo=new THREE.Mesh(new THREE.BoxGeometry(.18*sz,.44*sz,.18*sz),fur);lo.position.y=-.72*sz;lg.add(lo);
-    const pw=new THREE.Mesh(new THREE.BoxGeometry(.28*sz,.12*sz,.32*sz),fur);pw.position.set(0,-.96*sz,.04*sz);lg.add(pw);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.62*sz,.3*sz),fur);up.position.y=-.31*sz;lg.add(up);
+    const kn=new THREE.Mesh(new THREE.SphereGeometry(.18*sz,6,5),fur);kn.position.y=-.64*sz;lg.add(kn);
+    const lo=new THREE.Mesh(new THREE.BoxGeometry(.25*sz,.52*sz,.25*sz),fur);lo.position.y=-.94*sz;lg.add(lo);
+    const pw=new THREE.Mesh(new THREE.BoxGeometry(.4*sz,.17*sz,.44*sz),fur);pw.position.set(0,-1.22*sz,.07*sz);lg.add(pw);
+    // טפרים — 4 לכף
+    [-1.4,-.46,.46,1.4].forEach(cx=>{
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.055*sz,.22*sz,4),spikeM);
+      cl.rotation.x=Math.PI*.65;cl.position.set(cx*.09*sz,-1.28*sz,.22*sz);lg.add(cl);
+    });
   });
-  // זנב קצר — רוטווילר
-  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.06*sz,.04*sz,.22*sz,7),fur);
-  tail.position.set(0,.88*sz,-.82*sz);tail.rotation.x=.5;g.add(tail);
-  // קולר כהה ישן
-  const collar=new THREE.Mesh(new THREE.CylinderGeometry(.32*sz,.32*sz,.14*sz,14),
-    new THREE.MeshLambertMaterial({color:0x2a1a10}));
-  collar.position.set(0,1.2*sz,.72*sz);g.add(collar);
-  g.position.y=.12*sz;
+
+  // ══════════════════════════════════
+  //  זנב קצר
+  // ══════════════════════════════════
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.1*sz,.06*sz,.3*sz,6),fur);
+  tail.position.set(0,.94*sz,-.96*sz);tail.rotation.x=.44;g.add(tail);
+
+  // ══════════════════════════════════
+  //  קולר ספייק מסיבי
+  // ══════════════════════════════════
+  const collarY=1.28*sz, collarZ=.84*sz, collarR=.44*sz;
+  const collar=new THREE.Mesh(new THREE.CylinderGeometry(collarR-.02*sz,collarR-.02*sz,.22*sz,16),
+    new THREE.MeshLambertMaterial({color:0x120e06,emissive:0x060402}));
+  collar.position.set(0,collarY,collarZ);g.add(collar);
+  // 12 קוצים מסביב — חיצוניים, orientation נכונה
+  for(let i=0;i<12;i++){
+    _radialSpike(collarR+.01*sz, collarY, collarZ, (i/12)*Math.PI*2, .44*sz, .075*sz, spikeM, g);
+  }
+
+  // ══════════════════════════════════
+  //  שרשרת — TorusGeometry לטבעות אמיתיות
+  // ══════════════════════════════════
+  // 2 שרשראות שמשתלשלות מהקולר
+  [-.18*sz,.18*sz].forEach(cx=>{
+    for(let i=0;i<6;i++){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.092*sz,.026*sz,5,8),chainM);
+      ring.position.set(cx, collarY-.1*sz-i*.17*sz, collarZ+.06*sz);
+      ring.rotation.x=(i%2===0)?0:Math.PI*.5;
+      g.add(ring);
+    }
+  });
+
+  // ══════════════════════════════════
+  //  צלקות גוף — רחבות
+  // ══════════════════════════════════
+  // כתף שמאל
+  const bs1=new THREE.Mesh(new THREE.BoxGeometry(.13*sz,.46*sz,.12*sz),sRed);
+  bs1.position.set(.46*sz,1.06*sz,.28*sz);bs1.rotation.z=.42;g.add(bs1);
+  // ירך ימין
+  const bs2=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.42*sz,.11*sz),sRed);
+  bs2.position.set(-.44*sz,.98*sz,-.08*sz);bs2.rotation.z=-.36;g.add(bs2);
+  // חזה — פצע קרב
+  const bs3=new THREE.Mesh(new THREE.BoxGeometry(.42*sz,.12*sz,.1*sz),sRed);
+  bs3.position.set(0,.84*sz,1.08*sz);bs3.rotation.z=.28;g.add(bs3);
+
+  g.position.y=.15*sz;
   return g;
 }
 
+// ── מודל כלב גיסות טיטאן ──
+function mkTitanScout(sz){
+  const g=new THREE.Group();
+  const fur   =new THREE.MeshLambertMaterial({color:0x100e0a,emissive:0x040302});
+  const sTan  =new THREE.MeshLambertMaterial({color:0x2e1208,emissive:0x080300});
+  const sRed  =new THREE.MeshLambertMaterial({color:0x882020,emissive:0x300808});
+  const eyM   =new THREE.MeshLambertMaterial({color:0xdd8800,emissive:0xaa5500});
+  const eyHl  =new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x999999});
+  const ns    =new THREE.MeshLambertMaterial({color:0x050202});
+  const fangM =new THREE.MeshLambertMaterial({color:0xd8c89a,emissive:0x100e06});
+  const armorM=new THREE.MeshLambertMaterial({color:0x0e1208,emissive:0x040604});
+  const spikeM=new THREE.MeshLambertMaterial({color:0x242014,emissive:0x080604});
+
+  // גוף
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.64*sz,.54*sz,1.38*sz),fur);
+  body.position.y=.78*sz;g.add(body);
+  // אפוד שריון
+  const vest=new THREE.Mesh(new THREE.BoxGeometry(.68*sz,.5*sz,.58*sz),armorM);
+  vest.position.set(0,.82*sz,.4*sz);g.add(vest);
+  [-1,1].forEach(s=>{
+    const pk=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.13*sz,.07*sz),
+      new THREE.MeshLambertMaterial({color:0x080e08}));
+    pk.position.set(s*.2*sz,.72*sz,.66*sz);g.add(pk);
+  });
+  // קוץ מרכזי על האפוד
+  const vstSpk=new THREE.Mesh(new THREE.ConeGeometry(.06*sz,.22*sz,5),spikeM);
+  vstSpk.position.set(0,.98*sz,.68*sz);g.add(vstSpk); // tip +Y ✓
+
+  // צוואר
+  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.19*sz,.24*sz,.32*sz,7),fur);
+  nk.position.set(0,1.0*sz,.58*sz);nk.rotation.x=-.3;g.add(nk);
+
+  // ראש — נמוך קדימה
+  const hG=new THREE.Group();
+  hG.position.set(0,1.28*sz,.9*sz);hG.rotation.x=.26;g.add(hG);
+  const skull=new THREE.Mesh(new THREE.BoxGeometry(.72*sz,.62*sz,.68*sz),fur);hG.add(skull);
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(.74*sz,.18*sz,.28*sz),fur);
+  brow.position.set(0,.36*sz,.3*sz);hG.add(brow);
+  [-1,1].forEach(s=>{
+    const wr=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.24*sz,.07*sz),sTan);
+    wr.position.set(s*.17*sz,.24*sz,.44*sz);wr.rotation.z=s*.6;hG.add(wr);
+  });
+  [-1,1].forEach(s=>{
+    const jw=new THREE.Mesh(new THREE.BoxGeometry(.24*sz,.42*sz,.54*sz),sTan);
+    jw.position.set(s*.3*sz,-.1*sz,.04*sz);hG.add(jw);
+  });
+
+  // חרטום + שיניים
+  const jawUp=new THREE.Mesh(new THREE.BoxGeometry(.48*sz,.26*sz,.46*sz),fur);
+  jawUp.position.set(0,-.06*sz,.38*sz);hG.add(jawUp);
+  const jawLo=new THREE.Mesh(new THREE.BoxGeometry(.44*sz,.18*sz,.42*sz),fur);
+  jawLo.position.set(0,-.36*sz,.38*sz);jawLo.rotation.x=.2;hG.add(jawLo);
+
+  // ניבים עליונים (tip DOWN)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.072*sz,.3*sz,5),fangM);
+    f.position.set(s*.14*sz,-.14*sz,.6*sz);f.rotation.x=Math.PI;hG.add(f);
+  });
+  // ניבים תחתונים (tip UP)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.058*sz,.24*sz,5),fangM);
+    f.position.set(s*.14*sz,-.44*sz,.56*sz);hG.add(f);
+  });
+  // שיניים קטנות
+  [-1,0,1].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.15*sz,4),fangM);
+    t.position.set(ti*.1*sz,-.16*sz,.62*sz);t.rotation.x=Math.PI;hG.add(t);
+    const tb=new THREE.Mesh(new THREE.ConeGeometry(.03*sz,.12*sz,4),fangM);
+    tb.position.set(ti*.1*sz,-.42*sz,.58*sz);hG.add(tb);
+  });
+
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.07*sz,6,5),ns);
+  nose.scale.set(1,.64,.74);nose.position.set(0,.04*sz,.58*sz);hG.add(nose);
+
+  // צלקת
+  const sc=new THREE.Mesh(new THREE.BoxGeometry(.1*sz,.38*sz,.08*sz),sRed);
+  sc.position.set(.22*sz,-.02*sz,.3*sz);sc.rotation.z=.34;hG.add(sc);
+
+  // עיניים ענבר
+  [-1,1].forEach(s=>{
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.1*sz,7,6),eyM);
+    eye.position.set(s*.25*sz,.14*sz,.36*sz);hG.add(eye);
+    const pup=new THREE.Mesh(new THREE.BoxGeometry(.032*sz,.1*sz,.06*sz),
+      new THREE.MeshLambertMaterial({color:0x000000}));
+    pup.position.set(s*.25*sz,.14*sz,.42*sz);hG.add(pup);
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.022*sz,4,4),eyHl);
+    hl.position.set(s*.022,.04*sz,.12*sz);eye.add(hl);
+  });
+
+  // אוזניים
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.12*sz,.22*sz,.14*sz),fur);
+    ear.position.set(s*.37*sz,.36*sz,-.05*sz);ear.rotation.z=s*.22;hG.add(ear);
+  });
+
+  // קסדה טקטית
+  const helm=new THREE.Mesh(new THREE.SphereGeometry(.4*sz,8,6,0,Math.PI*2,0,Math.PI*.54),armorM);
+  helm.scale.set(1,.88,.92);helm.position.set(0,.32*sz,0);hG.add(helm);
+
+  // רגליים
+  [[.24,.78,.4],[-.24,.78,.4],[.24,.78,-.44],[-.24,.78,-.44]].forEach(([lx,ly,lz])=>{
+    const lg=new THREE.Group();lg.position.set(lx*sz,ly*sz,lz*sz);g.add(lg);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.46*sz,.2*sz),fur);up.position.y=-.23*sz;lg.add(up);
+    const lo=new THREE.Mesh(new THREE.BoxGeometry(.16*sz,.38*sz,.16*sz),fur);lo.position.y=-.64*sz;lg.add(lo);
+    const pw=new THREE.Mesh(new THREE.BoxGeometry(.26*sz,.12*sz,.3*sz),fur);pw.position.set(0,-.88*sz,.03*sz);lg.add(pw);
+    [-1,1].forEach(cx=>{
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.13*sz,4),spikeM);
+      cl.rotation.x=Math.PI*.62;cl.position.set(cx*.08*sz,-.93*sz,.13*sz);lg.add(cl);
+    });
+  });
+
+  // קולר ספייק — orientation נכונה
+  const cY=1.0*sz, cZ=.58*sz, cR=.3*sz;
+  const collar=new THREE.Mesh(new THREE.CylinderGeometry(cR,cR,.14*sz,12),
+    new THREE.MeshLambertMaterial({color:0x150a04,emissive:0x040100}));
+  collar.position.set(0,cY,cZ);g.add(collar);
+  for(let i=0;i<8;i++){
+    _radialSpike(cR+.01*sz, cY, cZ, (i/8)*Math.PI*2, .26*sz, .05*sz, spikeM, g);
+  }
+
+  // זנב
+  const tl=new THREE.Mesh(new THREE.CylinderGeometry(.05*sz,.04*sz,.24*sz,5),fur);
+  tl.position.set(0,.78*sz,-.72*sz);tl.rotation.x=.5;g.add(tl);
+
+  g.position.y=.13*sz;
+  return g;
+}
+
+
 // ── spawn טיטאן הבוס ──
-function _spawnTitanBoss(){
+function _spawnTitanBoss(frozen){
   if(G._titanEnemy&&G._titanEnemy.mesh)return;
   const m=mkTitan(1.22);
-  m.position.set(-100,0,-110);
+  m.position.set(-120,0,130);
   scene.add(m);
   // HP bar גדול
   const barBg=new THREE.Mesh(new THREE.BoxGeometry(3,.22,.1),new THREE.MeshLambertMaterial({color:0x220000}));
   barBg.position.set(0,3.8,0);m.add(barBg);
   const barFg=new THREE.Mesh(new THREE.BoxGeometry(3,.2,.12),new THREE.MeshLambertMaterial({color:0xff4400,emissive:0x661100}));
   barFg.position.set(0,3.8,.01);m.add(barFg);
-  // אור כתום-אדום סביבו
-  const pl=new THREE.PointLight(0xff4400,1.8,18);pl.position.set(-100,3,-110);scene.add(pl);
+  const pl=new THREE.PointLight(0xff3300,3.2,26);pl.position.set(-120,3.5,130);scene.add(pl);
+  const pl2=new THREE.PointLight(0xff6600,1.6,10);pl2.position.set(-120,.6,130);scene.add(pl2);
   G._titanEnemy={
-    mesh:m,bar:barFg,light:pl,
-    x:-100,z:-110,
+    mesh:m,bar:barFg,light:pl,light2:pl2,
+    x:-120,z:130,
     hp:500,mhp:500,
     spd:6.5,atk:3.2,atkT:1.0,
     alert:28,phase:1,
     dashT:3,dashOn:false,dvx:0,dvz:0,
     dead:false,_hitT:0,_hitCD:0,
+    frozen:!!frozen, // קפוא עד שהסקאוטים יובסו
   };
-  showN('💀 טיטאן! בוס אגדי — לחצו תקיפה ליד כדי לפגוע!');
+  if(!frozen)showN('💀 טיטאן! בוס אגדי — לחצו תקיפה ליד כדי לפגוע!');
 }
 
 // ── עדכון טיטאן בפריים ──
 function updTitan(dt){
   if(!G._titanEnemy||G._titanEnemy.dead)return;
+  if(G._titanEnemy.frozen)return; // קפוא — לא זז ולא תוקף
   const b=G._titanEnemy;
   const px=PB.position.x,pz=PB.position.z;
   const bx=b.mesh.position.x,bz=b.mesh.position.z;
@@ -8386,38 +8742,51 @@ function updTitan(dt){
   }
 }
 
-// ── עדכון רקס מלווה (אנימציית idle) ──
+// ── עדכון רקס מלווה ──
 function updReksAlly(dt){
   if(!G._reksAlly)return;
   const r=G._reksAlly;
   r._t=(r._t||0)+dt;
-  // עקב אחרי השחקן בצורה רפויה
+  // pulse נורית ירוקה
+  if(r.ind)r.ind.material.emissive.setRGB(0,0.4+Math.sin(r._t*3)*.2,0.2);
+  // לפני mission 21 — עמוד בכיכר, אל תעקוב
+  if(G.mission<21)return;
+  // מ-mission 21 ואילך — עקוב אחרי השחקן
+  r._waitAtPlaza=false;
   const px=PB.position.x,pz=PB.position.z;
   const dx=px+Math.sin(G.yaw+1.2)*3.5-r.x;
   const dz=pz+Math.cos(G.yaw+1.2)*3.5-r.z;
   const dist=Math.sqrt(dx*dx+dz*dz);
-  if(dist>2){
-    r.x+=dx/dist*4*dt;r.z+=dz/dist*4*dt;
+  if(dist>1.5){
+    const spd=dist>12?18:dist>6?14:dist>3?9:5;
+    const step=Math.min(spd*dt,dist);
+    r.x+=dx/dist*step;r.z+=dz/dist*step;
     r.mesh.position.set(r.x,0,r.z);
     r.mesh.rotation.y=Math.atan2(dx,dz);
   }
-  // pulse נורית ירוקה
-  if(r.ind)r.ind.material.emissive.setRGB(0,0.4+Math.sin(r._t*3)*.2,0.2);
 }
 
 // ── ספירת הריגות לפרק ה׳ ──
 let _ch5ScoutKills=0;
 function _checkCh5Progress(){
   if(G.mission!==21)return;
+  const need=5;
   const killed=G.enemies.filter(e=>e._titan&&e.hp<=0).length;
   if(killed!==_ch5ScoutKills){
     _ch5ScoutKills=killed;
-    const need=5;
-    document.getElementById('mtx').textContent=`2️⃣1️⃣ הכנע 5 כלבים מגיסות טיטאן ⚔️  (הובסו: ${_ch5ScoutKills}/${need})`;
-    if(_ch5ScoutKills>=need){
-      showN('✅ גיסות טיטאן הובסו!\n💧 עכשיו — בריכת הנחת.');
-      setTimeout(()=>setMission(22),800);
-    }
+    document.getElementById('mtx').textContent=`2️⃣1️⃣ הכנע 5 כלבים מגיסות טיטאן ⚔️  (הובסו: ${Math.min(_ch5ScoutKills,need)}/${need})`;
+  }
+  if(_ch5ScoutKills>=need&&G.mission===21&&!G._ch5ScoutsDone){
+    G._ch5ScoutsDone=true;
+    showN('✅ גיסות טיטאן הובסו!\n💀 טיטאן עצמו מתפרע — הילחמו בו!');
+    setTimeout(()=>{
+      // פשר את טיטאן להילחם
+      if(G._titanEnemy){
+        G._titanEnemy.frozen=false;
+        showN('💀 טיטאן! בוס אגדי — לחצו תקיפה ליד כדי לפגוע!');
+      }
+      setMission(23);
+    },800);
   }
 }
 
@@ -8438,105 +8807,65 @@ function _spawnFinalFireworks(){
 
 // ── בריכת הנחת — מבנה עולמי ──
 function _buildPoolOfRest(){
-  const cx=-100,cz=-110;
+  const cx=-120,cz=130;
   const mk=(geo,col,opts={})=>{
     const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col,...opts}));
     m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
   };
-
-  // ── פלאזה ראשית 30×30 ──
   mk(new THREE.BoxGeometry(30,0.3,30),0x8a9ea8).position.set(cx,0.15,cz);
-
-  // ── רצועת מסגרת בהירה ──
   [[cx,cz-14.7,30,0.08,0.6],[cx,cz+14.7,30,0.08,0.6],
    [cx-14.7,cz,0.6,0.08,28.4],[cx+14.7,cz,0.6,0.08,28.4]].forEach(([x,z,w,h,d])=>{
     mk(new THREE.BoxGeometry(w,h,d),0xd0dce0).position.set(x,0.31,z);
   });
-
-  // ── ריצוף שחמט ──
   for(let tx=-12;tx<=12;tx+=3)for(let tz=-12;tz<=12;tz+=3){
     if(Math.abs(tx)<7&&Math.abs(tz)<5)continue;
     const col=(Math.round((tx+tz)/3)%2===0)?0x7a8e98:0x96aab4;
     mk(new THREE.BoxGeometry(2.8,0.07,2.8),col).position.set(cx+tx,0.305,cz+tz);
   }
-
-  // ── שקע בריכה ──
   mk(new THREE.BoxGeometry(13,0.6,9),0x2a4050).position.set(cx,0.0,cz);
-
-  // ── מים ──
   const water=mk(new THREE.BoxGeometry(12.2,0.14,8.2),0x1a7acc,
     {transparent:true,opacity:0.82,emissive:0x0a3a5a});
-  water.position.set(cx,0.38,cz);
-  G._poolWater=water;
-
-  // ── מסגרת שיש ──
-  const rimMat={color:0xeee8d8};
+  water.position.set(cx,0.38,cz);G._poolWater=water;
   [[cx,cz-4.6,13,0.45,0.6],[cx,cz+4.6,13,0.45,0.6],
    [cx-6.6,cz,0.6,0.45,8.6],[cx+6.6,cz,0.6,0.45,8.6]].forEach(([x,z,w,h,d])=>{
     mk(new THREE.BoxGeometry(w,h,d),0xeee8d8).position.set(x,0.53,z);
   });
-  // פינות שיש
   [[-6.6,-4.6],[6.6,-4.6],[-6.6,4.6],[6.6,4.6]].forEach(([ox,oz])=>{
     mk(new THREE.BoxGeometry(0.65,0.45,0.65),0xfff4e8).position.set(cx+ox,0.53,cz+oz);
   });
-
-  // ── מזרקה מרכזית ──
   mk(new THREE.CylinderGeometry(1.5,1.7,0.4,12),0xd4cbb8).position.set(cx,0.6,cz);
   mk(new THREE.CylinderGeometry(0.15,0.2,2.6,8),0xc8c0a8).position.set(cx,1.9,cz);
   mk(new THREE.CylinderGeometry(0.65,0.85,0.22,12),0xe2d8c4).position.set(cx,3.25,cz);
-  // זרם
   const jet=mk(new THREE.CylinderGeometry(0.04,0.2,1.4,8),0x88ccee,
     {transparent:true,opacity:0.6,emissive:0x224466});
-  jet.position.set(cx,4.1,cz);
-  G._poolJet=jet;
-  // אגן עליון — כיפה קטנה
+  jet.position.set(cx,4.1,cz);G._poolJet=jet;
   mk(new THREE.SphereGeometry(0.22,8,6),0xddd4c0).position.set(cx,5.0,cz);
-
-  // ── 8 עמודים ──
-  const cols8=[
-    [cx-11,cz-11],[cx,cz-11],[cx+11,cz-11],
-    [cx+11,cz   ],
-    [cx+11,cz+11],[cx,cz+11],[cx-11,cz+11],
-    [cx-11,cz   ],
-  ];
-  cols8.forEach(([px,pz])=>{
+  [[cx-11,cz-11],[cx,cz-11],[cx+11,cz-11],
+   [cx+11,cz],[cx+11,cz+11],[cx,cz+11],[cx-11,cz+11],[cx-11,cz]].forEach(([px,pz])=>{
     mk(new THREE.BoxGeometry(0.7,0.3,0.7),0xc8c0a8).position.set(px,0.15,pz);
     mk(new THREE.CylinderGeometry(0.25,0.32,5.5,10),0xd8d0b8).position.set(px,3.05,pz);
     mk(new THREE.BoxGeometry(0.8,0.28,0.8),0xc0b8a0).position.set(px,5.94,pz);
-    // פנס
     mk(new THREE.BoxGeometry(0.28,0.32,0.28),0xffee88,{emissive:0x996600}).position.set(px,6.35,pz);
     const lamp=new THREE.PointLight(0xffcc66,0.7,12);lamp.position.set(px,6.5,pz);scene.add(lamp);
     blds.push({x:px,z:pz,w:1.2,d:1.2});
   });
-
-  // ── פרגולה — קורות ──
-  for(let bz=-11;bz<=11;bz+=5.5){
+  for(let bz=-11;bz<=11;bz+=5.5)
     mk(new THREE.BoxGeometry(24,0.28,0.4),0xb8a880).position.set(cx,6.08,cz+bz);
-  }
-  for(let bx=-11;bx<=11;bx+=5.5){
+  for(let bx=-11;bx<=11;bx+=5.5)
     mk(new THREE.BoxGeometry(0.4,0.28,24),0xb8a880).position.set(cx+bx,6.08,cz);
-  }
-
-  // ── ספסלים (4 כיוונים) ──
   [[-10,0,3,0.5],[10,0,3,0.5],[0,-10,0.5,3],[0,10,0.5,3]].forEach(([ox,oz,sw,sd])=>{
     mk(new THREE.BoxGeometry(sw,0.18,sd),0xa89870).position.set(cx+ox,0.49,cz+oz);
     mk(new THREE.BoxGeometry(sw,0.35,0.15),0x887858).position.set(cx+ox,0.35,cz+oz-(sd/2-0.1));
     mk(new THREE.BoxGeometry(sw,0.35,0.15),0x887858).position.set(cx+ox,0.35,cz+oz+(sd/2-0.1));
   });
-
-  // ── 4 ברושים בפינות ──
   [[-12,-12],[12,-12],[-12,12],[12,12]].forEach(([ox,oz])=>{
     mk(new THREE.CylinderGeometry(0.18,0.26,5,7),0x3a2208).position.set(cx+ox,2.5,cz+oz);
     mk(new THREE.ConeGeometry(0.95,6,7),0x1a5518).position.set(cx+ox,8.5,cz+oz);
   });
-
-  // ── 2 עצי צל ──
   [[-13,0],[13,0]].forEach(([ox,oz])=>{
     mk(new THREE.CylinderGeometry(0.22,0.3,4.5,8),0x3a2208).position.set(cx+ox,2.25,cz+oz);
     mk(new THREE.SphereGeometry(2.4,9,7),0x1e5c12).position.set(cx+ox,6.2,cz+oz);
   });
-
-  // ── אור כחול מרכזי ──
   const poolLight=new THREE.PointLight(0x2299dd,1.2,22);
   poolLight.position.set(cx,2.2,cz);scene.add(poolLight);
   G._poolLight=poolLight;
@@ -8546,28 +8875,42 @@ function _buildPoolOfRest(){
 // ── עדכון פרק ה׳ בלולאת המשחק ──
 function updCh5(dt){
   if(G.mission<20)return;
-  // מעקב אחרי רקס
+  // fallback: אם mission=21 והכלבים עדיין לא נוצרו — צור אותם עכשיו
+  if(G.mission===21&&!G._titanScoutsSpawned){
+    _spawnTitanScouts();
+  }
   updReksAlly(dt);
-  // ספירת גיסות
   _checkCh5Progress();
-  // קרב טיטאן — מיסיון 23
-  if(G.mission===23)updTitan(dt);
-  // הגעה לבריכת הנחת — מיסיון 22
-  if(G.mission===22&&PB){
-    const dd=d2(PB.position.x,PB.position.z,-100,-110);
-    if(dd<8){
+  if(G.mission===23){
+    // ודא שטיטאן קיים ופעיל
+    if(!G._titanEnemy)_spawnTitanBoss(false);
+    else if(G._titanEnemy.frozen)G._titanEnemy.frozen=false;
+    updTitan(dt);
+  }
+  // הגעה לבריכת הנחת — מיסיון 22 — guard מפני כפילות
+  if(G.mission===22&&PB&&!G._poolCutPlaying){
+    if(d2(PB.position.x,PB.position.z,-120,130)<8){
+      G._poolCutPlaying=true;
       showCut('titan_reveal',()=>{
         showCut('ch5_boss',()=>{
           _spawnTitanBoss();
           setMission(23);
+          G._poolCutPlaying=false;
         });
       });
     }
   }
-  // הגעה לכיכר — מיסיון 20
-  if(G.mission===20&&PB){
-    const dd=d2(PB.position.x,PB.position.z,40,0);
-    if(dd<5)setMission(21);
+  // הגעה לכיכר — מיסיון 20 — הצג רקס לפני מעבר למיסיון 21
+  if(G.mission===20&&PB&&!G._reksJoinCutPlaying){
+    if(d2(PB.position.x,PB.position.z,40,0)<8){
+      G._reksJoinCutPlaying=true;
+      if(!G._reksAlly)_spawnReksAlly();
+      showCut('reks_joins',()=>{
+        showN('🫡 רקס הצטרף לכנופייה!\nהוא מכיר את בריכת הנחת — עקבו אחריו.');
+        setMission(21);
+        G._reksJoinCutPlaying=false;
+      });
+    }
   }
 }
 
@@ -8637,6 +8980,10 @@ function loadGame(){
     if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}
     // שחזר mission — init קרא setMission(0), נדרוס בלי לקרוא unlock() (כדי לא לפתוח קאטסינים שוב)
     G.mission=s.mission;
+    // שחזר גיסות טיטאן אם mission==21
+    if(G.mission===21&&!G._titanScoutsSpawned){
+      _spawnTitanScouts();
+    }
     // שחזר שטחים שנכבשו
     G.terrCnt=s.terrCnt||0;
     document.getElementById('tc').textContent=G.terrCnt;
@@ -8684,6 +9031,56 @@ setMission=function(n){
     try{saveGame();}catch(_){}
   }
 };
+</script>
+<!-- ── פאנל DEV — בחירת פרק ── -->
+<div id="devPanel" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.82);border:1.5px solid #555;border-radius:10px;padding:12px 18px;
+  z-index:9999;font-family:sans-serif;text-align:center;min-width:340px;">
+  <div style="color:#aaa;font-size:11px;margin-bottom:8px;letter-spacing:1px;">🛠 DEV — בחירת פרק</div>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    <button onclick="_devJump(0)"  style="background:#2a4a2a;color:#8f8;border:1px solid #4a8a4a;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px">פרק א׳<br><small style="color:#666">mission 0</small></button>
+    <button onclick="_devJump(8)"  style="background:#2a3a4a;color:#8af;border:1px solid #4a6a8a;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px">פרק ב׳<br><small style="color:#666">mission 8</small></button>
+    <button onclick="_devJump(12)" style="background:#4a2a2a;color:#f88;border:1px solid #8a4a4a;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px">פרק ג׳<br><small style="color:#666">mission 12</small></button>
+    <button onclick="_devJump(15)" style="background:#3a3a1a;color:#ff8;border:1px solid #7a7a3a;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px">פרק ד׳<br><small style="color:#666">mission 15</small></button>
+    <button onclick="_devJump(20)" style="background:#3a1a3a;color:#f8f;border:1px solid #7a3a7a;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px">פרק ה׳<br><small style="color:#666">mission 20</small></button>
+  </div>
+  <div style="margin-top:10px;display:flex;gap:6px;justify-content:center;align-items:center;">
+    <span style="color:#aaa;font-size:12px">mission ספציפי:</span>
+    <input id="devMInput" type="number" min="0" max="24" value="0"
+      style="width:52px;background:#222;color:#fff;border:1px solid #555;border-radius:4px;padding:3px 6px;font-size:13px">
+    <button onclick="_devJump(+document.getElementById('devMInput').value)"
+      style="background:#333;color:#ccc;border:1px solid #555;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px">→ עבור</button>
+  </div>
+  <div style="margin-top:8px;color:#555;font-size:10px">לחץ P שוב לסגור</div>
+</div>
+<script>
+function _devJump(n){
+  document.getElementById('devPanel').style.display='none';
+  // אפס guard כדי לאפשר קפיצה גם לאותו mission
+  if(typeof G!=='undefined'){
+    if(n<=G.mission)G.mission=n-1;
+    // אפס titan scouts אם קופצים ל-21
+    if(n===21){G._titanScoutsSpawned=false;}
+  }
+  if(typeof setMission==='function') setMission(n);
+}
+// בחירת פרק ממסך בחירת הכלב
+window._csChapter=null;
+function csStartChapter(n){
+  window._csChapter=n;
+  // אם כלב כבר נבחר (משחק פעיל) — קפוץ ישירות בלי init מחדש
+  if(typeof G!=='undefined'&&G.dog&&G.hud){
+    window._csChapter=null;
+    if(typeof setMission==='function') setMission(n);
+  }
+  // אחרת — שמור פרק, בחירת הכלב תמשיך משם
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='p'||e.key==='P'){
+    const p=document.getElementById('devPanel');
+    p.style.display=p.style.display==='none'?'block':'none';
+  }
+});
 </script>
 </body>
 </html>
