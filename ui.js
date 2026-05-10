@@ -448,7 +448,7 @@ function buildHumanNPCs(){
     if(!isInBuilding(x,z,2)&&!_isOnRoad(x,z)) spots.push([x,z]);
   });
 
-  spots.slice(0,isMob?10:22).forEach(([x,z],i)=>{
+  spots.slice(0,22).forEach(([x,z],i)=>{
     const type=_HUMAN_TYPES[i%_HUMAN_TYPES.length];
     const si=i%_HUMAN_SHIRTS.length;
     const h=mkHuman(
@@ -554,12 +554,10 @@ function updHumanNPCs(dt){
       if(Math.random()<dt*2.0&&n._cigG){
         const wp=new THREE.Vector3();
         n._cigG.getWorldPosition(wp);
-        wp.y+=0.06;
-        const sm=new THREE.Mesh(
-          new THREE.SphereGeometry(0.035+Math.random()*0.03,4,3),
-          new THREE.MeshLambertMaterial({color:0xbbbbbb,transparent:true,opacity:0.45})
-        );
-        sm.position.copy(wp);
+        // השתמש בpool של _pfxGet במקום ליצור mesh חדש
+        const sm=_pfxGet(0xbbbbbb);
+        sm.scale.setScalar(0.12);
+        sm.position.copy(wp);sm.position.y+=0.06;
         scene.add(sm);
         G.particles.push({mesh:sm,vx:(Math.random()-.5)*0.07,vy:0.55+Math.random()*0.3,vz:(Math.random()-.5)*0.07,life:1.5,_smoke:1});
       }
@@ -574,13 +572,10 @@ function updHumanNPCs(dt){
         n.mesh._head.getWorldPosition(headWP);
         // כיוון הנשיפה — קדימה מהפנים של הדמות
         const fwd=new THREE.Vector3(Math.sin(n.mesh.rotation.y),0,Math.cos(n.mesh.rotation.y));
-        for(let pi=0;pi<5;pi++){
-          const sm=new THREE.Mesh(
-            new THREE.SphereGeometry(0.06+Math.random()*0.05,4,3),
-            new THREE.MeshLambertMaterial({color:0xe8e8e8,transparent:true,opacity:0.38})
-          );
-          sm.position.copy(headWP);
-          sm.position.y-=0.06;
+        for(let pi=0;pi<3;pi++){  // הפחת מ-5 ל-3
+          const sm=_pfxGet(0xe8e8e8);
+          sm.scale.setScalar(0.16+Math.random()*0.08);
+          sm.position.copy(headWP);sm.position.y-=0.06;
           scene.add(sm);
           G.particles.push({
             mesh:sm,
@@ -596,6 +591,7 @@ function updHumanNPCs(dt){
     }
 
     const distToPlayer=d2(n.x,n.z,px,pz);
+    if(distToPlayer>70)return; // מחוץ לטווח — דלג
 
     // ── בריחה מנביחה/קרב ──
     if(distToPlayer<5&&G.atkCD<0.4&&G.atkCD>0&&n.state!=='flee'){
@@ -757,7 +753,8 @@ function updHumanNPCs(dt){
       n.mesh.position.set(n.x,getGroundY(n.x,n.z)+(n.mesh._footY||0),n.z);
       n.mesh.rotation.y=Math.atan2(dx,dz);
 
-      // אנימציית הליכה
+      // אנימציית הליכה — רק לקרובים
+      if(distToPlayer<40){
       const animSpd=spd*3.2;
       n.wt+=dt*animSpd;
       const swing=n.state==='flee'?.6:.38;
@@ -767,6 +764,7 @@ function updHumanNPCs(dt){
       if(n.mesh._armR){n.mesh._armR.rotation.x=Math.sin(n.wt)*swing*.7;}
       if(n.type.name==="ג'וגר") n.mesh.position.y=getGroundY(n.x,n.z)+(n.mesh._footY||0)+Math.abs(Math.sin(n.wt*1.5))*.07;
       if(n.mesh._head) n.mesh._head.rotation.y=0;
+      }
     }
   });
 }

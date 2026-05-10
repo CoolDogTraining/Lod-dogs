@@ -136,8 +136,10 @@ function updPfx(dt){
     p.life-=dt;
     if(p.life<=0){
       (p.villa?mosqueScene:scene).remove(p.mesh);
-      _pfxReturn(p.mesh); // החזר ל-Pool במקום לזרוק
-      G.particles.splice(i,1);
+      _pfxReturn(p.mesh);
+      // swap-remove במקום splice — O(1) במקום O(n)
+      G.particles[i]=G.particles[G.particles.length-1];
+      G.particles.pop();
       continue;
     }
     p.mesh.position.x+=p.vx*dt;
@@ -192,18 +194,18 @@ function init(){
   G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
 
   const cv=document.getElementById('cv');
-  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:!isMob,powerPreference:'high-performance'});
+  renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
   renderer.setSize(innerWidth,innerHeight);
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.0:1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.5:2));
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=0.78;
   // תיקון באג: outputEncoding + sRGBEncoding הוסרו ב-Three.js r152+
   renderer.outputColorSpace = (THREE.SRGBColorSpace !== undefined)
     ? THREE.SRGBColorSpace
     : THREE.LinearEncoding; // fallback לגרסאות ישנות
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,isMob?60:90,isMob?180:260);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,90,260);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
@@ -300,7 +302,7 @@ function buildLights(){
   _sunLight=new THREE.DirectionalLight(0xfff4e0,0.75);
   _sunLight.position.set(130,100,60);_sunLight.castShadow=true;
   // שדרוג: shadow map — 4096 במחשב היה כבד מדי, 2048 איכות מספיקה ומהיר בהרבה
-  _sunLight.shadow.mapSize.set(isMob?512:2048,isMob?512:2048);
+  _sunLight.shadow.mapSize.set(isMob?1024:2048,isMob?1024:2048);
   _sunLight.shadow.camera.left=-160;_sunLight.shadow.camera.right=160;
   _sunLight.shadow.camera.top=160;_sunLight.shadow.camera.bottom=-160;
   _sunLight.shadow.camera.far=400;_sunLight.shadow.bias=-0.0002;_sunLight.shadow.normalBias=0.015;
@@ -4035,7 +4037,7 @@ function updPlayer(dt){
   if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
-  checkNear();
+  if(!G._frameCount||G._frameCount%3===0)checkNear();
   checkCh2Triggers();
 }
 
@@ -4202,7 +4204,8 @@ function checkNear(){
   G.bones.forEach(b=>{if(b.done)return;const dd=d2(b.x,b.z,px,pz);if(dd<best){best=dd;G.near=b;}});
   G.collectibles.forEach(c=>{if(c.done)return;const dd=d2(c.x,c.z,px,pz);if(dd<best){best=dd;G.near=c;}});
   G.npcs.forEach(n=>{
-    if(n._dead)return; // בלה מתה — לא ניתן לאינטראקציה
+    if(n._dead)return;
+    if(d2(n.x,n.z,px,pz)>90)return; // מחוץ לטווח // בלה מתה — לא ניתן לאינטראקציה
     const dd=d2(n.x,n.z,px,pz);if(dd<best){best=dd;G.near=n;}
   });
   if(G.near){
