@@ -375,12 +375,12 @@ function buildWorld(){
   })();
 
   // === רחובות ראשיים ===
-  mkRd(0,0,300,12,false);   // רחוב הרצל — E-W
-  mkRd(0,0,12,300,true);    // שדרות ירושלים — N-S
-  mkRd(-40,0,12,300,true);  // רחוב הגפן
-  mkRd(40,0,12,300,true);   // רחוב הדקל
-  mkRd(0,50,300,10,false);  // רחוב וייצמן
-  mkRd(0,-50,300,10,false); // רחוב בן גוריון
+  mkRd(0,0,300,16,false);   // רחוב הרצל — E-W
+  mkRd(0,0,16,300,true);    // שדרות ירושלים — N-S
+  mkRd(-40,0,16,300,true);  // רחוב הגפן
+  mkRd(40,0,16,300,true);   // רחוב הדקל
+  mkRd(0,50,300,14,false);  // רחוב וייצמן
+  mkRd(0,-50,300,14,false); // רחוב בן גוריון
 
   // === בלוקי מרכז העיר ===
   // רשת כבישים: E-W: z=0(הרצל,w=12), z=-50(בן גוריון,w=10), z=50(וייצמן,w=10)
@@ -414,7 +414,7 @@ function buildWorld(){
   // === רמת אשכול — צפון ===
   // כבישים N-S ב-x=-40,0,40 (רוחב 12) → לא לבנות בטווח x=[-46..46] סביב כל ציר
   // בין כבישים: x ≈ -60 (בין -80 ל--40), x ≈ -20 (בין -40 ל-0), x ≈ 20 (0 ל-40), x ≈ 60 (40 ל-80)
-  for(let bx=-85;bx<=85;bx+=32)for(let bz=-95;bz>=-155;bz-=32){
+  for(let bx=-80;bx<=80;bx+=48)for(let bz=-100;bz>=-160;bz-=48){
     // הימנע מבנייה על כבישים N-S (x=-40,0,40 ±8) ומכביש E-W (z=-50 ±8)
     if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
     if(Math.abs(bz+50)<10)continue;
@@ -422,7 +422,7 @@ function buildWorld(){
   }
 
   // === גני אביב — דרום ===
-  for(let bx=-85;bx<=85;bx+=32)for(let bz=80;bz<=150;bz+=32){
+  for(let bx=-80;bx<=80;bx+=48)for(let bz=85;bz<=155;bz+=48){
     if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
     // הימנע מכביש E-W z=50 ±8
     if(Math.abs(bz-50)<10)continue;
@@ -563,67 +563,55 @@ function bldBlock(x,z,w,d,h){
     wtL.position.set(wx,h+1.01,wz);scene.add(wtL);
   }
 
-  // חלונות — קדמי (z-) ואחורי (z+) ★
-  const glsMat=new THREE.MeshStandardMaterial({color:0x7ab8d0,roughness:.04,metalness:.12,transparent:true,opacity:.72,emissive:0x061520});
-  const frMat=new THREE.MeshLambertMaterial({color:0xf0e8d8});
+  // חלונות — texture-painted על פני הקיר (ללא meshes נפרדים)
   const shutCol=SHUTTER_COLS[Math.floor(Math.random()*SHUTTER_COLS.length)];
-  const shutMat=new THREE.MeshLambertMaterial({color:shutCol});
-
-  [[z-d/2-.04,1],[z+d/2+.04,-1]].forEach(([fz,side])=>{
-    for(let wy=1.6;wy<h-.9;wy+=2.2){
-      for(let wx=-w/2+1.6;wx<w/2-1.0;wx+=2.4){
-        // מסגרת
-        const fr=new THREE.Mesh(new THREE.BoxGeometry(1.12,1.22,.06),frMat);
-        fr.position.set(x+wx,wy,fz-.02*side);scene.add(fr);
-        // זכוכית
-        const wn=new THREE.Mesh(new THREE.BoxGeometry(.9,.98,.04),glsMat.clone());
-        wn.position.set(x+wx,wy,fz);scene.add(wn);
-        // תריסים (~60% מהחלונות)
-        if(Math.random()<.6){
-          const sl=new THREE.Mesh(new THREE.BoxGeometry(.48,1.08,.04),shutMat);
-          sl.position.set(x+wx-.49,wy,fz-.05*side);scene.add(sl);
-          const sr=new THREE.Mesh(new THREE.BoxGeometry(.48,1.08,.04),shutMat);
-          sr.position.set(x+wx+.49,wy,fz-.05*side);scene.add(sr);
-        }
+  // צייר חלונות על canvas ואפשר אותם כemissive layer
+  (()=>{
+    const sc2=64,tc2=document.createElement('canvas');tc2.width=sc2*4;tc2.height=sc2*4;
+    const tx2=tc2.getContext('2d');
+    tx2.fillStyle='rgba(0,0,0,0)';tx2.clearRect(0,0,tc2.width,tc2.height);
+    const cols2=Math.floor(w/2.4)+1, rows2=Math.floor(h/2.2);
+    for(let r=0;r<rows2;r++)for(let c2=0;c2<cols2;c2++){
+      const px=(c2/cols2)*tc2.width+8, py=(r/rows2)*tc2.height+8;
+      const pw=tc2.width/cols2-12, ph=tc2.height/rows2-12;
+      // זכוכית
+      tx2.fillStyle=`rgba(100,180,220,${.55+Math.random()*.35})`;
+      tx2.fillRect(px,py,pw,ph);
+      // מסגרת
+      tx2.strokeStyle='rgba(240,230,210,.9)';tx2.lineWidth=2;
+      tx2.strokeRect(px-1,py-1,pw+2,ph+2);
+      // תריס (60%)
+      if(Math.random()<.6){
+        const shutR=parseInt(((shutCol>>16)&0xff).toString());
+        const shutG=parseInt(((shutCol>>8)&0xff).toString());
+        const shutB=parseInt((shutCol&0xff).toString());
+        tx2.fillStyle=`rgba(${shutR},${shutG},${shutB},.82)`;
+        tx2.fillRect(px-1,py-1,pw*0.44+2,ph+2);
       }
     }
-  });
+    const winTex=new THREE.CanvasTexture(tc2);
+    const winMat=new THREE.MeshLambertMaterial({map:winTex,transparent:true,alphaTest:.05});
+    // פנל חלונות קדמי
+    const wp1=new THREE.Mesh(new THREE.PlaneGeometry(w*.85,h*.82),winMat);
+    wp1.position.set(x,h/2+.1,z-d/2-.05);scene.add(wp1);
+    // פנל חלונות אחורי
+    const wp2=new THREE.Mesh(new THREE.PlaneGeometry(w*.85,h*.82),winMat.clone());
+    wp2.position.set(x,h/2+.1,z+d/2+.05);wp2.rotation.y=Math.PI;scene.add(wp2);
+  })();
 
-  // חלונות צדדיים (x faces)
-  [[x-w/2-.04,1],[x+w/2+.04,-1]].forEach(([fx,side])=>{
-    for(let wy=2.0;wy<h-1.0;wy+=2.8){
-      const wn=new THREE.Mesh(new THREE.BoxGeometry(.04,.88,.82),glsMat.clone());
-      wn.position.set(fx,wy,z+(Math.random()-.5)*(d*.4));scene.add(wn);
-    }
-  });
-
-  // מרפסות — קומה ראשונה ואילך
+  // מרפסות — פשוטות, floor + rail בלבד (לא עמודים בודדים)
   if(h>7){
     for(let wy=2.5;wy<h-.8;wy+=4.4){
       const balW=Math.min(5,w-2);
-      // רצפת מרפסת
-      const bal=new THREE.Mesh(new THREE.BoxGeometry(balW,.13,1.2),new THREE.MeshLambertMaterial({color:dk(c,.88)}));
-      bal.position.set(x,wy-.06,z-d/2-1.2/2);scene.add(bal);
-      // עמודי מעקה
-      for(let pi=-balW/2+.25;pi<=balW/2-.25;pi+=.52){
-        const post=new THREE.Mesh(new THREE.BoxGeometry(.06,.62,.06),new THREE.MeshLambertMaterial({color:0x707068}));
-        post.position.set(x+pi,wy+.3,z-d/2-1.1);scene.add(post);
-      }
-      // מוט מעקה עליון
-      const rail=new THREE.Mesh(new THREE.BoxGeometry(balW,.06,.06),new THREE.MeshLambertMaterial({color:0x888880}));
-      rail.position.set(x,wy+.64,z-d/2-1.1);scene.add(rail);
+      const balMat=new THREE.MeshLambertMaterial({color:dk(c,.88)});
+      const bal=new THREE.Mesh(new THREE.BoxGeometry(balW,.13,1.2),balMat);
+      bal.position.set(x,wy-.06,z-d/2-.6);scene.add(bal);
+      const rail=new THREE.Mesh(new THREE.BoxGeometry(balW,.55,.08),new THREE.MeshLambertMaterial({color:0x888880}));
+      rail.position.set(x,wy+.3,z-d/2-1.1);scene.add(rail);
     }
   }
 
-  // מזגן (AC) — קיר קדמי
-  if(Math.random()<.25){
-    const acx=x+(Math.random()-.5)*(w*.55);
-    const acy=h*.35+Math.random()*h*.3;
-    const ac=new THREE.Mesh(new THREE.BoxGeometry(.72,.42,.32),new THREE.MeshStandardMaterial({color:0xe8e5dd,roughness:.55}));
-    ac.position.set(acx,acy,z-d/2-.18);scene.add(ac);
-    const acF=new THREE.Mesh(new THREE.BoxGeometry(.64,.06,.28),new THREE.MeshLambertMaterial({color:0xd0cc88}));
-    acF.position.set(acx,acy+.2,z-d/2-.18);scene.add(acF);
-  }
+  // מזגנים — הוסרו לשיפור ביצועים
 
   // כניסה / כניסות
   const doorH=2.1,doorW=1.2;
