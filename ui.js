@@ -2,25 +2,53 @@
 // ── פריטים קוסמטיים ──
 const COSMETICS=[
   {id:'spike',ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח על הצווארון',cost:50,
-   apply:(mesh)=>{
-     const spike=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,.25,6),new THREE.MeshLambertMaterial({color:0x111111}));
-     spike.position.set(0,.85,.28);mesh.add(spike);mesh._cosSpike=spike;
-   },remove:(mesh)=>{if(mesh._cosSpike){mesh.remove(mesh._cosSpike);mesh._cosSpike=null;}}},
+   apply:(grp)=>{
+     // עמודי ספייק על הגב — גדולים וגלויים
+     const mat=new THREE.MeshLambertMaterial({color:0x111111,emissive:0x221100});
+     const g2=new THREE.Group();
+     [-0.18,0,0.18].forEach((ox,i)=>{
+       const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.07,0.35+i*0.05,6),mat);
+       sp.position.set(ox,1.25+i*0.05,0.05);g2.add(sp);
+     });
+     grp.add(g2);grp._cosSpike=g2;
+   },remove:(grp)=>{if(grp._cosSpike){grp.remove(grp._cosSpike);grp._cosSpike=null;}}},
   {id:'glasses',ico:'🕶️',name:'משקפי שמש',desc:'מסתכל מגניב על העולם',cost:40,
-   apply:(mesh)=>{
-     const gl=new THREE.Mesh(new THREE.BoxGeometry(.55,.12,.08),new THREE.MeshLambertMaterial({color:0x111122,transparent:true,opacity:.8}));
-     gl.position.set(0,1.18,.28);mesh.add(gl);mesh._cosGl=gl;
-   },remove:(mesh)=>{if(mesh._cosGl){mesh.remove(mesh._cosGl);mesh._cosGl=null;}}},
+   apply:(grp)=>{
+     const mat=new THREE.MeshLambertMaterial({color:0x050515,transparent:true,opacity:.85,emissive:0x000033});
+     const g2=new THREE.Group();
+     // עדשה שמאל + עדשה ימין + חיבור
+     [-0.14,0.14].forEach(ox=>{
+       const lens=new THREE.Mesh(new THREE.BoxGeometry(.22,.14,.04),mat);
+       lens.position.set(ox,1.28,0.3);g2.add(lens);
+     });
+     const br=new THREE.Mesh(new THREE.BoxGeometry(.32,.04,.04),new THREE.MeshLambertMaterial({color:0x222222}));
+     br.position.set(0,1.28,0.3);g2.add(br);
+     grp.add(g2);grp._cosGl=g2;
+   },remove:(grp)=>{if(grp._cosGl){grp.remove(grp._cosGl);grp._cosGl=null;}}},
   {id:'bandana',ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,
-   apply:(mesh)=>{
-     const bn=new THREE.Mesh(new THREE.BoxGeometry(.52,.18,.52),new THREE.MeshLambertMaterial({color:0xcc2200}));
-     bn.position.set(0,.92,0);mesh.add(bn);mesh._cosBn=bn;
-   },remove:(mesh)=>{if(mesh._cosBn){mesh.remove(mesh._cosBn);mesh._cosBn=null;}}},
-  {id:'cape',ico:'🦸',name:'גלימת גיבור',desc:'רק הגיבור האמיתי יכול לשאת אותה',cost:120,
-   apply:(mesh)=>{
-     const cape=new THREE.Mesh(new THREE.PlaneGeometry(.6,.9),new THREE.MeshLambertMaterial({color:0xcc0000,side:THREE.DoubleSide}));
-     cape.position.set(0,.6,-.35);cape.rotation.x=-.3;mesh.add(cape);mesh._cosCape=cape;
-   },remove:(mesh)=>{if(mesh._cosCape){mesh.remove(mesh._cosCape);mesh._cosCape=null;}}},
+   apply:(grp)=>{
+     const g2=new THREE.Group();
+     const bn=new THREE.Mesh(new THREE.CylinderGeometry(.22,.24,.18,8),
+       new THREE.MeshLambertMaterial({color:0xcc2200,emissive:0x440800}));
+     bn.position.set(0,1.05,0.1);g2.add(bn);
+     // קשר בנדנה בצד
+     const knot=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.08),
+       new THREE.MeshLambertMaterial({color:0xaa1800}));
+     knot.position.set(0.22,1.05,0.1);g2.add(knot);
+     grp.add(g2);grp._cosBn=g2;
+   },remove:(grp)=>{if(grp._cosBn){grp.remove(grp._cosBn);grp._cosBn=null;}}},
+  {id:'cape',ico:'🦸',name:'גלימת גיבור',desc:'רק לגיבור האמיתי יכול לשאת אותה',cost:120,
+   apply:(grp)=>{
+     const g2=new THREE.Group();
+     const cape=new THREE.Mesh(new THREE.PlaneGeometry(.7,1.1),
+       new THREE.MeshLambertMaterial({color:0xcc0000,emissive:0x330000,side:THREE.DoubleSide}));
+     cape.position.set(0,0.8,-0.5);cape.rotation.x=0.25;g2.add(cape);
+     // צווארון
+     const collar=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.1,8),
+       new THREE.MeshLambertMaterial({color:0xffcc00,emissive:0x332200}));
+     collar.position.set(0,1.08,0);g2.add(collar);
+     grp.add(g2);grp._cosCape=g2;
+   },remove:(grp)=>{if(grp._cosCape){grp.remove(grp._cosCape);grp._cosCape=null;}}},
 ];
 
 function openCosmeticShop(){
@@ -35,8 +63,8 @@ function openCosmeticShop(){
     html+=`<div style="display:flex;align-items:center;gap:8px;margin:6px 0;background:rgba(255,255,255,.05);border-radius:8px;padding:6px">
       <span style="font-size:22px">${item.ico}</span>
       <div style="flex:1"><div style="font-weight:bold;font-size:12px">${item.name}</div><div style="color:#aaa;font-size:10px">${item.desc}</div></div>
-      <button onclick="buyCos('${item.id}')" style="background:${have?'#2ecc71':'#f5c518'};border:none;border-radius:6px;padding:4px 8px;font-weight:bold;font-size:11px;cursor:pointer">
-        ${have?'✅ לבוש':'💰 '+item.cost}
+      <button onclick="buyCos('${item.id}')" style="background:${have?'#e74c3c':'#f5c518'};border:none;border-radius:6px;padding:4px 10px;font-weight:bold;font-size:11px;cursor:pointer;color:#111">
+        ${have?'🗑 הסר':'💰 '+item.cost}
       </button>
     </div>`;
   });
@@ -56,9 +84,8 @@ function buyCos(id){
   if(!item)return;
   if(!G._cosmetics)G._cosmetics={};
   if(G._cosmetics[id]){
-    // כבר יש — הסר
     item.remove(PB);delete G._cosmetics[id];
-    showN(`הסרת ${item.name}`);
+    showN(`הסרת ${item.name} ✓`);
   } else {
     if(G.coins<item.cost){showN('💰 אין מספיק מטבעות!');return;}
     G.coins-=item.cost;updCoins();
