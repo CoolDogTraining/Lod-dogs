@@ -56,6 +56,100 @@ const blds=[];
 let _ambLight=null,_sunLight=null,_fillLight=null,_hemiLight=null;
 let _rainPoints=null,_rainGeo=null;
 
+
+// ════════════════════════════════════════════════
+// MUSIC — מוזיקת רקע פרוצדורלית
+// ════════════════════════════════════════════════
+let _musicCtx=null,_musicGain=null,_musicMode='explore',_musicNodes=[];
+let _musicBeat=0,_musicInterval=null;
+
+const _SCALES={
+  explore:[0,2,3,5,7,8,10], // מינורי — חקירה
+  combat: [0,1,3,5,6,8,10], // פריגי — מתח
+  boss:   [0,2,4,7,9],      // מייג׳ור — אפי
+  night:  [0,3,5,6,7,10],   // דוריאני — לילה
+};
+const _BASE_FREQ=110; // A2
+
+function _freqOfNote(scale,step,oct=0){
+  const notes=_SCALES[scale]||_SCALES.explore;
+  const n=notes[((step%notes.length)+notes.length)%notes.length];
+  return _BASE_FREQ*Math.pow(2,(n+oct*12)/12);
+}
+
+function _playMusicNote(freq,dur,vol=0.04,wave='sine',delay=0){
+  if(!_musicCtx||!_musicGain)return;
+  try{
+    const o=_musicCtx.createOscillator();
+    const g=_musicCtx.createGain();
+    o.connect(g);g.connect(_musicGain);
+    o.type=wave;o.frequency.setValueAtTime(freq,_musicCtx.currentTime+delay);
+    g.gain.setValueAtTime(0,_musicCtx.currentTime+delay);
+    g.gain.linearRampToValueAtTime(vol,_musicCtx.currentTime+delay+0.03);
+    g.gain.exponentialRampToValueAtTime(0.001,_musicCtx.currentTime+delay+dur);
+    o.start(_musicCtx.currentTime+delay);
+    o.stop(_musicCtx.currentTime+delay+dur+0.05);
+  }catch(e){}
+}
+
+function _musicTick(){
+  if(!_musicCtx)return;
+  const mode=_musicMode;
+  const beat=_musicBeat;
+  const bps=mode==='combat'?0.22:mode==='boss'?0.18:0.35;
+
+  // בס — כל beat זוגי
+  if(beat%2===0){
+    _playMusicNote(_freqOfNote(mode,0,-1),bps*1.8,0.06,'triangle');
+  }
+  // מלודיה — כל 4 beats
+  if(beat%4===0){
+    const step=Math.floor(Math.random()*7);
+    _playMusicNote(_freqOfNote(mode,step,1),bps*3,0.03,'sine');
+  }
+  // אקורד רקע
+  if(beat%8===0){
+    [0,2,4].forEach((s,i)=>{
+      _playMusicNote(_freqOfNote(mode,s,0),bps*8,0.015,'sine',i*0.01);
+    });
+  }
+  // תופים — combat בלבד
+  if(mode==='combat'||mode==='boss'){
+    if(beat%2===0)_playMusicNote(60,0.08,0.05,'square'); // kick
+    if(beat%4===2)_playMusicNote(200,0.04,0.03,'square'); // snare
+  }
+
+  _musicBeat=(beat+1)%32;
+  const nextBps=mode==='combat'?0.22:mode==='boss'?0.18:0.35;
+  _musicInterval=setTimeout(_musicTick,nextBps*1000);
+}
+
+function startMusic(){
+  if(_musicCtx)return;
+  try{
+    _musicCtx=new(window.AudioContext||window.webkitAudioContext)();
+    _musicGain=_musicCtx.createGain();
+    _musicGain.gain.setValueAtTime(0.18,_musicCtx.currentTime);
+    _musicGain.connect(_musicCtx.destination);
+    _musicTick();
+  }catch(e){console.warn('Music init failed',e);}
+}
+
+function setMusicMode(mode){
+  if(_musicMode===mode)return;
+  _musicMode=mode;
+  if(!_musicCtx)return;
+  // fade transition
+  const targetVol=mode==='night'?0.1:0.18;
+  if(_musicGain)_musicGain.gain.linearRampToValueAtTime(targetVol,_musicCtx.currentTime+1.5);
+}
+
+function stopMusic(){
+  if(_musicInterval)clearTimeout(_musicInterval);
+  if(_musicGain)_musicGain.gain.linearRampToValueAtTime(0,(_musicCtx?.currentTime||0)+1);
+  setTimeout(()=>{try{_musicCtx?.close();}catch(e){}; _musicCtx=null;_musicGain=null;},1500);
+}
+
 // ════════════════════════════════════════════════
 // AUDIO
 // ════════════════════════════════════════════════
@@ -160,7 +254,7 @@ function updPfx(dt){
 // ════════════════════════════════════════════════
 // SELECT DOG
 // ════════════════════════════════════════════════
-function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';if(!isMob){if(isMob){document.getElementById('sq-btn-mob').classList.add('has-done');}else{document.getElementById('sq-btn').style.display='flex';}}init();if(window._csChapter!=null){const _ch=window._csChapter;window._csChapter=null;setTimeout(()=>{if(isMob)document.getElementById('mob').style.display='block';if(typeof setMission==='function')setMission(_ch);},400);}}
+function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';if(!isMob){if(isMob){document.getElementById('sq-btn-mob').classList.add('has-done');}else{document.getElementById('sq-btn').style.display='flex';}}startMusic();init();if(window._csChapter!=null){const _ch=window._csChapter;window._csChapter=null;setTimeout(()=>{if(isMob)document.getElementById('mob').style.display='block';if(typeof setMission==='function')setMission(_ch);},400);}}
 
 // ════════════════════════════════════════════════
 // INIT
@@ -1788,23 +1882,43 @@ function _mkLamp(x,z){
   _streetLamps.push({bulb:bulbMat,x:x+.8,z});
 }
 function _initLampPool(){
-  // 6 PointLights קבועים — מוצבים בנקודות מרכזיות בעיר, לא זזים
-  const fixedPos=[
-    [0,0],[40,25],[-40,25],[0,-60],[40,-60],[-40,-60]
-  ];
-  fixedPos.forEach(([x,z])=>{
-    const pl=new THREE.PointLight(0xffeebb,0,22);
-    pl.position.set(x,4.2,z);
+  // 8 PointLights דינמיים — זזים תמיד לפנסים הקרובים לשחקן
+  for(let i=0;i<8;i++){
+    const pl=new THREE.PointLight(0xffd97a,0,18);
+    pl.position.set(0,4.5,0);
     scene.add(pl);
     _lampLightPool.push(pl);
-  });
+  }
 }
 function _updLampPool(){
-  if(!_streetLamps.length) return;
-  const lampsOn=G.dayTime>0.70||G.dayTime<0.30;
-  const targetI=lampsOn?0.7:0;
-  _lampLightPool.forEach(pl=>{
-    pl.intensity+=(targetI-pl.intensity)*0.04;
+  if(!_streetLamps.length||!PB)return;
+  const lampsOn=G.dayTime>0.72||G.dayTime<0.28;
+  const targetI=lampsOn?1.1:0;
+
+  // מצא 8 הפנסים הקרובים לשחקן
+  const px=PB.position.x,pz=PB.position.z;
+  const sorted=_streetLamps
+    .map((l,i)=>({l,i,d:(l.x-px)*(l.x-px)+(l.z-pz)*(l.z-pz)}))
+    .sort((a,b)=>a.d-b.d)
+    .slice(0,8);
+
+  sorted.forEach(({l},i)=>{
+    const pl=_lampLightPool[i];
+    pl.position.set(l.x,4.5,l.z);
+    pl.intensity+=(targetI-pl.intensity)*0.06;
+  });
+  // שאר ה-lights כבים
+  for(let i=sorted.length;i<_lampLightPool.length;i++){
+    _lampLightPool[i].intensity*=0.85;
+  }
+  // עדכן צבע הנורה
+  _streetLamps.forEach(l=>{
+    if(l.bulb){
+      const t=lampsOn?1:0;
+      const cur=l.bulb.emissive.r;
+      const nr=cur+(t-cur)*0.05;
+      l.bulb.emissive.setRGB(nr*1.0,nr*0.85,nr*0.3);
+    }
   });
 }
 const _benchSpots=[];  // {x,z,ang} — לשימוש NPC יושב
@@ -3780,6 +3894,7 @@ function buildNPCs(){
       {ico:'🦷',name:'חידוד שיניים',desc:'+3 כוח קבוע',cost:80,fn:()=>shopBuy('pow')},
       {ico:'🏃',name:'שמן מנועים',desc:'+0.5 מהירות קבוע',cost:60,fn:()=>shopBuy('spd')},
       {ico:'🛡️',name:'שריון פרוות',desc:'+20 HP מקס׳',cost:100,fn:()=>shopBuy('mhp')},
+      {ico:'👗',name:'חנות עיצוב',desc:'עיצוב ויזואלי לכלב',cost:0,fn:()=>openCosmeticShop()},
     ]},
   ];
   npcDefs.forEach(n=>{
@@ -3933,9 +4048,20 @@ function loop(){
     return;
   }
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
-    updPlayer(dt);updEnemies(dt);updPickups(dt);updTerrs(dt);updNPCs(dt);updPfx(dt);
+    updPlayer(dt);updEnemies(dt);updPickups(dt);
+    // מוד מוזיקה דינמי
+    (()=>{
+      const anyClose=G.enemies.some(e=>e.hp>0&&e.mesh.visible&&d2(e.mesh.position.x,e.mesh.position.z,PB.position.x,PB.position.z)<18);
+      const bossClose=(G.bosses&&G.bosses.some(b=>!b.dead&&d2(b.mesh.position.x,b.mesh.position.z,PB.position.x,PB.position.z)<25))||(G.bruno&&!G.bruno.dead)||(G.palto&&!G.palto.dead);
+      const isNight=G.dayTime>0.72||G.dayTime<0.28;
+      if(bossClose)setMusicMode('boss');
+      else if(anyClose)setMusicMode('combat');
+      else if(isNight)setMusicMode('night');
+      else setMusicMode('explore');
+    })();updTerrs(dt);updNPCs(dt);updPfx(dt);
     updateNavDirection();
     updSQPanel();
+    updReputationHUD();
     if(G.mission>=12)updCh3Entities(dt);
     // פיצ'רים חדשים — throttle על מובייל לחסוך CPU
     const _fc=G._frameCount||0;
@@ -4023,7 +4149,9 @@ function updPlayer(dt){
   if(!blkZ)PB.position.z=nz; else G.vz*=.1;
   if(G.atkCD>0)G.atkCD-=dt;
   G._frameCount=(G._frameCount||0)+1; // עבור AI throttling
-  if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=.5;}
+  // זיפו: מהירות תקיפה כפולה
+  const _atkCooldown=G.dog==='zippo'?0.28:0.5;
+  if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
   if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
@@ -4034,6 +4162,38 @@ function updPlayer(dt){
 // ════════════════════════════════════════════════
 // ATTACK — gated strictly
 // ════════════════════════════════════════════════
+
+// ── Ragdoll — אנימציית מוות פשוטה ──
+function _ragdoll(mesh){
+  if(!mesh||mesh._ragdolling)return;
+  mesh._ragdolling=true;
+  const startY=mesh.position.y;
+  const startRZ=mesh.rotation.z;
+  const dir=(Math.random()<0.5)?1:-1;
+  const startRX=mesh.rotation.x;
+  let t=0;
+  const anim=setInterval(()=>{
+    t+=0.05;
+    mesh.rotation.z=startRZ+dir*(Math.PI/2)*Math.min(1,t*2);
+    mesh.rotation.x=startRX+0.3*Math.sin(t*8)*Math.max(0,1-t);
+    mesh.position.y=Math.max(0,startY-t*2.5);
+    mesh.scale.y=Math.max(0.2,1-t*0.6);
+    if(t>=1.2){
+      clearInterval(anim);
+      mesh.rotation.z=startRZ+dir*(Math.PI/2);
+      mesh.position.y=0;
+      // fade out
+      setTimeout(()=>{
+        let op=1;
+        const fade=setInterval(()=>{
+          op-=0.08;
+          mesh.children.forEach(c=>{if(c.material&&c.material.opacity!==undefined){c.material.transparent=true;c.material.opacity=Math.max(0,op);}});
+          if(op<=0){clearInterval(fade);mesh.visible=false;}
+        },40);
+      },800);
+    }
+  },30);
+}
 function doAtk(){
   sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
   const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
@@ -4061,15 +4221,19 @@ function doAtk(){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
       if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<4.2){
-        const dmg=dog.pow*10*(1+dog.lv*.1);e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);showDmg(e.mesh.position.x,1,e.mesh.position.z,Math.round(dmg));
+        // זיפו: קריטי-היט
+        const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
+        const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
+        e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
+        if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
           const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
+          _ragdoll(e.mesh);
           updateMissionHUD();
-          // בדיקה מיידית לגיסות טיטאן
           if(e._titan&&G.mission===21)_checkCh5Progress();
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
-          // ── respawn אויב חדש — לא עבור גיסות טיטאן ──
           if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
         }
       }
@@ -4178,8 +4342,11 @@ function playerRespawn(){
 }
 function dmgPlayer(dmg){
   const dog=G.dogs[G.dog];
-  dog.hp=Math.max(0,dog.hp-dmg);
-  sHit();haptic(dmg>=20?[60,20,40]:30);
+  // קולין: שריון מפחית נזק
+  const _armor=dog._armor||0;
+  const _actual=Math.max(1,Math.round(dmg-_armor));
+  dog.hp=Math.max(0,dog.hp-_actual);
+  sHit();haptic(_actual>=20?[60,20,40]:30);
   const hf=document.getElementById('hf');
   hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);
   if(dog.hp<=0)playerDeath();
@@ -4195,7 +4362,9 @@ function checkNear(){
   G.collectibles.forEach(c=>{if(c.done)return;const dd=d2(c.x,c.z,px,pz);if(dd<best){best=dd;G.near=c;}});
   G.npcs.forEach(n=>{
     if(n._dead)return;
-    if(d2(n.x,n.z,px,pz)>90)return; // מחוץ לטווח // בלה מתה — לא ניתן לאינטראקציה
+    if(d2(n.x,n.z,px,pz)>90)return; // מחוץ לטווח
+    // מוניטין — תגובה כשמתקרב לראשונה
+    if(!n._repReacted&&d2(n.x,n.z,px,pz)<6){n._repReacted=true;_triggerRepReaction(n);setTimeout(()=>{n._repReacted=false;},15000);}
     const dd=d2(n.x,n.z,px,pz);if(dd<best){best=dd;G.near=n;}
   });
   if(G.near){
@@ -4498,7 +4667,25 @@ function updTerrs(dt){
 function addXP(amt){
   const dog=G.dogs[G.dog];dog.xp+=amt;showXPPop('+'+amt+' XP');
   const need=XP_TO_LVL[Math.min(dog.lv,XP_TO_LVL.length-1)];
-  if(dog.lv<5&&dog.xp>=need){dog.lv++;dog.xp=0;dog.mhp+=10;dog.hp=dog.mhp;dog.pow+=1;dog.spd+=.3;sLvlUp();haptic([50,30,50,30,80]);showLU(dog);}
+  if(dog.lv<5&&dog.xp>=need){
+    dog.lv++;dog.xp=0;
+    // שיפורים ייחודיים לכל כלב
+    const id=G.dog;
+    if(id==='zippo'){
+      // זיפו — גיבור: מהירות + קריטי עולים, HP מעט
+      dog.mhp+=8;dog.hp=dog.mhp;dog.pow+=2;dog.spd+=0.8;dog._critChance=(dog._critChance||0.15)+0.05;
+      showLU(dog,['+8 HP','+2 כוח','+0.8 מהירות','+5% קריטי']);
+    } else if(id==='colin'){
+      // קולין — לוחם: HP + כוח, מהירות מינימלית
+      dog.mhp+=18;dog.hp=dog.mhp;dog.pow+=3;dog.spd+=0.2;dog._armor=(dog._armor||0)+2;
+      showLU(dog,['+18 HP','+3 כוח','+2 שריון','+0.2 מהירות']);
+    } else {
+      // מומו — תמיכה: HP בינוני + מהירות + מחזירה אנרגיה מהר
+      dog.mhp+=12;dog.hp=dog.mhp;dog.pow+=1;dog.spd+=0.5;dog._stamRegen=(dog._stamRegen||1)+0.5;
+      showLU(dog,['+12 HP','+1 כוח','+0.5 מהירות','+0.5 התחדשות סטמינה']);
+    }
+    sLvlUp();haptic([50,30,50,30,80]);
+  }
   if(_hudXP){
     const pct=Math.min(100,dog.xp/Math.max(1,XP_TO_LVL[Math.min(dog.lv,XP_TO_LVL.length-1)])*100);
     _hudXP.style.width=pct+'%';
@@ -4508,7 +4695,16 @@ function addXP(amt){
   if(_hudHP) _hudHP.classList.toggle('critical', dog.hp/dog.mhp < 0.25);
 }
 function showXPPop(t){const el=document.getElementById('xpp');el.textContent=t;el.style.display='block';el.style.animation='none';void el.offsetWidth;el.style.animation='floatUp 1.2s ease-out forwards';setTimeout(()=>el.style.display='none',1200);}
-function showLU(dog){G.paused=true;document.getElementById('lu-su').textContent=`${dog.name} הגיעה לרמה ${dog.lv}!`;document.getElementById('lu-st').innerHTML=`<div class="lu-s"><div class="lu-v">+10</div><div class="lu-l">בריאות מקס׳</div></div><div class="lu-s"><div class="lu-v">+1</div><div class="lu-l">כוח</div></div><div class="lu-s"><div class="lu-v">+0.3</div><div class="lu-l">מהירות</div></div>`;document.getElementById('lu').style.display='flex';}
+function showLU(dog,bonuses){
+  G.paused=true;
+  document.getElementById('lu-su').textContent=`${dog.name} הגיעה לרמה ${dog.lv}!`;
+  const bs=bonuses||['+10 HP','+1 כוח','+0.3 מהירות'];
+  document.getElementById('lu-st').innerHTML=bs.map(b=>{
+    const [v,...rest]=b.split(' ');
+    return `<div class="lu-s"><div class="lu-v">${v}</div><div class="lu-l">${rest.join(' ')}</div></div>`;
+  }).join('');
+  document.getElementById('lu').style.display='flex';
+}
 function closeLU(){document.getElementById('lu').style.display='none';G.paused=false;}
 
 // ════════════════════════════════════════════════
@@ -4817,35 +5013,69 @@ function drawBigMap(){
   const sc=(S/300)*mapZoomLevel;
   const wx=x=>W/2+(x-px)*sc;
   const wz=z=>H/2+(z-pz)*sc;
-  // רקע
-  ctx.fillStyle='#0d1a0d';ctx.fillRect(0,0,W,H);
+  // רקע — שכונות צבועות
+  ctx.fillStyle='#0d1117';ctx.fillRect(0,0,W,H);
+
+  // ── אזורים/שכונות ──
+  const zones=[
+    {x:0,z:-100,r:55,col:'rgba(100,60,20,0.18)',name:'שכונת הגשר'},
+    {x:-60,z:55,r:40,col:'rgba(20,80,60,0.18)',name:'שוק לוד'},
+    {x:50,z:90,r:38,col:'rgba(40,40,120,0.18)',name:'רמת אשכול'},
+    {x:72,z:96,r:22,col:'rgba(60,20,100,0.18)',name:'קרית בית הכנסת'},
+    {x:-50,z:-100,r:30,col:'rgba(120,30,30,0.18)',name:'שכונת כנופיית הגשר'},
+  ];
+  zones.forEach(z=>{
+    ctx.fillStyle=z.col;
+    ctx.beginPath();ctx.arc(wx(z.x),wz(z.z),z.r*sc,0,Math.PI*2);ctx.fill();
+    if(mapZoomLevel>=0.7){
+      ctx.fillStyle='rgba(255,255,255,0.18)';ctx.font=`${Math.round(9*mapZoomLevel)}px sans-serif`;
+      ctx.textAlign='center';ctx.fillText(z.name,wx(z.x),wz(z.z));
+    }
+  });
+
   // רשת
-  ctx.strokeStyle='#1a2a1a';ctx.lineWidth=1;
+  ctx.strokeStyle='#161d16';ctx.lineWidth=1;
   const grid=40;
   const startX=Math.floor((px-W/2/sc)/grid)*grid;
   const startZ=Math.floor((pz-H/2/sc)/grid)*grid;
   for(let i=startX;i<startX+W/sc+grid;i+=grid){ctx.beginPath();ctx.moveTo(wx(i),0);ctx.lineTo(wx(i),H);ctx.stroke();}
   for(let i=startZ;i<startZ+H/sc+grid;i+=grid){ctx.beginPath();ctx.moveTo(0,wz(i));ctx.lineTo(W,wz(i));ctx.stroke();}
   // רחובות ראשיים
-  ctx.strokeStyle='#2e3e2e';ctx.lineWidth=3;
-  ctx.beginPath();ctx.moveTo(0,wz(0));ctx.lineTo(W,wz(0));ctx.stroke();   // הרצל
-  ctx.beginPath();ctx.moveTo(wx(0),0);ctx.lineTo(wx(0),H);ctx.stroke();   // ירושלים
-  ctx.lineWidth=2.5;
-  ctx.beginPath();ctx.moveTo(wx(40),0);ctx.lineTo(wx(40),H);ctx.stroke(); // הדקל
-  ctx.beginPath();ctx.moveTo(wx(-40),0);ctx.lineTo(wx(-40),H);ctx.stroke();// הגפן
-  ctx.beginPath();ctx.moveTo(0,wz(50));ctx.lineTo(W,wz(50));ctx.stroke(); // וייצמן
-  ctx.beginPath();ctx.moveTo(0,wz(-50));ctx.lineTo(W,wz(-50));ctx.stroke();// בן גוריון
-  ctx.strokeStyle='#253525';ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(wx(72),0);ctx.lineTo(wx(72),H);ctx.stroke(); // שד' בית הכנסת
-  // כיכר הכדורים — עיגול כתום
-  ctx.fillStyle='rgba(232,121,26,.7)';ctx.beginPath();ctx.arc(wx(40),wz(0),8*mapZoomLevel,0,Math.PI*2);ctx.fill();
-  // בית כנסת — עיגול כחול
-  ctx.fillStyle='rgba(85,136,255,.7)';ctx.beginPath();ctx.arc(wx(72),wz(96),6*mapZoomLevel,0,Math.PI*2);ctx.fill();
-  if(mapZoomLevel>=1){
-    ctx.fillStyle='#ffaa44';ctx.font=`bold ${Math.round(9*mapZoomLevel)}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText('כיכר הכדורים',wx(40),wz(0)-10*mapZoomLevel);
-    ctx.fillStyle='#88aaff';ctx.fillText('בית כנסת',wx(72),wz(96)-9*mapZoomLevel);
-  }
+  const roads=[
+    {x1:-200,z1:0,x2:200,z2:0,w:4,col:'#3a5a3a',name:'רח׳ הרצל',lx:0,lz:0},
+    {x1:0,z1:-200,x2:0,z2:200,w:4,col:'#3a5a3a',name:'שד׳ ירושלים',lx:0,lz:-80},
+    {x1:40,z1:-200,x2:40,z2:200,w:3,col:'#2d4a2d',name:'רח׳ הדקל',lx:40,lz:30},
+    {x1:-40,z1:-200,x2:-40,z2:200,w:3,col:'#2d4a2d',name:'רח׳ הגפן',lx:-40,lz:30},
+    {x1:-200,z1:50,x2:200,z2:50,w:2.5,col:'#253a25',name:'רח׳ וייצמן',lx:80,lz:50},
+    {x1:-200,z1:-50,x2:200,z2:-50,w:2.5,col:'#253a25',name:'רח׳ בן גוריון',lx:80,lz:-50},
+    {x1:72,z1:-200,x2:72,z2:200,w:2,col:'#1e301e',name:'שד׳ בית הכנסת',lx:72,lz:60},
+  ];
+  roads.forEach(r=>{
+    ctx.strokeStyle=r.col;ctx.lineWidth=r.w;
+    ctx.beginPath();ctx.moveTo(wx(r.x1),wz(r.z1));ctx.lineTo(wx(r.x2),wz(r.z2));ctx.stroke();
+    if(mapZoomLevel>=1&&r.name){
+      ctx.fillStyle='rgba(180,220,180,0.7)';ctx.font=`${Math.round(8*mapZoomLevel)}px sans-serif`;
+      ctx.textAlign='center';ctx.fillText(r.name,wx(r.lx),wz(r.lz)-5);
+    }
+  });
+  // נקודות עניין
+  const pois=[
+    {x:40,z:0,col:'rgba(232,121,26,.85)',r:7,icon:'⚽',name:'כיכר הכדורים'},
+    {x:72,z:96,col:'rgba(85,136,255,.85)',r:6,icon:'✡',name:'בית כנסת'},
+    {x:-51,z:-100,col:'rgba(180,140,60,.85)',r:7,icon:'🕌',name:'מסגד הגדול'},
+    {x:80,z:-80,col:'rgba(200,200,200,.85)',r:6,icon:'🏛',name:'עיריית לוד'},
+    {x:-74,z:52,col:'rgba(60,200,100,.85)',r:5,icon:'🏪',name:'שוק לוד'},
+    {x:35,z:35,col:'rgba(255,80,80,.75)',r:5,icon:'🐕',name:'כנופיית הגשר'},
+  ];
+  pois.forEach(p=>{
+    ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(wx(p.x),wz(p.z),p.r*Math.max(0.7,mapZoomLevel),0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;ctx.stroke();
+    if(mapZoomLevel>=0.8){
+      ctx.font=`bold ${Math.round(10*mapZoomLevel)}px sans-serif`;ctx.textAlign='center';
+      ctx.fillStyle='rgba(0,0,0,0.6)';ctx.fillRect(wx(p.x)-30*mapZoomLevel,wz(p.z)-20*mapZoomLevel,60*mapZoomLevel,14*mapZoomLevel);
+      ctx.fillStyle='#fff';ctx.fillText(p.name,wx(p.x),wz(p.z)-8*mapZoomLevel);
+    }
+  });
   // בניינים
   ctx.fillStyle='#253525';
   blds.forEach(b=>ctx.fillRect(wx(b.x)-b.w/2*sc,wz(b.z)-b.d/2*sc,b.w*sc,b.d*sc));
@@ -5714,6 +5944,51 @@ function togglePause(e){
   }
 }
 
+
+// ════════════════════════════════════════════════
+// REPUTATION — מוניטין בעיר
+// ════════════════════════════════════════════════
+// רמות: 0=לא ידוע, 1=מוכרים, 2=מפחידים, 3=אגדה
+function getReputation(){
+  const kills=G.totalKills,terrs=G.terrCnt,lv=G.dogs[G.dog].lv;
+  if(kills>=30&&terrs>=4&&lv>=4)return 3;
+  if(kills>=15&&terrs>=2)return 2;
+  if(kills>=5||terrs>=1)return 1;
+  return 0;
+}
+const _REP_NAMES=['לא ידוע','מוכרים','מפחידים','🌟 אגדה'];
+const _REP_REACTIONS=[
+  null, // 0 — ניטרלי
+  ['שמעתי עליכם...','אל תקרבו!','הכלבים של לוד!'],
+  ['!אחד מהכלבים המפורסמים','ברחו! הכלבים!','כולם ידברו על זה!'],
+  ['!אגדה!','כלבי לוד לעד!','לא האמנתי שאראה אתכם!'],
+];
+
+function _triggerRepReaction(npc){
+  const rep=getReputation();
+  if(rep===0)return;
+  const reactions=_REP_REACTIONS[rep];
+  if(!reactions||!npc)return;
+  const txt=reactions[Math.floor(Math.random()*reactions.length)];
+  // הצג בועת דיבור מעל ה-NPC
+  showDmg(npc.x,2.5,npc.z,txt,true);
+  // ברמה 2+ — בורחים
+  if(rep>=2&&npc.state!=='flee'){
+    npc.state='flee';
+    npc._fleeT=4+Math.random()*3;
+  }
+}
+
+// עדכון מוניטין ב-HUD
+function updReputationHUD(){
+  const el=document.getElementById('rep-hud');
+  if(!el)return;
+  const rep=getReputation();
+  if(rep===0){el.style.display='none';return;}
+  el.style.display='block';
+  el.textContent='⭐'.repeat(rep)+' '+_REP_NAMES[rep];
+  el.style.color=rep===3?'#f5c518':rep===2?'#e74c3c':'#aaa';
+}
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
@@ -5866,3 +6141,16 @@ function closeSQPopup(){
   if(p)p.classList.remove('open');
 }
 
+
+// ── הוסף rep-hud לDOM ──
+document.addEventListener('DOMContentLoaded',()=>{
+  const rh=document.createElement('div');
+  rh.id='rep-hud';
+  rh.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:25;background:rgba(0,0,0,.7);border:1px solid #f5c518;border-radius:8px;padding:3px 12px;color:#f5c518;font-size:12px;font-weight:bold;display:none;pointer-events:none;';
+  document.body.appendChild(rh);
+  // cos-shop
+  const cs=document.createElement('div');
+  cs.id='cos-shop';
+  cs.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(10,15,10,.97);border:2px solid #f5c518;border-radius:14px;padding:16px;width:min(320px,85vw);display:none;color:#fff;';
+  document.body.appendChild(cs);
+});

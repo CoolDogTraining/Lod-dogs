@@ -1,3 +1,73 @@
+
+// ── פריטים קוסמטיים ──
+const COSMETICS=[
+  {id:'spike',ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח על הצווארון',cost:50,
+   apply:(mesh)=>{
+     const spike=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,.25,6),new THREE.MeshLambertMaterial({color:0x111111}));
+     spike.position.set(0,.85,.28);mesh.add(spike);mesh._cosSpike=spike;
+   },remove:(mesh)=>{if(mesh._cosSpike){mesh.remove(mesh._cosSpike);mesh._cosSpike=null;}}},
+  {id:'glasses',ico:'🕶️',name:'משקפי שמש',desc:'מסתכל מגניב על העולם',cost:40,
+   apply:(mesh)=>{
+     const gl=new THREE.Mesh(new THREE.BoxGeometry(.55,.12,.08),new THREE.MeshLambertMaterial({color:0x111122,transparent:true,opacity:.8}));
+     gl.position.set(0,1.18,.28);mesh.add(gl);mesh._cosGl=gl;
+   },remove:(mesh)=>{if(mesh._cosGl){mesh.remove(mesh._cosGl);mesh._cosGl=null;}}},
+  {id:'bandana',ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,
+   apply:(mesh)=>{
+     const bn=new THREE.Mesh(new THREE.BoxGeometry(.52,.18,.52),new THREE.MeshLambertMaterial({color:0xcc2200}));
+     bn.position.set(0,.92,0);mesh.add(bn);mesh._cosBn=bn;
+   },remove:(mesh)=>{if(mesh._cosBn){mesh.remove(mesh._cosBn);mesh._cosBn=null;}}},
+  {id:'cape',ico:'🦸',name:'גלימת גיבור',desc:'רק הגיבור האמיתי יכול לשאת אותה',cost:120,
+   apply:(mesh)=>{
+     const cape=new THREE.Mesh(new THREE.PlaneGeometry(.6,.9),new THREE.MeshLambertMaterial({color:0xcc0000,side:THREE.DoubleSide}));
+     cape.position.set(0,.6,-.35);cape.rotation.x=-.3;mesh.add(cape);mesh._cosCape=cape;
+   },remove:(mesh)=>{if(mesh._cosCape){mesh.remove(mesh._cosCape);mesh._cosCape=null;}}},
+];
+
+function openCosmeticShop(){
+  if(!G.hud)return;
+  const el=document.getElementById('cos-shop');
+  if(!el)return;
+  G.shopOpen=true;G.paused=true;
+  const owned=G._cosmetics||{};
+  let html='<div style="color:#f5c518;font-weight:bold;font-size:14px;text-align:center;margin-bottom:8px">👗 חנות עיצוב</div>';
+  COSMETICS.forEach(item=>{
+    const have=owned[item.id];
+    html+=`<div style="display:flex;align-items:center;gap:8px;margin:6px 0;background:rgba(255,255,255,.05);border-radius:8px;padding:6px">
+      <span style="font-size:22px">${item.ico}</span>
+      <div style="flex:1"><div style="font-weight:bold;font-size:12px">${item.name}</div><div style="color:#aaa;font-size:10px">${item.desc}</div></div>
+      <button onclick="buyCos('${item.id}')" style="background:${have?'#2ecc71':'#f5c518'};border:none;border-radius:6px;padding:4px 8px;font-weight:bold;font-size:11px;cursor:pointer">
+        ${have?'✅ לבוש':'💰 '+item.cost}
+      </button>
+    </div>`;
+  });
+  html+='<button onclick="closeCosShop()" style="width:100%;margin-top:8px;background:rgba(255,255,255,.1);border:1px solid #555;border-radius:8px;padding:6px;color:#fff;cursor:pointer">✕ סגור</button>';
+  el.innerHTML=html;
+  el.style.display='block';
+}
+
+function closeCosShop(){
+  const el=document.getElementById('cos-shop');
+  if(el)el.style.display='none';
+  G.shopOpen=false;G.paused=false;
+}
+
+function buyCos(id){
+  const item=COSMETICS.find(c=>c.id===id);
+  if(!item)return;
+  if(!G._cosmetics)G._cosmetics={};
+  if(G._cosmetics[id]){
+    // כבר יש — הסר
+    item.remove(PB);delete G._cosmetics[id];
+    showN(`הסרת ${item.name}`);
+  } else {
+    if(G.coins<item.cost){showN('💰 אין מספיק מטבעות!');return;}
+    G.coins-=item.cost;updCoins();
+    item.apply(PB);G._cosmetics[id]=true;
+    showN(`✅ קנית ${item.name}!`);haptic([20,10,30]);
+  }
+  openCosmeticShop(); // רענן
+  saveGame();
+}
 // ── ui.js — ממשק, יום/לילה, סביבה, מערכות, פרק ה׳, שמירה ──
 // ════════════════════════════════════════════════
 // ██ מחזור יום / לילה ██
