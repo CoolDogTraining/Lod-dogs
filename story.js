@@ -4,7 +4,10 @@
 // ════════════════════════════════════════════════
 const SLIDES=['לוד, ישראל.\nעיר של ניגודים — רחובות ישנים ורעש של חיים.','שלושה כלבי רחוב ללא בית.\nאבל עם חלום אחד...','קולין — חזק. זיפו — מהיר. מומו — חכמה.\nביחד הם יכבשו את העיר.','הם מתחילים מהתחתית.\nפחי אשפה. שינה תחת גשרים.','אבל לוד — תהיה שלהם. 🐕'];
 let sIdx=0;
-document.getElementById('st-tx').textContent=SLIDES[0];
+document.addEventListener('DOMContentLoaded',()=>{
+  const el=document.getElementById('st-tx');
+  if(el)el.textContent=SLIDES[0];
+});
 function nextStory(){sIdx++;if(sIdx>=SLIDES.length){document.getElementById('story').style.display='none';document.getElementById('cs-scr').style.display='flex';return;}document.getElementById('st-tx').textContent=SLIDES[sIdx];}
 
 // ════════════════════════════════════════════════
