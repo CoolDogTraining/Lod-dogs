@@ -198,7 +198,10 @@ function init(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?1.5:2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio,isMob?2:2));
+  // הבטח לפחות 720p — אם המסך קטן, פיקסל ריישו מינימלי מובטח
+  const _minPR=Math.max(renderer.getPixelRatio(), Math.min(720/innerHeight, devicePixelRatio));
+  renderer.setPixelRatio(_minPR);
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=0.78;
   // תיקון באג: outputEncoding + sRGBEncoding הוסרו ב-Three.js r152+
