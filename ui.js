@@ -448,7 +448,7 @@ function buildHumanNPCs(){
     if(!isInBuilding(x,z,2)&&!_isOnRoad(x,z)) spots.push([x,z]);
   });
 
-  spots.slice(0,22).forEach(([x,z],i)=>{
+  spots.slice(0,isMob?10:22).forEach(([x,z],i)=>{
     const type=_HUMAN_TYPES[i%_HUMAN_TYPES.length];
     const si=i%_HUMAN_SHIRTS.length;
     const h=mkHuman(
