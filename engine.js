@@ -160,7 +160,7 @@ function updPfx(dt){
 // ════════════════════════════════════════════════
 // SELECT DOG
 // ════════════════════════════════════════════════
-function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';document.getElementById('sq-btn').style.display='flex';init();if(window._csChapter!=null){const _ch=window._csChapter;window._csChapter=null;setTimeout(()=>{if(isMob)document.getElementById('mob').style.display='block';if(typeof setMission==='function')setMission(_ch);},400);}}
+function selDog(d){G.dog=d;document.getElementById('cs-scr').style.display='none';document.getElementById('hud').style.display='block';document.getElementById('hdn').textContent=G.dogs[d].name;if(isMob)document.getElementById('mob').style.display='block';G.hud=true;document.getElementById('coin-hud').style.display='block';if(!isMob){if(isMob){document.getElementById('sq-btn-mob').classList.add('has-done');}else{document.getElementById('sq-btn').style.display='flex';}}init();if(window._csChapter!=null){const _ch=window._csChapter;window._csChapter=null;setTimeout(()=>{if(isMob)document.getElementById('mob').style.display='block';if(typeof setMission==='function')setMission(_ch);},400);}}
 
 // ════════════════════════════════════════════════
 // INIT
@@ -5839,7 +5839,7 @@ function shopBuy(type){
 // SIDE QUESTS
 // ════════════════════════════════════════════════
 function updSQPanel(){
-  const btn=document.getElementById('sq-btn');
+  const btn=document.getElementById(isMob?'sq-btn-mob':'sq-btn');
   if(!btn||G.mission<1){if(btn)btn.style.display='none';return;}
   btn.style.display='flex';
   // צבע הכפתור — ירוק אם יש משהו שהושלם לאחרונה

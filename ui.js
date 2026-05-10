@@ -2157,7 +2157,7 @@ function loadGame(){
     document.getElementById('hdn').textContent=G.dogs[G.dog].name;
     if(isMob)document.getElementById('mob').style.display='block';
     G.hud=true;document.getElementById('coin-hud').style.display='block';
-    document.getElementById('sq-btn').style.display='flex';
+    if(isMob){document.getElementById('sq-btn-mob').classList.add('has-done');}else{document.getElementById('sq-btn').style.display='flex';}
     init();
     // אחרי init — שחזר מיקום (init מאפס ל-0,0,60)
     if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}
