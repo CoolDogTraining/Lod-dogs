@@ -591,7 +591,6 @@ function updHumanNPCs(dt){
     }
 
     const distToPlayer=d2(n.x,n.z,px,pz);
-    if(distToPlayer>70)return; // מחוץ לטווח — דלג
 
     // ── בריחה מנביחה/קרב ──
     if(distToPlayer<5&&G.atkCD<0.4&&G.atkCD>0&&n.state!=='flee'){
@@ -753,8 +752,7 @@ function updHumanNPCs(dt){
       n.mesh.position.set(n.x,getGroundY(n.x,n.z)+(n.mesh._footY||0),n.z);
       n.mesh.rotation.y=Math.atan2(dx,dz);
 
-      // אנימציית הליכה — רק לקרובים
-      if(distToPlayer<40){
+      // אנימציית הליכה
       const animSpd=spd*3.2;
       n.wt+=dt*animSpd;
       const swing=n.state==='flee'?.6:.38;
@@ -764,7 +762,6 @@ function updHumanNPCs(dt){
       if(n.mesh._armR){n.mesh._armR.rotation.x=Math.sin(n.wt)*swing*.7;}
       if(n.type.name==="ג'וגר") n.mesh.position.y=getGroundY(n.x,n.z)+(n.mesh._footY||0)+Math.abs(Math.sin(n.wt*1.5))*.07;
       if(n.mesh._head) n.mesh._head.rotation.y=0;
-      }
     }
   });
 }

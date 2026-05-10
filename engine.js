@@ -3942,9 +3942,8 @@ function loop(){
     updDayNight(dt);
     _updLampPool();
     updWeather(dt);
-    // מכוניות ואנשים — עדכן כל 2 פריימים במובייל, כל פריים בדסקטופ
-    if(!isMob||_fc%2===0){updCars(dt*(_fc%2===0&&isMob?2:1));}
-    if(!isMob||_fc%3===0){updHumanNPCs(dt*(_fc%3===0&&isMob?3:1));}
+    updCars(dt);
+    updHumanNPCs(dt);
     updCollectibles(dt);
     updBldCapture(dt);
     updCh5(dt); // פרק ה׳
