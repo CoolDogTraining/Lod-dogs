@@ -2307,16 +2307,8 @@ function deleteSave(){localStorage.removeItem(SAVE_KEY);showN('🗑️ שמיר�
 // שמירה אוטומטית כל 60 שניות
 setInterval(()=>{if(PB&&G.mission>0)saveGame();},60000);
 
-// תיקון באג: _origSetMission הוגדר אבל לא נעטף — השלם את ה-wrapper לשמירה על כל מעבר משימה
-const _origSetMission=setMission;
-// eslint-disable-next-line no-global-assign
-setMission=function(n){
-  _origSetMission(n);
-  // שמור אחרי כל מעבר משימה (לא במשימה 0 — תחילת המשחק)
-  if(PB&&n>0){
-    try{saveGame();}catch(_){}
-  }
-};
+// הערה: setMission ב-engine.js כבר קורא saveGame() בפנים — אין צורך ב-wrapper נוסף.
+// הwrapper הישן גרם לשמירה כפולה בכל מעבר משימה.
 function _devJump(n){
   document.getElementById('devPanel').style.display='none';
   // אפס guard כדי לאפשר קפיצה גם לאותו mission
@@ -2324,6 +2316,10 @@ function _devJump(n){
     if(n<=G.mission)G.mission=n-1;
     // אפס titan scouts אם קופצים ל-21
     if(n===21){G._titanScoutsSpawned=false;}
+    // אפס ch5 scout kills אם קופצים לפרק ה׳
+    if(n>=20){_ch5ScoutKills=0;G._ch5ScoutsDone=false;}
+    // אפס pool cut guards
+    G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
   if(typeof setMission==='function') setMission(n);
 }
