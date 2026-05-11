@@ -884,8 +884,8 @@ function bldMarket(x,z){
     signTrim.position.set(sx,2.58,sz+1.72);scene.add(signTrim);
     const signTrim2=signTrim.clone();signTrim2.position.y=3.18;scene.add(signTrim2);
 
-    // ── קולידר ──
-    blds.push({x:sx,z,w:5.6,d:3.2});
+    // ── קולידר — רק לבניין האחורי, לא לדלפק הפתוח ──
+    blds.push({x:sx,z:sz+0.8,w:5.6,d:1.6});
   }
 
   // ── גג/מבנה מקשר מעל כל הדוכנים ──
@@ -3952,17 +3952,17 @@ function buildNPCs(){
     {x:-18,z:115,name:'בוקסר',type:'recruit',av:'🐶',buildFn:()=>mkBoxer(.85)},  // מדרכה גני אביב
     {x:80,z:42,name:'לולה',type:'recruit',av:'🐩',buildFn:()=>mkLola(.85)},       // פארק
     {x:11,z:-125,name:'פישקה',type:'recruit',av:'🐕',buildFn:()=>mkFishka(.85)},  // מדרכה ירושלים
-    {x:-80,z:55,name:'🥩 מכולת השוק',type:'shop',av:'🏪',buildFn:()=>mkShuki(.7),shopItems:[
+    {x:-80,z:51,name:'🥩 מכולת השוק',type:'shop',av:'🏪',buildFn:()=>mkShuki(.7),shopItems:[
       {ico:'🍖',name:'מנת בשר',desc:'+40 בריאות',cost:30,fn:()=>shopBuy('hp')},
       {ico:'💊',name:'תרופה',desc:'+80 בריאות מלא',cost:60,fn:()=>shopBuy('hp_big')},
       {ico:'⚡',name:'מנת אנרגיה',desc:'+100 סטמינה',cost:20,fn:()=>shopBuy('stam')},
     ]},
-    {x:-67,z:55,name:'🦷 דוכן הציוד',type:'shop',av:'🏪',buildFn:()=>mkBoxer(.7),shopItems:[
+    {x:-67.6,z:51,name:'🦷 דוכן הציוד',type:'shop',av:'🏪',buildFn:()=>mkBoxer(.7),shopItems:[
       {ico:'🦷',name:'חידוד שיניים',desc:'+3 כוח קבוע',cost:80,fn:()=>shopBuy('pow')},
       {ico:'🏃',name:'שמן מנועים',desc:'+0.5 מהירות קבוע',cost:60,fn:()=>shopBuy('spd')},
       {ico:'🛡️',name:'שריון פרוות',desc:'+20 HP מקס׳',cost:100,fn:()=>shopBuy('mhp')},
     ]},
-    {x:-54,z:55,name:'👗 חנות אופנה',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
+    {x:-55.2,z:51,name:'👗 חנות אופנה',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
       {ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח (קוסמטי)',cost:50,fn:()=>buyCos('spike')},
       {ico:'🕶️',name:'משקפי שמש',desc:'מגניב (קוסמטי)',cost:40,fn:()=>buyCos('glasses')},
       {ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,fn:()=>buyCos('bandana')},
@@ -3971,8 +3971,9 @@ function buildNPCs(){
   ];
   npcDefs.forEach(n=>{
     // וידוא מיקום בטוח — לא בתוך בניין ולא בתוך כביש
+    // חנויות לא מוזזות — הן חייבות לעמוד ליד הדוכן שלהן
     let {x,z}=n;
-    if(isInBuilding(x,z,2)||_isOnRoad(x,z)){
+    if(n.type!=='shop' && (isInBuilding(x,z,2)||_isOnRoad(x,z))){
       // מצא נקודה קרובה על מדרכה
       for(const [sx,sz] of _SPAWN_POOL){
         if(!isInBuilding(sx,sz,2)&&!_isOnRoad(sx,sz)&&d2(sx,sz,x,z)<40){x=sx;z=sz;break;}
