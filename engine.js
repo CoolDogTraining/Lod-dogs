@@ -822,23 +822,75 @@ function bldPark(x,z){
 }
 function bldMarket(x,z){
   const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133];
+  const woodM  =new THREE.MeshLambertMaterial({color:0x6b3f1a});
+  const woodLtM=new THREE.MeshLambertMaterial({color:0x8B5a2a});
+  const whiteM =new THREE.MeshLambertMaterial({color:0xffffff});
+  const wallM  =new THREE.MeshLambertMaterial({color:0xf0e6cc});
+
   for(let i=0;i<6;i++){
-    const stallMat=new THREE.MeshLambertMaterial({color:0xede0c8});
-    const stall=new THREE.Mesh(new THREE.BoxGeometry(3.8,2.4,2.8),stallMat);
-    stall.position.set(x+i*6,1.2,z);stall.castShadow=true;stall.receiveShadow=true;scene.add(stall);
-    // גג מרקיזה — צבעוני
+    const sx=x+i*6.2, sz=z;
+
+    // ── גוף הדוכן ──
+    const stall=new THREE.Mesh(new THREE.BoxGeometry(5.6,2.8,3.2),wallM);
+    stall.position.set(sx,1.4,sz);stall.castShadow=true;stall.receiveShadow=true;scene.add(stall);
+
+    // ── 4 עמודי פינה ──
+    [[-2.6,1.8],[2.6,1.8],[-2.6,-1.8],[2.6,-1.8]].forEach(([ox,oz])=>{
+      const post=new THREE.Mesh(new THREE.BoxGeometry(.22,3.1,.22),woodM);
+      post.position.set(sx+ox,1.55,sz+oz);scene.add(post);
+    });
+
+    // ── מרקיזה משופעת — 2 חלקים ──
     const awCol=awningCols[i%awningCols.length];
-    const aw=new THREE.Mesh(new THREE.BoxGeometry(4.4,.12,3.4),new THREE.MeshLambertMaterial({color:awCol}));
-    aw.position.set(x+i*6,2.5,z);scene.add(aw);
-    // פסים לבנים על הגג
-    for(let s=0;s<3;s++){
-      const strip=new THREE.Mesh(new THREE.BoxGeometry(.3,.14,3.4),new THREE.MeshLambertMaterial({color:0xffffff}));
-      strip.position.set(x+i*6-1.2+s*1.2,2.52,z);scene.add(strip);
+    const awM=new THREE.MeshLambertMaterial({color:awCol});
+    // חלק אחורי גבוה
+    const awBack=new THREE.Mesh(new THREE.BoxGeometry(6,.12,1.8),awM);
+    awBack.position.set(sx,3.1,sz+0.6);awBack.rotation.x=-0.18;scene.add(awBack);
+    // חלק קדמי משופע ומוארך
+    const awFront=new THREE.Mesh(new THREE.BoxGeometry(6,.1,2.2),awM);
+    awFront.position.set(sx,2.65,sz-1.5);awFront.rotation.x=0.32;scene.add(awFront);
+    // פסים לבנים על המרקיזה
+    for(let s=0;s<4;s++){
+      const strip=new THREE.Mesh(new THREE.BoxGeometry(.28,.14,2.2),whiteM);
+      strip.position.set(sx-2.1+s*1.4,2.67,sz-1.5);strip.rotation.x=0.32;scene.add(strip);
     }
-    // דוכן
-    const counter=new THREE.Mesh(new THREE.BoxGeometry(3.4,.6,1.0),new THREE.MeshLambertMaterial({color:0x8B5a2a}));
-    counter.position.set(x+i*6,.3,z-1.4);scene.add(counter);
+    // שוליים קדמיים — גדילים קצרים
+    for(let f=0;f<8;f++){
+      const fringe=new THREE.Mesh(new THREE.BoxGeometry(.18,.3,.06),awM);
+      fringe.position.set(sx-2.6+f*.74,2.22,sz-2.55);scene.add(fringe);
+    }
+
+    // ── דלפק עץ ──
+    const counter=new THREE.Mesh(new THREE.BoxGeometry(5.2,.55,1.1),woodLtM);
+    counter.position.set(sx,.28,sz-1.6);counter.castShadow=true;scene.add(counter);
+    // לוח קדמי של הדלפק
+    const front=new THREE.Mesh(new THREE.BoxGeometry(5.2,.6,.12),woodM);
+    front.position.set(sx,.3,sz-2.17);scene.add(front);
+
+    // ── מוצרים על הדלפק — כדורים צבעוניים (פירות/ירקות) ──
+    const prodCols=[0xff4400,0xffcc00,0xff8800,0x44bb22,0xcc2244,0xffee44];
+    for(let p=0;p<5;p++){
+      const prod=new THREE.Mesh(
+        new THREE.SphereGeometry(.22,6,5),
+        new THREE.MeshLambertMaterial({color:prodCols[(i+p)%prodCols.length]})
+      );
+      prod.position.set(sx-1.8+p*.9,.62,sz-1.6);scene.add(prod);
+    }
+
+    // ── שלט מעל הדוכן ──
+    const sign=new THREE.Mesh(new THREE.BoxGeometry(3.2,.6,.12),woodM);
+    sign.position.set(sx,2.88,sz+1.72);scene.add(sign);
+    const signTrim=new THREE.Mesh(new THREE.BoxGeometry(3.4,.08,.14),new THREE.MeshLambertMaterial({color:0xf5c518}));
+    signTrim.position.set(sx,2.58,sz+1.72);scene.add(signTrim);
+    const signTrim2=signTrim.clone();signTrim2.position.y=3.18;scene.add(signTrim2);
+
+    // ── קולידר ──
+    blds.push({x:sx,z,w:5.6,d:3.2});
   }
+
+  // ── גג/מבנה מקשר מעל כל הדוכנים ──
+  const roofBeam=new THREE.Mesh(new THREE.BoxGeometry(6.2*6+1,.18,.28),woodM);
+  roofBeam.position.set(x+6.2*2.5,3.14,z+1.72);scene.add(roofBeam);
 }
 function bldStation(x,z){
   // גוף תחנה — בטון
@@ -3900,17 +3952,17 @@ function buildNPCs(){
     {x:-18,z:115,name:'בוקסר',type:'recruit',av:'🐶',buildFn:()=>mkBoxer(.85)},  // מדרכה גני אביב
     {x:80,z:42,name:'לולה',type:'recruit',av:'🐩',buildFn:()=>mkLola(.85)},       // פארק
     {x:11,z:-125,name:'פישקה',type:'recruit',av:'🐕',buildFn:()=>mkFishka(.85)},  // מדרכה ירושלים
-    {x:-68,z:48,name:'🥩 מכולת השוק',type:'shop',av:'🏪',buildFn:()=>mkShuki(.7),shopItems:[
+    {x:-80,z:55,name:'🥩 מכולת השוק',type:'shop',av:'🏪',buildFn:()=>mkShuki(.7),shopItems:[
       {ico:'🍖',name:'מנת בשר',desc:'+40 בריאות',cost:30,fn:()=>shopBuy('hp')},
       {ico:'💊',name:'תרופה',desc:'+80 בריאות מלא',cost:60,fn:()=>shopBuy('hp_big')},
       {ico:'⚡',name:'מנת אנרגיה',desc:'+100 סטמינה',cost:20,fn:()=>shopBuy('stam')},
     ]},
-    {x:-78,z:56,name:'🦷 דוכן הציוד',type:'shop',av:'🏪',buildFn:()=>mkBoxer(.7),shopItems:[
+    {x:-67,z:55,name:'🦷 דוכן הציוד',type:'shop',av:'🏪',buildFn:()=>mkBoxer(.7),shopItems:[
       {ico:'🦷',name:'חידוד שיניים',desc:'+3 כוח קבוע',cost:80,fn:()=>shopBuy('pow')},
       {ico:'🏃',name:'שמן מנועים',desc:'+0.5 מהירות קבוע',cost:60,fn:()=>shopBuy('spd')},
       {ico:'🛡️',name:'שריון פרוות',desc:'+20 HP מקס׳',cost:100,fn:()=>shopBuy('mhp')},
     ]},
-    {x:-88,z:48,name:'👗 חנות אופנה',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
+    {x:-54,z:55,name:'👗 חנות אופנה',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
       {ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח (קוסמטי)',cost:50,fn:()=>buyCos('spike')},
       {ico:'🕶️',name:'משקפי שמש',desc:'מגניב (קוסמטי)',cost:40,fn:()=>buyCos('glasses')},
       {ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,fn:()=>buyCos('bandana')},
@@ -5080,7 +5132,7 @@ function drawBigMap(){
     {x:72,z:96,col:'rgba(85,136,255,.85)',r:6,icon:'✡',name:'בית כנסת'},
     {x:-51,z:-100,col:'rgba(180,140,60,.85)',r:7,icon:'🕌',name:'מסגד הגדול'},
     {x:80,z:-80,col:'rgba(200,200,200,.85)',r:6,icon:'🏛',name:'עיריית לוד'},
-    {x:-74,z:52,col:'rgba(60,200,100,.85)',r:5,icon:'🏪',name:'שוק לוד'},
+    {x:-67,z:55,col:'rgba(60,200,100,.85)',r:5,icon:'🏪',name:'שוק לוד'},
     {x:35,z:35,col:'rgba(255,80,80,.75)',r:5,icon:'🐕',name:'כנופיית הגשר'},
   ];
   pois.forEach(p=>{
