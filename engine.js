@@ -3981,8 +3981,11 @@ function buildNPCs(){
     }
     const ng=n.buildFn();
     ng.position.set(x,0,z);
-    // חנויות בשוק — פנים החוצה לכיוון z- (השחקן מגיע מדרום לשוק)
-    if(n.type==='shop') ng.rotation.y=0;
+    // חנויות — יסתכלו לכיוון מרכז העיר (איפה השחקן מתחיל)
+    if(n.type==='shop'){
+      const dx=0-x, dz=60-z;
+      ng.rotation.y=Math.atan2(dx,dz);
+    }
     scene.add(ng);
     const indCol=n.type==='shop'?0x00ccff:0xf5c518;
     const ind=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),new THREE.MeshLambertMaterial({color:indCol,emissive:n.type==='shop'?0x003344:0x443300}));ind.position.set(0,2.6,0);ng.add(ind);
