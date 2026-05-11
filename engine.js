@@ -6097,34 +6097,57 @@ function spawnBlood(x,y,z,n=10){
 }
 
 // ════════════════════════════════════════════════
-// DAMAGE NUMBERS
+// DAMAGE NUMBERS — DOM pool (ללא createElement בכל פגיעה)
 // ════════════════════════════════════════════════
+const _DMG_POOL=[];
+const _DMG_POOL_MAX=20;
+const _DMG_DUR=1000; // ms
+
+function _dmgGet(){
+  // שלוף אלמנט פנוי מהpool
+  const el=_DMG_POOL.pop();
+  if(el){el.style.animation='none';el.style.opacity='1';return el;}
+  // אין בpool — צור חדש (קורה לכל היותר 20 פעמים בחיי המשחק)
+  const d=document.createElement('div');
+  d.className='dmg-num';
+  document.body.appendChild(d);
+  return d;
+}
+
+function _dmgReturn(el){
+  el.style.display='none';
+  if(_DMG_POOL.length<_DMG_POOL_MAX)_DMG_POOL.push(el);
+  // אם pool מלא — האלמנט נשאר ב-DOM אך מוסתר, ינוצל בפעם הבאה
+}
+
 function showDmg(wx,wy,wz,txt,isCoin){
-  // project 3D position to screen
   if(!camera||!renderer)return;
   const v=new THREE.Vector3(wx,wy+.5,wz);
   v.project(camera);
   const sw=renderer.domElement.clientWidth,sh=renderer.domElement.clientHeight;
   const sx=(v.x*.5+.5)*sw,sy=(-.5*v.y+.5)*sh;
   if(sx<0||sx>sw||sy<0||sy>sh)return;
-  const el=document.createElement('div');
-  el.className='dmg-num';
+  const el=_dmgGet();
   el.textContent=txt;
   el.style.left=sx+'px';el.style.top=sy+'px';
   el.style.color=isCoin?'#f5c518':'#ff4444';
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(),1000);
+  el.style.display='block';
+  // הפעל אנימציה מחדש (reflow trick)
+  void el.offsetWidth;
+  el.style.animation='';
+  setTimeout(()=>_dmgReturn(el),_DMG_DUR);
 }
+
 function showDmgVilla(dmg){
-  // inside mosque — simple screen-center flash
-  const el=document.createElement('div');
-  el.className='dmg-num';
+  const el=_dmgGet();
   el.textContent=dmg;
   el.style.left=(50+Math.random()*20-10)+'%';
   el.style.top=(45+Math.random()*10-5)+'%';
   el.style.color='#ff4444';
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(),1000);
+  el.style.display='block';
+  void el.offsetWidth;
+  el.style.animation='';
+  setTimeout(()=>_dmgReturn(el),_DMG_DUR);
 }
 
 // ════════════════════════════════════════════════
