@@ -1451,6 +1451,10 @@ const _CUT_PORTRAITS={
   // ── פרק ה׳ ──
   ch5_open:'🌅',reks_joins:'🫡',new_threat:'⚠️',titan_reveal:'💀',
   ch5_boss:'🔥',ch5_finale:'🏙️',true_ending:'🐾',
+  // ── פרק ו׳ ──
+  ch6_open:'💔',ch6_reks_dead:'😶',ch6_shadow_seen:'👁️',
+  ch6_shadow_zippo:'⚡',ch6_lab_found:'🔬',ch6_recording:'🎙️',
+  ch6_shadow_fight:'⚔️',ch6_factory:'😱',ch6_fire:'🔥',ch6_ending:'🌆',
 };
 function skipTypewriter(){
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
@@ -2298,16 +2302,61 @@ function deleteSave(){localStorage.removeItem(SAVE_KEY);showN('🗑️ שמיר�
     const btn=document.getElementById('cs-continue');
     if(!btn)return;
     const d=new Date(s.ts);
-    const mName={0:'שיחה עם בלה',1:'איסוף אוכל',2:'כיבוש ראשון',3:'קרבות',4:'גיוס',5:'כיבוש שטחים',6:'ג׳ק הרוטווילר',7:'—',8:'המסגד',9:'חדירה',10:'ברונו',11:'ניצחון!',12:'בלה נפלה',13:'כיכר הכדורים',14:'פרק ד׳',15:'העירייה',16:'הכספת',17:'פלטו',18:'שידור',19:'אנדרטה',20:'רקס מגיע',21:'גיסות טיטאן',22:'בריכת הנחת',23:'טיטאן',24:'סיום אמיתי!'};
+    const mName={0:'שיחה עם בלה',1:'איסוף אוכל',2:'כיבוש ראשון',3:'קרבות',4:'גיוס',5:'כיבוש שטחים',6:'ג׳ק הרוטווילר',7:'—',8:'המסגד',9:'חדירה',10:'ברונו',11:'ניצחון!',12:'בלה נפלה',13:'כיכר הכדורים',14:'פרק ד׳',15:'העירייה',16:'הכספת',17:'פלטו',18:'שידור',19:'אנדרטה',20:'רקס מגיע',21:'גיסות טיטאן',22:'בריכת הנחת',23:'טיטאן',24:'סיום אמיתי!',25:'פרק ו׳ — גילוי',26:'הצל נראה',27:'זיפו עוקב',28:'הבניין הנטוש',29:'המעבדה',30:'קרב הצל',31:'המפעל',32:'שריפה'};
     document.getElementById('cs-save-info').textContent=`רמה ${s.dogs?.[s.dog]?.lv||1} | ${mName[s.mission]||'—'} | 💰${s.coins||0}`;
     btn.style.display='block';
   }catch(e){}
 })();
 
+// ════════════════════════════════════════════════
+// ██ פרק ו׳ — "צל" ██
+// ════════════════════════════════════════════════
+
+// boss הצל — עותק של רקס, נלחם כמו commander אבל עם HP גבוה יותר
+function _spawnShadowBoss(){
+  if(G._shadowEnemy)return;
+  if(!scene)return;
+  // בנה מודל דומה ל-reks (commander) — אבל עם גוון כהה יותר
+  const grp=mkCommander(1.05);
+  // גוון כהה לציון שהוא "עותק"
+  grp.traverse(c=>{
+    if(c.isMesh&&c.material){
+      const m=c.material.clone();
+      m.color.multiplyScalar(0.55);
+      m.emissive=new THREE.Color(0x110022);
+      c.material=m;
+    }
+  });
+  // הילה סגולה — מסמנת שהוא לא "אמיתי"
+  const aura=new THREE.Mesh(
+    new THREE.SphereGeometry(.55,8,8),
+    new THREE.MeshBasicMaterial({color:0x6600aa,transparent:true,opacity:.18,depthWrite:false})
+  );
+  grp.add(aura);
+  grp.position.set(90,0,95);
+  scene.add(grp);
+  const enemy={
+    mesh:grp,x:90,z:95,
+    hp:320,mhp:320,        // חזק יותר מ-boss רגיל
+    pow:14,spd:5.5,
+    dead:false,_t:0,
+    isShadow:true,         // דגל לזיהוי
+    name:'הצל',
+  };
+  G._shadowEnemy=enemy;
+  G.bosses.push(enemy);
+  showN('⚔️ הצל — HP: 320\nהוא נלחם כמו רקס. היזהרו.');
+}
+
+// עדכון שמות משימות בmission map של שמירה
+const _CH6_MISSION_NAMES={
+  25:'פרק ו׳ — גילוי',26:'הצל נראה',27:'זיפו עוקב',
+  28:'הבניין הנטוש',29:'המעבדה',30:'קרב הצל',
+  31:'המפעל',32:'שריפה',
+};
+
 // שמירה אוטומטית כל 60 שניות
 setInterval(()=>{if(PB&&G.mission>0)saveGame();},60000);
-
-// שמירה גם כשהשחקן מסתיר את הטאב / עובר לאפליקציה אחרת
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&typeof PB!=='undefined'&&PB&&G.mission>0)saveGame();
 });
