@@ -3979,7 +3979,11 @@ function buildNPCs(){
         if(!isInBuilding(sx,sz,2)&&!_isOnRoad(sx,sz)&&d2(sx,sz,x,z)<40){x=sx;z=sz;break;}
       }
     }
-    const ng=n.buildFn();ng.position.set(x,0,z);scene.add(ng);
+    const ng=n.buildFn();
+    ng.position.set(x,0,z);
+    // חנויות בשוק — פנים החוצה (דרומה, כלפי השחקן)
+    if(n.type==='shop') ng.rotation.y=Math.PI;
+    scene.add(ng);
     const indCol=n.type==='shop'?0x00ccff:0xf5c518;
     const ind=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),new THREE.MeshLambertMaterial({color:indCol,emissive:n.type==='shop'?0x003344:0x443300}));ind.position.set(0,2.6,0);ng.add(ind);
     if(n.type==='shop'){
@@ -6140,7 +6144,6 @@ function openShop(npc){
     const row=document.createElement('div');row.className='sh-item';
     row.innerHTML=`<div class="sh-ico">${item.ico}</div><div class="sh-info"><div class="sh-name">${item.name}</div><div class="sh-desc">${item.desc}</div></div><div class="sh-cost">💰${item.cost}</div>`;
     row.addEventListener('click',()=>{item.fn();document.getElementById('sh-coin-val').textContent=G.coins;});
-    row.addEventListener('touchstart',()=>{item.fn();document.getElementById('sh-coin-val').textContent=G.coins;});
     cont.appendChild(row);
   });
   document.getElementById('shop-ov').classList.add('open');
