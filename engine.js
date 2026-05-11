@@ -3981,8 +3981,8 @@ function buildNPCs(){
     }
     const ng=n.buildFn();
     ng.position.set(x,0,z);
-    // חנויות בשוק — פנים החוצה (דרומה, כלפי השחקן)
-    if(n.type==='shop') ng.rotation.y=Math.PI;
+    // חנויות בשוק — פנים החוצה לכיוון z- (השחקן מגיע מדרום לשוק)
+    if(n.type==='shop') ng.rotation.y=0;
     scene.add(ng);
     const indCol=n.type==='shop'?0x00ccff:0xf5c518;
     const ind=new THREE.Mesh(new THREE.SphereGeometry(.32,6,6),new THREE.MeshLambertMaterial({color:indCol,emissive:n.type==='shop'?0x003344:0x443300}));ind.position.set(0,2.6,0);ng.add(ind);
@@ -6140,10 +6140,17 @@ function openShop(npc){
   document.getElementById('sh-name').textContent=npc.name;
   document.getElementById('sh-coin-val').textContent=G.coins;
   const cont=document.getElementById('sh-items');cont.innerHTML='';
+  let _shopReady=false;
+  setTimeout(()=>{_shopReady=true;},350); // חסום קליקים ל-350ms אחרי פתיחה
   (npc.shopItems||[]).forEach(item=>{
     const row=document.createElement('div');row.className='sh-item';
-    row.innerHTML=`<div class="sh-ico">${item.ico}</div><div class="sh-info"><div class="sh-name">${item.name}</div><div class="sh-desc">${item.desc}</div></div><div class="sh-cost">💰${item.cost}</div>`;
-    row.addEventListener('click',()=>{item.fn();document.getElementById('sh-coin-val').textContent=G.coins;});
+    row.innerHTML=`<div class="sh-ico">${item.ico}</div><div class="sh-info"><div class="sh-iname">${item.name}</div><div class="sh-desc">${item.desc}</div></div><div class="sh-cost">💰${item.cost}</div>`;
+    row.addEventListener('pointerup',e=>{
+      e.stopPropagation();
+      if(!_shopReady)return;
+      item.fn();
+      document.getElementById('sh-coin-val').textContent=G.coins;
+    });
     cont.appendChild(row);
   });
   document.getElementById('shop-ov').classList.add('open');
