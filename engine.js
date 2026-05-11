@@ -6071,22 +6071,24 @@ function updReputationHUD(){
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
+// geometry משותף לכל splat הדם — נוצר פעם אחת בלבד
+const _BLOOD_SPLAT_GEO = new THREE.CircleGeometry(.12, 6);
+const _BLOOD_SPLAT_MAT = new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false});
+
 function spawnBlood(x,y,z,n=10){
   if(!scene)return;
+  // חלקיקי דם — מהpool הקיים במקום new SphereGeometry לכל אחד
   for(let i=0;i<n;i++){
-    const sz=.05+Math.random()*.1;
-    const m=new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),
-      new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true}));
+    const col=Math.random()<.6?0xcc0000:0x880000;
+    const m=_pfxGet(col);
     m.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
     scene.add(m);
     const spd=2.5+Math.random()*5,ang=Math.random()*Math.PI*2;
     G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
   }
-  // splat שטוח על הקרקע
+  // splat שטוח על הקרקע — geometry+material משותפים
   for(let i=0;i<3;i++){
-    const r=.08+Math.random()*.16;
-    const m=new THREE.Mesh(new THREE.CircleGeometry(r,6),
-      new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false}));
+    const m=new THREE.Mesh(_BLOOD_SPLAT_GEO,_BLOOD_SPLAT_MAT);
     m.rotation.x=-Math.PI/2;
     m.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
     scene.add(m);

@@ -2307,6 +2307,11 @@ function deleteSave(){localStorage.removeItem(SAVE_KEY);showN('🗑️ שמיר�
 // שמירה אוטומטית כל 60 שניות
 setInterval(()=>{if(PB&&G.mission>0)saveGame();},60000);
 
+// שמירה גם כשהשחקן מסתיר את הטאב / עובר לאפליקציה אחרת
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&typeof PB!=='undefined'&&PB&&G.mission>0)saveGame();
+});
+
 // הערה: setMission ב-engine.js כבר קורא saveGame() בפנים — אין צורך ב-wrapper נוסף.
 // הwrapper הישן גרם לשמירה כפולה בכל מעבר משימה.
 function _devJump(n){
