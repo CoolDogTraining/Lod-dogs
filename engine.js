@@ -47,6 +47,15 @@ const G={
   capturedBlds:[],     // בניינים לכיבוש
   humanNPCs:[],        // אנשים ברחוב
   cars:[],             // מכוניות
+  // ── פרק ו׳ — "צל" ──
+  _shadowEnemy:null,
+  _shadowBossDead:false,
+  _ch6MarketVisited:false,
+  _ch6PortVisited:false,
+  _ch6LabVisited:false,
+  _ch6RecordingPlayed:false,
+  _ch6FactoryVisited:false,
+  _ch6FireDone:false,
 };
 
 let scene,camera,renderer,clock,mmCtx;
@@ -4043,7 +4052,7 @@ function updateMissionHUD(){
 
 function updateNavArrow(){
   const nav=document.getElementById('nav');
-  if(G.mission>=23){nav.style.display='none';return;}
+  if(G.mission>=23&&(G.mission<25||G.mission>32)){nav.style.display='none';return;}
   if(G.mission===7){nav.style.display='none';return;}
   const m=MISSIONS[G.mission];
   if(!m||!m.hint){nav.style.display='none';return;}
@@ -4090,6 +4099,17 @@ function updateNavDirection(){
     tx=G._fishkaEnemy?G._fishkaEnemy.x:35;tz=G._fishkaEnemy?G._fishkaEnemy.z:35;
   } else if(G.mission>=14&&G.mission<=19){
     tx=80;tz=-80; // עיריית לוד
+  } else if(G.mission===25){
+    tx=0;tz=60;   // בסיס הכנופייה
+  } else if(G.mission===26){
+    tx=-60;tz=60; // שוק לוד
+  } else if(G.mission===27){
+    tx=80;tz=120; // נמל ישן
+  } else if(G.mission===28||G.mission===29||G.mission===30||G.mission===31||G.mission===32){
+    tx=90;tz=95;  // בניין נטוש / מעבדה
+    if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
+      tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;
+    }
   } else {
     const tgt=m.targetFn();if(!tgt)return;
     tx=(tgt.mesh?tgt.mesh.position.x:tgt.x)||0;
@@ -4153,6 +4173,7 @@ function loop(){
     updCollectibles(dt);
     updBldCapture(dt);
     updCh5(dt); // פרק ה׳
+    updCh6(dt); // פרק ו׳
     // כניסה למסגד — שחקן הגיע לדלת במשימה 8
     if(G.mission===8&&G.gateMarker){
       const px=PB.position.x,pz=PB.position.z;
@@ -6023,6 +6044,178 @@ function togglePause(e){
   }
 }
 
+// ════════════════════════════════════════════════
+// CH5 UPDATE — כניסה לפרק ה׳ (missions 20-24)
+// ════════════════════════════════════════════════
+function updCh5(dt){
+  if(G.mission<20||G.mission>24)return;
+  // titan boss logic מנוהלת ב-updCh3Entities / _checkCh5Progress
+  // כאן אפשר להוסיף logic נוסף בעתיד
+}
+
+// ════════════════════════════════════════════════
+// CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
+// ════════════════════════════════════════════════
+function updCh6(dt){
+  if(G.mission<25||G.mission>32)return;
+  if(!PB)return;
+  const px=PB.position.x,pz=PB.position.z;
+
+  // ── mission 25: הגיעו לבסיס הכנופייה ──
+  if(G.mission===25&&!G._ch6BaseVisited){
+    if(d2(px,pz,0,60)<6){
+      G._ch6BaseVisited=true;
+      setMission(26);
+    }
+  }
+
+  // ── mission 26: שוק לוד — קולין רואה את הצל ──
+  if(G.mission===26&&!G._ch6MarketVisited){
+    if(d2(px,pz,-60,60)<8){
+      G._ch6MarketVisited=true;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_shadow_seen',()=>{
+        G.paused=false;
+        setMission(27);
+      }),300);
+    }
+  }
+
+  // ── mission 27: נמל ישן — זיפו פוגש את הצל ──
+  if(G.mission===27&&!G._ch6PortVisited){
+    if(d2(px,pz,80,120)<8){
+      G._ch6PortVisited=true;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_shadow_zippo',()=>{
+        G.paused=false;
+        setMission(28);
+      }),300);
+    }
+  }
+
+  // ── mission 28: הגיעו לבניין הנטוש ──
+  if(G.mission===28&&!G._ch6LabVisited){
+    if(d2(px,pz,90,95)<7){
+      G._ch6LabVisited=true;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_lab_found',()=>{
+        G.paused=false;
+        setMission(29);
+      }),300);
+    }
+  }
+
+  // ── mission 29: הקלטה של ד"ר כץ ──
+  if(G.mission===29&&!G._ch6RecordingPlayed){
+    if(d2(px,pz,90,95)<7){
+      G._ch6RecordingPlayed=true;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_recording',()=>{
+        G.paused=false;
+        // מסת הצל מופיעה
+        if(typeof _spawnShadowBoss==='function')_spawnShadowBoss();
+        setMission(30);
+      }),300);
+    }
+  }
+
+  // ── mission 30: קרב הצל ──
+  if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
+    const se=G._shadowEnemy;
+    const dd=d2(se.x,se.z,px,pz);
+
+    // תנועה — רודף את השחקן
+    if(dd>2){
+      const ang=Math.atan2(px-se.x,pz-se.z);
+      se.x+=Math.sin(ang)*se.spd*dt;
+      se.z+=Math.cos(ang)*se.spd*dt;
+      se.mesh.position.set(se.x,0,se.z);
+      se.mesh.rotation.y=ang;
+    }
+
+    // הצל תוקף
+    if(!se._atkT)se._atkT=0;
+    se._atkT=Math.max(0,se._atkT-dt);
+    if(dd<2.5&&se._atkT<=0){
+      dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);
+    }
+
+    // השחקן תוקף את הצל
+    if(!se._hitT)se._hitT=0;
+    se._hitT=Math.max(0,se._hitT-dt);
+    if(dd<4&&G.atkCD<=0&&se._hitT<=0){
+      const dog=G.dogs[G.dog];
+      const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
+      se.hp-=dmg;haptic(22);
+      spawnBlood(se.x,1.5,se.z,10);
+      showDmg(se.x,2,se.z,dmg);
+      se._hitT=0.45;G.atkCD=0.55;
+      // HP bar
+      if(se.bar)se.bar.scale.x=Math.max(0,se.hp/se.mhp);
+      if(se.hp<=0){
+        se.dead=true;se.mesh.visible=false;
+        G._shadowBossDead=true;
+        sCapture();haptic([80,30,80,30,100]);
+        addXP(180);G.coins+=150;updCoins();
+        spawnBlood(se.x,2,se.z,25);
+        showN('⚔️ הצל הובס.');
+        setTimeout(()=>showCut('ch6_shadow_fight',()=>{
+          setMission(31);
+        }),600);
+      }
+    }
+
+    // HP bar מעל הצל — בנה פעם אחת
+    if(!se.bar&&se.mesh){
+      const bg=new THREE.Mesh(
+        new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0x330033})
+      );
+      bg.position.set(0,2.8,0);se.mesh.add(bg);
+      const bar=new THREE.Mesh(
+        new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0xaa00cc})
+      );
+      bar.position.set(0,.001,0.01);bg.add(bar);
+      se.bar=bar;
+    }
+  }
+
+  // ── mission 31: המפעל — דלת אחורית ──
+  if(G.mission===31&&!G._ch6FactoryVisited){
+    if(d2(px,pz,95,90)<7){
+      G._ch6FactoryVisited=true;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_factory',()=>{
+        G.paused=false;
+        setMission(32);
+      }),300);
+    }
+  }
+
+  // ── mission 32: שריפה — סוף הפרק ──
+  if(G.mission===32&&!G._ch6FireDone){
+    if(d2(px,pz,88,92)<7){
+      G._ch6FireDone=true;
+      G.paused=true;
+      // אפקט שריפה — particles אדומים/כתומים
+      for(let i=0;i<40;i++){
+        const col=Math.random()<.5?0xff4400:0xff8800;
+        const m=_pfxGet(col);
+        m.position.set(90+(Math.random()-.5)*8,0,95+(Math.random()-.5)*8);
+        scene.add(m);
+        G.particles.push({mesh:m,vx:(Math.random()-.5)*3,vy:2+Math.random()*5,vz:(Math.random()-.5)*3,life:1.5+Math.random()*2});
+      }
+      setTimeout(()=>showCut('ch6_fire',()=>{
+        setTimeout(()=>showCut('ch6_ending',()=>{
+          G.paused=false;
+          showN('🏁 פרק ו׳ הסתיים!\n\nד"ר כץ נעלם. לוד בטוחה.');
+        }),1500);
+      }),400);
+    }
+  }
+}
+
 
 // ════════════════════════════════════════════════
 // REPUTATION — מוניטין בעיר
@@ -6071,24 +6264,22 @@ function updReputationHUD(){
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
-// geometry משותף לכל splat הדם — נוצר פעם אחת בלבד
-const _BLOOD_SPLAT_GEO = new THREE.CircleGeometry(.12, 6);
-const _BLOOD_SPLAT_MAT = new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false});
-
 function spawnBlood(x,y,z,n=10){
   if(!scene)return;
-  // חלקיקי דם — מהpool הקיים במקום new SphereGeometry לכל אחד
   for(let i=0;i<n;i++){
-    const col=Math.random()<.6?0xcc0000:0x880000;
-    const m=_pfxGet(col);
+    const sz=.05+Math.random()*.1;
+    const m=new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),
+      new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true}));
     m.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
     scene.add(m);
     const spd=2.5+Math.random()*5,ang=Math.random()*Math.PI*2;
     G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
   }
-  // splat שטוח על הקרקע — geometry+material משותפים
+  // splat שטוח על הקרקע
   for(let i=0;i<3;i++){
-    const m=new THREE.Mesh(_BLOOD_SPLAT_GEO,_BLOOD_SPLAT_MAT);
+    const r=.08+Math.random()*.16;
+    const m=new THREE.Mesh(new THREE.CircleGeometry(r,6),
+      new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false}));
     m.rotation.x=-Math.PI/2;
     m.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
     scene.add(m);
@@ -6097,57 +6288,34 @@ function spawnBlood(x,y,z,n=10){
 }
 
 // ════════════════════════════════════════════════
-// DAMAGE NUMBERS — DOM pool (ללא createElement בכל פגיעה)
+// DAMAGE NUMBERS
 // ════════════════════════════════════════════════
-const _DMG_POOL=[];
-const _DMG_POOL_MAX=20;
-const _DMG_DUR=1000; // ms
-
-function _dmgGet(){
-  // שלוף אלמנט פנוי מהpool
-  const el=_DMG_POOL.pop();
-  if(el){el.style.animation='none';el.style.opacity='1';return el;}
-  // אין בpool — צור חדש (קורה לכל היותר 20 פעמים בחיי המשחק)
-  const d=document.createElement('div');
-  d.className='dmg-num';
-  document.body.appendChild(d);
-  return d;
-}
-
-function _dmgReturn(el){
-  el.style.display='none';
-  if(_DMG_POOL.length<_DMG_POOL_MAX)_DMG_POOL.push(el);
-  // אם pool מלא — האלמנט נשאר ב-DOM אך מוסתר, ינוצל בפעם הבאה
-}
-
 function showDmg(wx,wy,wz,txt,isCoin){
+  // project 3D position to screen
   if(!camera||!renderer)return;
   const v=new THREE.Vector3(wx,wy+.5,wz);
   v.project(camera);
   const sw=renderer.domElement.clientWidth,sh=renderer.domElement.clientHeight;
   const sx=(v.x*.5+.5)*sw,sy=(-.5*v.y+.5)*sh;
   if(sx<0||sx>sw||sy<0||sy>sh)return;
-  const el=_dmgGet();
+  const el=document.createElement('div');
+  el.className='dmg-num';
   el.textContent=txt;
   el.style.left=sx+'px';el.style.top=sy+'px';
   el.style.color=isCoin?'#f5c518':'#ff4444';
-  el.style.display='block';
-  // הפעל אנימציה מחדש (reflow trick)
-  void el.offsetWidth;
-  el.style.animation='';
-  setTimeout(()=>_dmgReturn(el),_DMG_DUR);
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
 }
-
 function showDmgVilla(dmg){
-  const el=_dmgGet();
+  // inside mosque — simple screen-center flash
+  const el=document.createElement('div');
+  el.className='dmg-num';
   el.textContent=dmg;
   el.style.left=(50+Math.random()*20-10)+'%';
   el.style.top=(45+Math.random()*10-5)+'%';
   el.style.color='#ff4444';
-  el.style.display='block';
-  void el.offsetWidth;
-  el.style.animation='';
-  setTimeout(()=>_dmgReturn(el),_DMG_DUR);
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
 }
 
 // ════════════════════════════════════════════════

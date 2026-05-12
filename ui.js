@@ -2212,6 +2212,17 @@ function saveGame(){
       collFound:G.collFound||0,terrCnt:G.terrCnt||0,
       // ── פרק ה׳ ──
       ch5ScoutKills:_ch5ScoutKills||0,
+      // ── פרק ו׳ ──
+      ch6:{
+        baseVisited:!!G._ch6BaseVisited,
+        marketVisited:!!G._ch6MarketVisited,
+        portVisited:!!G._ch6PortVisited,
+        labVisited:!!G._ch6LabVisited,
+        recordingPlayed:!!G._ch6RecordingPlayed,
+        factoryVisited:!!G._ch6FactoryVisited,
+        fireDone:!!G._ch6FireDone,
+        shadowBossDead:!!G._shadowBossDead,
+      },
       dogs:{
         colin:{...G.dogs.colin},
         zippo:{...G.dogs.zippo},
@@ -2248,6 +2259,17 @@ function loadGame(){
     G.ch2Active=!!s.ch2Active;G.momoFreed=!!s.momoFreed;
     // ── שחזר state פרק ה׳ ──
     if(s.ch5ScoutKills)_ch5ScoutKills=s.ch5ScoutKills;
+    // ── שחזר state פרק ו׳ ──
+    if(s.ch6){
+      G._ch6BaseVisited=!!s.ch6.baseVisited;
+      G._ch6MarketVisited=!!s.ch6.marketVisited;
+      G._ch6PortVisited=!!s.ch6.portVisited;
+      G._ch6LabVisited=!!s.ch6.labVisited;
+      G._ch6RecordingPlayed=!!s.ch6.recordingPlayed;
+      G._ch6FactoryVisited=!!s.ch6.factoryVisited;
+      G._ch6FireDone=!!s.ch6.fireDone;
+      G._shadowBossDead=!!s.ch6.shadowBossDead;
+    }
     // שחזר gateMarker אם היינו בפרק ב׳
     if(G.ch2Active&&G.mission>=8&&G.mission<=10)G.gateMarker={x:-51,z:-100};
     if(s.sideQ)G.sideQ=s.sideQ;
