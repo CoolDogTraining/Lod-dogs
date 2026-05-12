@@ -2283,6 +2283,8 @@ function loadGame(){
     if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}
     // שחזר mission — init קרא setMission(0), נדרוס בלי לקרוא unlock() (כדי לא לפתוח קאטסינים שוב)
     G.mission=s.mission;
+    // סדר את העולם לפי ה-mission שנשמר
+    setTimeout(()=>{if(typeof _applyWorldState==='function')_applyWorldState(G.mission);},300);
     // שחזר גיסות טיטאן אם mission==21
     if(G.mission===21&&!G._titanScoutsSpawned){
       _spawnTitanScouts();
@@ -2387,28 +2389,37 @@ document.addEventListener('visibilitychange',()=>{
 // הwrapper הישן גרם לשמירה כפולה בכל מעבר משימה.
 function _devJump(n){
   document.getElementById('devPanel').style.display='none';
-  // אפס guard כדי לאפשר קפיצה גם לאותו mission
   if(typeof G!=='undefined'){
     if(n<=G.mission)G.mission=n-1;
     // אפס titan scouts אם קופצים ל-21
     if(n===21){G._titanScoutsSpawned=false;}
     // אפס ch5 scout kills אם קופצים לפרק ה׳
     if(n>=20){_ch5ScoutKills=0;G._ch5ScoutsDone=false;}
-    // אפס pool cut guards
+    // אפס ch6 state אם קופצים לפרק ו׳
+    if(n>=25){
+      G._ch6BaseVisited=false;G._ch6MarketVisited=false;G._ch6PortVisited=false;
+      G._ch6LabVisited=false;G._ch6RecordingPlayed=false;
+      G._ch6FactoryVisited=false;G._ch6FireDone=false;
+      G._shadowEnemy=null;G._shadowBossDead=false;
+    }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
   if(typeof setMission==='function') setMission(n);
+  // סדר את העולם לפי ה-mission החדש
+  setTimeout(()=>{if(typeof _applyWorldState==='function')_applyWorldState(n);},200);
 }
+
 // בחירת פרק ממסך בחירת הכלב
 window._csChapter=null;
 function csStartChapter(n){
   window._csChapter=n;
-  // אם כלב כבר נבחר (משחק פעיל) — קפוץ ישירות בלי init מחדש
   if(typeof G!=='undefined'&&G.dog&&G.hud){
     window._csChapter=null;
+    if(n<=G.mission)G.mission=n-1;
     if(typeof setMission==='function') setMission(n);
+    // סדר את העולם לפי הפרק שנבחר
+    setTimeout(()=>{if(typeof _applyWorldState==='function')_applyWorldState(n);},200);
   }
-  // אחרת — שמור פרק, בחירת הכלב תמשיך משם
 }
 document.addEventListener('keydown',function(e){
   // Escape — פתח/סגור dev panel

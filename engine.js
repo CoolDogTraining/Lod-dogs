@@ -6054,6 +6054,89 @@ function updCh5(dt){
 }
 
 // ════════════════════════════════════════════════
+// _applyWorldState — מסדר את העולם לפי mission
+// נקרא בכל פתיחת פרק (_devJump, csStartChapter, loadGame)
+// ════════════════════════════════════════════════
+function _applyWorldState(m){
+  if(!PB)return;
+
+  // ── פרק א׳ (0-7): עולם נקי ──
+  // בלה חיה, אין gateMarker, אין fishka hostile
+  if(m<=7){
+    G.npcs.forEach(n=>{n._dead=false;if(n.mesh)n.mesh.visible=true;});
+    G.ch2Active=false;G.momoFreed=false;
+    G.gateMarker=null;G._bellaMarker=null;
+  }
+
+  // ── פרק ב׳ (8-11): בלה חיה, gateMarker קיים ──
+  if(m>=8){
+    G.ch2Active=true;
+    G.gateMarker={x:-51,z:-100};
+    // בלה עדיין חיה
+    G.npcs.forEach(n=>{if(n.name==='בלה הזקנה')n._dead=false;});
+  }
+
+  // ── פרק ג׳ (12+): בלה מתה ──
+  if(m>=12){
+    G.npcs.forEach(n=>{if(n.name==='בלה הזקנה'){n._dead=true;if(n.mesh)n.mesh.visible=false;}});
+    G._bellaMarker=null; // כבר עבר
+    // fishka כבוי — הקרב כבר הסתיים
+    if(G._fishkaEnemy&&m>13){G._fishkaEnemy.caught=true;if(G._fishkaEnemy.mesh)G._fishkaEnemy.mesh.visible=false;}
+    // מומו חופשית
+    G.momoFreed=true;
+  }
+
+  // ── פרק ד׳ (14-19): עיריית לוד פתוחה ──
+  if(m>=14){
+    // שומרי עירייה — מופעלים ב-updCh3Entities
+  }
+
+  // ── פרק ה׳ (20+): רקס ally ──
+  if(m>=20){
+    if(!G._reksAlly&&typeof _spawnReksAlly==='function'){
+      _spawnReksAlly();
+    }
+    // titan scouts
+    if(m===21&&!G._titanScoutsSpawned&&typeof _spawnTitanScouts==='function'){
+      _spawnTitanScouts();
+    }
+    // titan boss
+    if(m>=22&&m<=23&&typeof _spawnTitanBoss==='function'){
+      if(!G._titanEnemy)_spawnTitanBoss(m===22);
+      else if(m===23)G._titanEnemy.frozen=false;
+    }
+    // titan dead אם mission 24+
+    if(m>=24&&G._titanEnemy){G._titanEnemy.dead=true;if(G._titanEnemy.mesh)G._titanEnemy.mesh.visible=false;}
+  }
+
+  // ── פרק ו׳ (25+): רקס מת ──
+  if(m>=25){
+    // רקס ally נעלם
+    if(G._reksAlly&&G._reksAlly.mesh)G._reksAlly.mesh.visible=false;
+    // כל state פרק ו׳ שכבר עבר
+    if(m>25)G._ch6BaseVisited=true;
+    if(m>26)G._ch6MarketVisited=true;
+    if(m>27)G._ch6PortVisited=true;
+    if(m>28)G._ch6LabVisited=true;
+    if(m>29)G._ch6RecordingPlayed=true;
+    if(m>30){G._shadowBossDead=true;if(G._shadowEnemy)G._shadowEnemy.dead=true;}
+    if(m>31)G._ch6FactoryVisited=true;
+    if(m>32)G._ch6FireDone=true;
+    // boss הצל — spawn אם mission 30 ועדיין לא מת
+    if(m===30&&!G._shadowBossDead&&typeof _spawnShadowBoss==='function'){
+      if(!G._shadowEnemy)_spawnShadowBoss();
+    }
+  }
+
+  // ── אויבים — הצג לפי פרק ──
+  if(m>=3)G.enemies.forEach(e=>{e.mesh.visible=true;});
+  if(m>=4)G.npcs.forEach(n=>{if(n.ind&&n.type==='recruit')n.ind.visible=true;});
+
+  updateMissionHUD();
+  updateNavArrow();
+}
+
+// ════════════════════════════════════════════════
 // CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
 // ════════════════════════════════════════════════
 function updCh6(dt){
