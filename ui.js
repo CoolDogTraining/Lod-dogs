@@ -2155,9 +2155,19 @@ function _checkCh5Progress(){
   if(_ch5ScoutKills>=need&&G.mission===21&&!G._ch5ScoutsDone){
     G._ch5ScoutsDone=true;
     showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מחכה בבריכת הנחת — הגיעו אליו!');
-    // ✅ תיקון: קודם עוברים ל-22 (הגיע לבריכה), לא ישירות ל-23
     setTimeout(()=>{
       setMission(22);
+      // אם השחקן כבר נמצא ליד הבריכה — פתח קאטסין מיידית
+      if(PB&&d2(PB.position.x,PB.position.z,-120,130)<8&&!G._poolCutPlaying){
+        G._poolCutPlaying=true;
+        showCut('titan_reveal',()=>{
+          showCut('ch5_boss',()=>{
+            _spawnTitanBoss();
+            setMission(23);
+            G._poolCutPlaying=false;
+          });
+        });
+      }
     },800);
   }
 }
