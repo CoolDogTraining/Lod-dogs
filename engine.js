@@ -5891,7 +5891,7 @@ function buildLabScene(){
 
   // כתמי חלודה על הרצפה
   const rustM=new THREE.MeshLambertMaterial({color:0x3a1500,emissive:0x0a0400});
-  [[0,0],[−4,3],[6,−5],[−8,−2]].forEach(([rx,rz])=>{
+  [[0,0],[-4,3],[6,-5],[-8,-2]].forEach(([rx,rz])=>{
     const r=new THREE.Mesh(new THREE.PlaneGeometry(1.5+Math.random(),0.8+Math.random()),rustM);
     r.rotation.x=-Math.PI/2;r.position.set(rx,0.01,rz);_addNS(r);
   });
@@ -5916,7 +5916,7 @@ function buildLabScene(){
     joint.rotation.z=Math.PI/2;joint.position.set(px+2,py,pz);_add(joint);
   });
   // צינורות אנכיים
-  [[-11,4,10],[12,4,-5],[−5,4,14]].forEach(([px,py,pz])=>{
+  [[-11,4,10],[12,4,-5],[-5,4,14]].forEach(([px,py,pz])=>{
     const p=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,6,8),pipeM);
     p.position.set(px,py,pz);_add(p);
   });
@@ -5925,7 +5925,7 @@ function buildLabScene(){
   const tableM=new THREE.MeshLambertMaterial({color:0x1c2c22,emissive:0x020402});
   const metalM=new THREE.MeshLambertMaterial({color:0x2a3a2a,emissive:0x040604});
   const glassM=new THREE.MeshLambertMaterial({color:0x0a2a18,transparent:true,opacity:0.6,emissive:0x002208});
-  [[−6,0,−8],[4,0,−10],[−4,0,−5],[8,0,−3]].forEach(([tx,ty,tz],i)=>{
+  [[-6,0,-8],[4,0,-10],[-4,0,-5],[8,0,-3]].forEach(([tx,ty,tz],i)=>{
     const t=new THREE.Mesh(new THREE.BoxGeometry(3.5,0.12,1.2),tableM);
     t.position.set(tx,0.88,tz);_add(t);
     const leg1=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.88,0.1),metalM);
@@ -5983,7 +5983,7 @@ function buildLabScene(){
 
   // סיבוכי חוטים מהתקרה
   const wireM=new THREE.MeshLambertMaterial({color:0x0a0a0a,emissive:0x010101});
-  [[-3,8,−6],[5,8,-2],[-8,8,-10]].forEach(([wx,wy,wz])=>{
+  [[-3,8,-6],[5,8,-2],[-8,8,-10]].forEach(([wx,wy,wz])=>{
     const wire=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,8,4),wireM);
     wire.rotation.z=0.1+Math.random()*0.2;wire.position.set(wx,wy-4,wz);_add(wire);
     const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),
@@ -5994,8 +5994,8 @@ function buildLabScene(){
 
   // שולחן ראשי — ד"ר כץ עבד כאן
   const mainT=new THREE.Mesh(new THREE.BoxGeometry(5,0.15,2),tableM);
-  mainT.position.set(0,0.95,−10);_add(mainT);
-  [[-2,1.1,−10],[0.5,1.1,−10],[2,1.1,−10]].forEach(([px,py,pz],i)=>{
+  mainT.position.set(0,0.95,-10);_add(mainT);
+  [[-2,1.1,-10],[0.5,1.1,-10],[2,1.1,-10]].forEach(([px,py,pz],i)=>{
     const item=[
       new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.12,0.4,8),glassM),
       new THREE.Mesh(new THREE.BoxGeometry(0.8,0.5,0.6),metalM),
@@ -6006,10 +6006,10 @@ function buildLabScene(){
   // נגן הקלטות — עליו לוחצים ב-mission 29
   const recorder=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.2,0.4),
     new THREE.MeshLambertMaterial({color:0x0a1a0a,emissive:0x001500}));
-  recorder.position.set(1.5,1.1,−10);_add(recorder);
+  recorder.position.set(1.5,1.1,-10);_add(recorder);
   const recBtn=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.06,8),
     new THREE.MeshLambertMaterial({color:0xff2200,emissive:0x880000}));
-  recBtn.position.set(1.5,1.22,−10);_add(recBtn);
+  recBtn.position.set(1.5,1.22,-10);_add(recBtn);
   G._labRecorder=recorder;
 
   // דלת יציאה — קיר ימין
@@ -6026,7 +6026,7 @@ function buildLabScene(){
   // indicator — שחקן מגיע לנגן ב-mission 29
   const recInd=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),
     new THREE.MeshBasicMaterial({color:0xff4400}));
-  recInd.position.set(1.5,1.6,−10);_addNS(recInd);
+  recInd.position.set(1.5,1.6,-10);_addNS(recInd);
   G._labRecInd=recInd;
 }
 
