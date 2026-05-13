@@ -1,52 +1,124 @@
 
 // ── פריטים קוסמטיים ──
 const COSMETICS=[
-  {id:'spike',ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח על הצווארון',cost:50,
+  // ── ספייק קולר — צווארון עם ציפורניים מתכתיות ──
+  {id:'spike',ico:'⚡',name:'צווארון ספייק',desc:'מתכת כבדה. לא לכולם.',cost:50,
    apply:(grp)=>{
-     // עמודי ספייק על הגב — גדולים וגלויים
-     const mat=new THREE.MeshLambertMaterial({color:0x111111,emissive:0x221100});
      const g2=new THREE.Group();
-     [-0.18,0,0.18].forEach((ox,i)=>{
-       const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.07,0.35+i*0.05,6),mat);
-       sp.position.set(ox,1.25+i*0.05,0.05);g2.add(sp);
-     });
+     const sz=grp._dogSz||1;
+     // בסיס צווארון עור שחור
+     const base=new THREE.Mesh(
+       new THREE.CylinderGeometry(.22*sz,.22*sz,.11*sz,16),
+       new THREE.MeshLambertMaterial({color:0x1a0a00,emissive:0x050200}));
+     base.position.set(0,.92*sz,.52*sz);g2.add(base);
+     // ספייקים מתכתיים סביב הצווארון
+     const spikeM=new THREE.MeshLambertMaterial({color:0xb8b8b8,emissive:0x303030});
+     for(let i=0;i<8;i++){
+       const ang=(i/8)*Math.PI*2;
+       const spk=new THREE.Mesh(new THREE.ConeGeometry(.025*sz,.12*sz,4),spikeM);
+       spk.position.set(
+         Math.cos(ang)*.22*sz+0,
+         .92*sz+.06*sz,
+         Math.sin(ang)*.22*sz+.52*sz
+       );
+       spk.rotation.z=-Math.cos(ang)*Math.PI*.45;
+       spk.rotation.x=Math.sin(ang)*Math.PI*.45;
+       g2.add(spk);
+     }
+     // תג מתכת קדמי
+     const tag=new THREE.Mesh(
+       new THREE.BoxGeometry(.09*sz,.07*sz,.03*sz),
+       new THREE.MeshLambertMaterial({color:0xd4af37,emissive:0x443300}));
+     tag.position.set(0,.92*sz,.74*sz);g2.add(tag);
      grp.add(g2);grp._cosSpike=g2;
    },remove:(grp)=>{if(grp._cosSpike){grp.remove(grp._cosSpike);grp._cosSpike=null;}}},
-  {id:'glasses',ico:'🕶️',name:'משקפי שמש',desc:'מסתכל מגניב על העולם',cost:40,
+
+  // ── משקפי שמש — מסגרת עבה, עדשות כהות ──
+  {id:'glasses',ico:'🕶️',name:'משקפי שמש',desc:'נינג׳ה. אל תשאל.',cost:40,
    apply:(grp)=>{
-     const mat=new THREE.MeshLambertMaterial({color:0x050515,transparent:true,opacity:.85,emissive:0x000033});
      const g2=new THREE.Group();
-     // עדשה שמאל + עדשה ימין + חיבור
-     [-0.14,0.14].forEach(ox=>{
-       const lens=new THREE.Mesh(new THREE.BoxGeometry(.22,.14,.04),mat);
-       lens.position.set(ox,1.28,0.3);g2.add(lens);
+     const sz=grp._dogSz||1;
+     const frameM=new THREE.MeshLambertMaterial({color:0x111111,emissive:0x050505});
+     const lensM=new THREE.MeshLambertMaterial({color:0x001133,transparent:true,opacity:.82,emissive:0x000822});
+     // עדשה שמאל
+     const lL=new THREE.Mesh(new THREE.BoxGeometry(.19*sz,.13*sz,.05*sz),lensM);
+     lL.position.set(-.16*sz,1.31*sz,.58*sz);g2.add(lL);
+     // עדשה ימין
+     const lR=new THREE.Mesh(new THREE.BoxGeometry(.19*sz,.13*sz,.05*sz),lensM);
+     lR.position.set(.16*sz,1.31*sz,.58*sz);g2.add(lR);
+     // מסגרת שמאל
+     const fL=new THREE.Mesh(new THREE.BoxGeometry(.21*sz,.015*sz,.05*sz),frameM);
+     fL.position.set(-.16*sz,1.375*sz,.58*sz);g2.add(fL);
+     const fLb=fL.clone();fLb.position.y=1.245*sz;g2.add(fLb);
+     // מסגרת ימין
+     const fR=fL.clone();fR.position.x=.16*sz;g2.add(fR);
+     const fRb=fLb.clone();fRb.position.x=.16*sz;g2.add(fRb);
+     // גשר אמצעי
+     const br=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.03*sz,.04*sz),frameM);
+     br.position.set(0,1.315*sz,.58*sz);g2.add(br);
+     // זרועות לצדדים
+     [-1,1].forEach(side=>{
+       const arm=new THREE.Mesh(new THREE.BoxGeometry(.18*sz,.025*sz,.03*sz),frameM);
+       arm.position.set(side*.28*sz,1.31*sz,.46*sz);
+       arm.rotation.y=side*0.3;g2.add(arm);
      });
-     const br=new THREE.Mesh(new THREE.BoxGeometry(.32,.04,.04),new THREE.MeshLambertMaterial({color:0x222222}));
-     br.position.set(0,1.28,0.3);g2.add(br);
      grp.add(g2);grp._cosGl=g2;
    },remove:(grp)=>{if(grp._cosGl){grp.remove(grp._cosGl);grp._cosGl=null;}}},
-  {id:'bandana',ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,
+
+  // ── בנדנה — בד כרוך על הצוואר עם קשר ──
+  {id:'bandana',ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי.',cost:35,
    apply:(grp)=>{
      const g2=new THREE.Group();
-     const bn=new THREE.Mesh(new THREE.CylinderGeometry(.22,.24,.18,8),
-       new THREE.MeshLambertMaterial({color:0xcc2200,emissive:0x440800}));
-     bn.position.set(0,1.05,0.1);g2.add(bn);
-     // קשר בנדנה בצד
-     const knot=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.08),
-       new THREE.MeshLambertMaterial({color:0xaa1800}));
-     knot.position.set(0.22,1.05,0.1);g2.add(knot);
+     const sz=grp._dogSz||1;
+     // בד בנדנה — cilinder שטוח
+     const bn=new THREE.Mesh(
+       new THREE.CylinderGeometry(.215*sz,.215*sz,.1*sz,14),
+       new THREE.MeshLambertMaterial({color:0xcc1500,emissive:0x3a0500}));
+     bn.position.set(0,.93*sz,.52*sz);g2.add(bn);
+     // פסים לבנים על הבד
+     [-.03,.03].forEach(oy=>{
+       const stripe=new THREE.Mesh(
+         new THREE.CylinderGeometry(.217*sz,.217*sz,.018*sz,14),
+         new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x111111}));
+       stripe.position.set(0,.93*sz+oy,.52*sz);g2.add(stripe);
+     });
+     // קשר — שתי לשוניות קטנות
+     const knotM=new THREE.MeshLambertMaterial({color:0xaa1000,emissive:0x2a0300});
+     const k1=new THREE.Mesh(new THREE.BoxGeometry(.1*sz,.08*sz,.06*sz),knotM);
+     k1.position.set(.21*sz,.93*sz,.52*sz);k1.rotation.z=0.3;g2.add(k1);
+     const k2=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.12*sz,.05*sz),knotM);
+     k2.position.set(.19*sz,.87*sz,.52*sz);k2.rotation.z=-0.2;g2.add(k2);
      grp.add(g2);grp._cosBn=g2;
    },remove:(grp)=>{if(grp._cosBn){grp.remove(grp._cosBn);grp._cosBn=null;}}},
-  {id:'cape',ico:'🦸',name:'גלימת גיבור',desc:'רק לגיבור האמיתי יכול לשאת אותה',cost:120,
+
+  // ── גלימת גיבור — גלימה עם צווארון זהב ושרשרת ──
+  {id:'cape',ico:'🦸',name:'גלימת גיבור',desc:'רק לגיבור האמיתי.',cost:120,
    apply:(grp)=>{
      const g2=new THREE.Group();
-     const cape=new THREE.Mesh(new THREE.PlaneGeometry(.7,1.1),
-       new THREE.MeshLambertMaterial({color:0xcc0000,emissive:0x330000,side:THREE.DoubleSide}));
-     cape.position.set(0,0.8,-0.5);cape.rotation.x=0.25;g2.add(cape);
-     // צווארון
-     const collar=new THREE.Mesh(new THREE.CylinderGeometry(.25,.28,.1,8),
-       new THREE.MeshLambertMaterial({color:0xffcc00,emissive:0x332200}));
-     collar.position.set(0,1.08,0);g2.add(collar);
+     const sz=grp._dogSz||1;
+     const capeM=new THREE.MeshLambertMaterial({
+       color:0xcc0000,emissive:0x2a0000,side:THREE.DoubleSide});
+     // גלימה ראשית — מרובעת עם קצה מחודד
+     const shape=new THREE.Shape();
+     shape.moveTo(-.38*sz,0);shape.lineTo(.38*sz,0);
+     shape.lineTo(.3*sz,-.9*sz);shape.lineTo(0,-1.1*sz);
+     shape.lineTo(-.3*sz,-.9*sz);shape.closePath();
+     const geo=new THREE.ShapeGeometry(shape);
+     const cape=new THREE.Mesh(geo,capeM);
+     cape.position.set(0,.95*sz,-.48*sz);
+     cape.rotation.x=-.18;g2.add(cape);
+     // קפל אמצעי — פס כהה יותר
+     const fold=new THREE.Mesh(
+       new THREE.PlaneGeometry(.04*sz,.9*sz),
+       new THREE.MeshLambertMaterial({color:0x990000,emissive:0x110000,side:THREE.DoubleSide}));
+     fold.position.set(0,.95*sz,-.47*sz);fold.rotation.x=-.18;g2.add(fold);
+     // צווארון זהב
+     const colM=new THREE.MeshLambertMaterial({color:0xd4af37,emissive:0x4a3300});
+     const col=new THREE.Mesh(new THREE.CylinderGeometry(.26*sz,.26*sz,.1*sz,14),colM);
+     col.position.set(0,1.06*sz,.5*sz);g2.add(col);
+     // כפתור/שרשרת
+     const chain=new THREE.Mesh(new THREE.SphereGeometry(.04*sz,6,6),colM);
+     chain.position.set(0,1.06*sz,.76*sz);g2.add(chain);
      grp.add(g2);grp._cosCape=g2;
    },remove:(grp)=>{if(grp._cosCape){grp.remove(grp._cosCape);grp._cosCape=null;}}},
 ];
@@ -2027,10 +2099,14 @@ function updReksAlly(dt){
   r._t=(r._t||0)+dt;
   // pulse נורית ירוקה
   if(r.ind)r.ind.material.emissive.setRGB(0,0.4+Math.sin(r._t*3)*.2,0.2);
+  // mission 24+ — רקס הובס את טיטאן, עומד במקום (לפני שנעלם בפרק ו׳)
+  if(G.mission>=24){
+    r.mesh.rotation.y+=(0-r.mesh.rotation.y)*0.05; // מסתובב לכיוון קדימה
+    return;
+  }
   // לפני mission 21 — עמוד בכיכר, אל תעקוב
   if(G.mission<21)return;
-  // מ-mission 21 ואילך — עקוב אחרי השחקן
-  r._waitAtPlaza=false;
+  // מ-mission 21 עד 23 — עקוב אחרי השחקן
   const px=PB.position.x,pz=PB.position.z;
   const dx=px+Math.sin(G.yaw+1.2)*3.5-r.x;
   const dz=pz+Math.cos(G.yaw+1.2)*3.5-r.z;

@@ -430,17 +430,19 @@ const MISSIONS=[
    unlock:()=>{
      showN('💀 טיטאן כאן! הילחמו יחד — זהו הקרב האחרון!');
    }},
-  // 24 — סיום פרק ה׳ (לא סוף המשחק — ממשיך לפרק ו׳)
+  // 24 — סיום פרק ה׳ → מעבר לפרק ו׳
   {txt:'🏆 לוד — לעד ולנצח! 🐾',hint:'',targetFn:()=>({x:0,z:0}),unlock:()=>{
     setTimeout(()=>{
       showCut('ch5_finale',()=>{
         showCut('true_ending',()=>{
-          showN('🐾 כלבי לוד — אגדה לעד!\n\n⏳ אבל הסיפור עוד לא נגמר...');
-          _spawnFinalFireworks();
-          // אחרי הזיקוקים — מעבר לפרק ו׳
-          setTimeout(()=>setMission(25),6000);
+          showN('🐾 כלבי לוד — אגדה לעד!\n\n...אבל הסיפור עוד לא נגמר.');
+          if(typeof _spawnFinalFireworks==='function')_spawnFinalFireworks();
         });
       });
+      // setMission(25) רץ בנפרד — לא תלוי בסגירת הקאטסינים
+      setTimeout(()=>{
+        if(typeof setMission==='function')setMission(25);
+      },8000);
     },1200);
   }},
 
