@@ -2146,22 +2146,18 @@ function updReksAlly(dt){
 let _ch5ScoutKills=0;
 function _checkCh5Progress(){
   if(G.mission!==21)return;
-  const need=5;
+  const need=6; // ✅ תיקון: יש 6 סקאוטים בפועל
   const killed=G.enemies.filter(e=>e._titan&&e.hp<=0).length;
   if(killed!==_ch5ScoutKills){
     _ch5ScoutKills=killed;
-    document.getElementById('mtx').textContent=`2️⃣1️⃣ הכנע 5 כלבים מגיסות טיטאן ⚔️  (הובסו: ${Math.min(_ch5ScoutKills,need)}/${need})`;
+    document.getElementById('mtx').textContent=`2️⃣1️⃣ הכנע 6 כלבים מגיסות טיטאן ⚔️  (הובסו: ${Math.min(_ch5ScoutKills,need)}/${need})`;
   }
   if(_ch5ScoutKills>=need&&G.mission===21&&!G._ch5ScoutsDone){
     G._ch5ScoutsDone=true;
-    showN('✅ גיסות טיטאן הובסו!\n💀 טיטאן עצמו מתפרע — הילחמו בו!');
+    showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מחכה בבריכת הנחת — הגיעו אליו!');
+    // ✅ תיקון: קודם עוברים ל-22 (הגיע לבריכה), לא ישירות ל-23
     setTimeout(()=>{
-      // פשר את טיטאן להילחם
-      if(G._titanEnemy){
-        G._titanEnemy.frozen=false;
-        showN('💀 טיטאן! בוס אגדי — לחצו תקיפה ליד כדי לפגוע!');
-      }
-      setMission(23);
+      setMission(22);
     },800);
   }
 }
@@ -2264,8 +2260,20 @@ function updCh5(dt){
     updTitan(dt);
   }
   // הגעה לבריכת הנחת — מיסיון 22 — guard מפני כפילות
+  // ✅ תיקון: חסום מעבר לקרב טיטאן עד שכל 6 הסקאוטים הובסו
   if(G.mission===22&&PB&&!G._poolCutPlaying){
     if(d2(PB.position.x,PB.position.z,-120,130)<8){
+      // בדוק אם עוד לא הובסו כל הסקאוטים
+      if(!G._ch5ScoutsDone){
+        // הצג הודעה אחת בלבד — לא כל פריים
+        if(!G._titanWarnShown){
+          G._titanWarnShown=true;
+          const killed=G.enemies.filter(e=>e._titan&&e.hp<=0).length;
+          showN(`⚠️ טיטאן מחכה — הכנע קודם את כל הסקאוטים!\n(הובסו: ${killed}/6)`);
+          setTimeout(()=>{G._titanWarnShown=false;},4000);
+        }
+        return;
+      }
       G._poolCutPlaying=true;
       showCut('titan_reveal',()=>{
         showCut('ch5_boss',()=>{

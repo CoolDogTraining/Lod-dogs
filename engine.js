@@ -309,7 +309,7 @@ function init(){
   G.terrs=[];G.terrCnt=0;G.guardDogs=[];G.cityHallGuards=[];
   G._fishkaEnemy=null;G.bruno=null;G.palto=null;G.reks=null;
   G._reksAlly=null;G._titanEnemy=null;G._titanScoutsSpawned=false;G._ch5ScoutsDone=false;
-  G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
+  G._poolCutPlaying=false;G._reksJoinCutPlaying=false;G._titanWarnShown=false;
 
   const cv=document.getElementById('cv');
   renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,powerPreference:'high-performance'});
