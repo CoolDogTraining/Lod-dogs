@@ -2158,7 +2158,7 @@ function _checkCh5Progress(){
     setTimeout(()=>{
       setMission(22);
       // אם השחקן כבר נמצא ליד הבריכה — פתח קאטסין מיידית
-      if(PB&&d2(PB.position.x,PB.position.z,-120,130)<8&&!G._poolCutPlaying){
+      if(PB&&d2(PB.position.x,PB.position.z,-120,130)<18&&!G._poolCutPlaying){
         G._poolCutPlaying=true;
         showCut('titan_reveal',()=>{
           showCut('ch5_boss',()=>{
@@ -2273,7 +2273,7 @@ function updCh5(dt){
   // הגעה לבריכת הנחת — מיסיון 22 — guard מפני כפילות
   // ✅ תיקון: חסום מעבר לקרב טיטאן עד שכל 6 הסקאוטים הובסו
   if(G.mission===22&&PB&&!G._poolCutPlaying){
-    if(d2(PB.position.x,PB.position.z,-120,130)<8){
+    if(d2(PB.position.x,PB.position.z,-120,130)<18){
       // בדוק אם עוד לא הובסו כל הסקאוטים
       if(!G._ch5ScoutsDone){
         // הצג הודעה אחת בלבד — לא כל פריים
