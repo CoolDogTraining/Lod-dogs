@@ -6736,9 +6736,10 @@ function showDmgVilla(dmg){
 // COINS HUD
 // ════════════════════════════════════════════════
 function updCoins(){
+  G.coins=99999; // DEV — אינסוף מטבעות (הוצא לפני שחרור)
   const v=document.getElementById('coin-val');
   const h=document.getElementById('coin-hud');
-  if(v)v.textContent=G.coins;
+  if(v)v.textContent='∞';
   if(h)h.style.display=G.hud?'block':'none';
 }
 

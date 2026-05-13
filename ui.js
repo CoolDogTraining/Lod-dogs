@@ -2162,7 +2162,8 @@ function _checkCh5Progress(){
         G._poolCutPlaying=true;
         showCut('titan_reveal',()=>{
           showCut('ch5_boss',()=>{
-            _spawnTitanBoss();
+            if(G._titanEnemy){G._titanEnemy.frozen=false;}
+            else{_spawnTitanBoss(false);}
             setMission(23);
             G._poolCutPlaying=false;
           });
@@ -2287,7 +2288,9 @@ function updCh5(dt){
       G._poolCutPlaying=true;
       showCut('titan_reveal',()=>{
         showCut('ch5_boss',()=>{
-          _spawnTitanBoss();
+          // טיטאן כבר קיים וקפוא — פשט אותו עכשיו
+          if(G._titanEnemy){G._titanEnemy.frozen=false;}
+          else{_spawnTitanBoss(false);}
           setMission(23);
           G._poolCutPlaying=false;
         });
