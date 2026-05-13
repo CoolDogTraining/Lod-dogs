@@ -4106,7 +4106,7 @@ function updateNavDirection(){
   } else if(G.mission===27){
     tx=80;tz=120; // נמל ישן
   } else if(G.mission===28||G.mission===29||G.mission===30||G.mission===31||G.mission===32){
-    tx=-45;tz=-90;  // בניין נטוש / מעבדה
+    tx=25;tz=-125;  // בניין נטוש / מעבדה
     if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
       tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;
     }
@@ -5803,13 +5803,13 @@ function buildCityHall(){
 
 // ════════════════════════════════════════════════
 // ██ ABANDONED LAB — בניין נטוש / מעבדה ██
-// מיקום: (-45, -90) — שכונת הגשר (שכונה ענייה, צפון-מערב)
+// מיקום: (25, -125) — שכונת הגשר (שכונה ענייה, צפון)
 // ════════════════════════════════════════════════
 const LAB={inLab:false,playerX:0,playerZ:8,playerYaw:Math.PI,enterGrace:0};
 let labScene=null,labCamera=null,labObjects=[];
 
 function buildLabExterior(){
-  const x=-45,z=-90;
+  const x=25,z=-125;
   const wallM=new THREE.MeshLambertMaterial({color:0x4a3e2e,emissive:0x080603});
   const roofM=new THREE.MeshLambertMaterial({color:0x2a2218,emissive:0x040301});
   const rustM=new THREE.MeshLambertMaterial({color:0x6a3a1a,emissive:0x0d0500});
@@ -6525,7 +6525,7 @@ function updCh6(dt){
 
   // ── mission 27: עקוב אחרי הצל — מגיע לבניין הנטוש ──
   if(G.mission===27&&!G._ch6PortVisited){
-    if(d2(px,pz,-45,-90)<8){
+    if(d2(px,pz,25,-125)<8){
       G._ch6PortVisited=true;
       G.paused=true;
       setTimeout(()=>showCut('ch6_shadow_zippo',()=>{
@@ -6541,7 +6541,7 @@ function updCh6(dt){
     if(G._labDoorInd){
       G._labDoorInd.position.y=4.2+Math.sin(Date.now()*.003)*0.2;
     }
-    if(d2(px,pz,-45,-90)<4&&!LAB.inLab){
+    if(d2(px,pz,25,-125)<4&&!LAB.inLab){
       enterLab();
     }
   }
@@ -6600,14 +6600,14 @@ function updCh6(dt){
   // ── mission 31: חוזרים למעבדה לגלות "את השאר" ──
   if(G.mission===31&&!G._ch6FactoryVisited&&!LAB.inLab){
     if(G._labDoorInd)G._labDoorInd.visible=true;
-    if(d2(px,pz,-45,-90)<4){
+    if(d2(px,pz,25,-125)<4){
       enterLab(); // בתוך updLab יקרה ch6_factory
     }
   }
 
   // ── mission 32: שריפה — מחוץ לבניין ──
   if(G.mission===32&&!G._ch6FireDone){
-    if(d2(px,pz,-45,-90)<7){
+    if(d2(px,pz,25,-125)<7){
       G._ch6FireDone=true;
       G.paused=true;
       // אפקט שריפה

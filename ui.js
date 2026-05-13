@@ -2086,8 +2086,20 @@ function updTitan(dt){
       spawnBlood(b.x,2,b.z,40);
       spawnPfx(b.x,2,b.z,0xf5c518,32);
       spawnPfx(b.x,2,b.z,0xff4400,24);
-      showN('🏆 טיטאן הובס!\n🐾 כלבי לוד — אגדה לעד!');
-      setTimeout(()=>setMission(24),1200);
+      showN('🏆 טיטאן הובס!');
+      // ── רקס: התקף לב — קריסה ויזואלית ואז קאטסין ──
+      G._reksCollapsing=true;
+      G._reksCollapseT=0;
+      setTimeout(()=>{
+        // הצג ch5_finale (רקס מסתכל על לוד — הרגע לפני) ואז את הקריסה
+        G.paused=true;
+        showCut('ch5_finale',()=>{
+          showCut('rex_heart_attack',()=>{
+            G.paused=false;
+            if(typeof setMission==='function')setMission(24);
+          });
+        });
+      },2200);
     }
   }
 }
@@ -2098,10 +2110,20 @@ function updReksAlly(dt){
   const r=G._reksAlly;
   r._t=(r._t||0)+dt;
   // pulse נורית ירוקה
-  if(r.ind)r.ind.material.emissive.setRGB(0,0.4+Math.sin(r._t*3)*.2,0.2);
-  // mission 24+ — רקס הובס את טיטאן, עומד במקום (לפני שנעלם בפרק ו׳)
-  if(G.mission>=24){
-    r.mesh.rotation.y+=(0-r.mesh.rotation.y)*0.05; // מסתובב לכיוון קדימה
+  if(r.ind&&!G._reksCollapsing)r.ind.material.emissive.setRGB(0,0.4+Math.sin(r._t*3)*.2,0.2);
+  // mission 24+ — רקס קורס מהתקף לב
+  if(G.mission>=24||G._reksCollapsing){
+    // אנימציית נפילה: מסתובב על הצד, שוקע לאדמה
+    const colT=G._reksCollapseT||0;
+    G._reksCollapseT=(colT+0.016); // מצטבר בכל פריים
+    const prog=Math.min(colT/2.5,1); // 2.5 שניות לנפילה מלאה
+    r.mesh.rotation.z=prog*(Math.PI/2); // נוטה 90° על הצד
+    r.mesh.position.y=Math.max(-0.4,0-prog*0.4); // שוקע לאדמה
+    // נורית אדומה מהבהבת בהתחלה
+    if(r.ind){
+      if(colT<1.5) r.ind.material.emissive.setRGB(0.8+Math.sin(colT*12)*0.2,0,0);
+      else r.ind.material.emissive.setRGB(0,0,0);
+    }
     return;
   }
   // לפני mission 21 — עמוד בכיכר, אל תעקוב
