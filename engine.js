@@ -330,7 +330,7 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildSky();buildWorld();_initLampPool();buildCityHall();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
+  buildLights();buildSky();buildWorld();_initLampPool();buildCityHall();buildLabExterior();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
   buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();
   _buildPoolOfRest();
   setupInput();
@@ -4141,6 +4141,13 @@ function loop(){
     updHUD();
     return;
   }
+  if(LAB.inLab){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updLab(dt);
+    updPfx(dt);
+    if(labCamera)renderer.render(labScene,labCamera);
+    updHUD();
+    return;
+  }
   if(CITY.inCity){
     updCityHall(dt);updPfx(dt);
     if(cityCamera)renderer.render(cityScene,cityCamera);
@@ -5795,6 +5802,348 @@ function buildCityHall(){
 }
 
 // ════════════════════════════════════════════════
+// ██ ABANDONED LAB — בניין נטוש / מעבדה ██
+// מיקום: (90, 95) — פינה דרום-מזרחית
+// ════════════════════════════════════════════════
+const LAB={inLab:false,playerX:0,playerZ:8,playerYaw:Math.PI,enterGrace:0};
+let labScene=null,labCamera=null,labObjects=[];
+
+function buildLabExterior(){
+  const x=90,z=95;
+  const wallM=new THREE.MeshLambertMaterial({color:0x4a3e2e,emissive:0x080603});
+  const roofM=new THREE.MeshLambertMaterial({color:0x2a2218,emissive:0x040301});
+  const rustM=new THREE.MeshLambertMaterial({color:0x6a3a1a,emissive:0x0d0500});
+
+  // גוף ראשי — בניין מלבני נמוך וכבד
+  const body=new THREE.Mesh(new THREE.BoxGeometry(18,6,14),wallM);
+  body.position.set(x,3,z);body.castShadow=true;body.receiveShadow=true;scene.add(body);
+  // קומה שנייה — חלקית, קצה שבור
+  const top=new THREE.Mesh(new THREE.BoxGeometry(10,3,8),wallM);
+  top.position.set(x-2,7.5,z-1);top.castShadow=true;scene.add(top);
+  // גג שטוח עם קצוות שבורים
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(18.4,0.4,14.4),roofM);
+  roof.position.set(x,6.2,z);scene.add(roof);
+  const roof2=new THREE.Mesh(new THREE.BoxGeometry(10.4,0.4,8.4),roofM);
+  roof2.position.set(x-2,9.2,z-1);scene.add(roof2);
+  // פסי חלודה על הקירות
+  [[-6,3,z+7],[ 3,2,z+7],[ 7,4,z+7]].forEach(([ox,oy,oz])=>{
+    const rust=new THREE.Mesh(new THREE.BoxGeometry(0.3,oy,0.15),rustM);
+    rust.position.set(x+ox,oy/2,oz);scene.add(rust);
+  });
+  // חלונות אטומים — לוחות עץ
+  const boardM=new THREE.MeshLambertMaterial({color:0x3a2a14,emissive:0x060400});
+  [[-5,3.5],[ 1,3.5],[ 5,3.5]].forEach(([ox,oy])=>{
+    const win=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.4,0.2),boardM);
+    win.position.set(x+ox,oy,z+7.1);scene.add(win);
+    // פס אלכסוני על החלון
+    const cross=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.2,0.22),boardM);
+    cross.position.set(x+ox,oy,z+7.15);cross.rotation.z=0.5;scene.add(cross);
+  });
+  // דלת כניסה — ברזל ישן, כהה
+  const doorM=new THREE.MeshLambertMaterial({color:0x1a1208,emissive:0x030200});
+  const door=new THREE.Mesh(new THREE.BoxGeometry(2.2,3.5,0.3),doorM);
+  door.position.set(x,1.75,z+7.15);scene.add(door);
+  // פס אנטנה/צינור על הגג
+  const pipeM=new THREE.MeshLambertMaterial({color:0x2a2020,emissive:0x050303});
+  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,4,6),pipeM);
+  pipe.position.set(x+6,8,z);scene.add(pipe);
+  // שלט "סכנה" מקולקל
+  const signM=new THREE.MeshLambertMaterial({color:0x8a6a00,emissive:0x1a1000});
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.0,0.1),signM);
+  sign.position.set(x,5.2,z+7.2);sign.rotation.z=0.08;scene.add(sign);
+  // זרקור כחול מעל הדלת
+  const labLight=new THREE.PointLight(0x4488ff,1.5,12);
+  labLight.position.set(x,5.5,z+6);scene.add(labLight);
+  // marker כניסה — נצנץ כחול
+  const ind=new THREE.Mesh(
+    new THREE.SphereGeometry(0.35,8,8),
+    new THREE.MeshBasicMaterial({color:0x4488ff})
+  );
+  ind.position.set(x,4.2,z+7);scene.add(ind);
+  G._labDoorInd=ind;
+  G._labBuilt=true;
+}
+
+function buildLabScene(){
+  labScene=new THREE.Scene();
+  labScene.background=new THREE.Color(0x050810);
+  labScene.fog=new THREE.FogExp2(0x050810,.04);
+  labCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,.1,120);
+  labScene.add(labCamera);
+
+  const _add=m=>{m.castShadow=true;m.receiveShadow=true;labScene.add(m);labObjects.push(m);return m;};
+  const _addNS=m=>{labScene.add(m);labObjects.push(m);return m;};
+
+  // תאורה — ירוקה/כחלחלת, מפחידה
+  labScene.add(new THREE.AmbientLight(0x0a1a18,2.5));
+  const mainLight=new THREE.PointLight(0x00cc88,3.5,35);mainLight.position.set(0,5,0);_addNS(mainLight);
+  const redLight=new THREE.PointLight(0xff2200,4.0,20);redLight.position.set(-8,2.5,-12);_addNS(redLight);
+  const blueLight=new THREE.PointLight(0x0044ff,2.5,25);blueLight.position.set(10,3,-8);_addNS(blueLight);
+  // נורות סינון שמציצות
+  [[-6,4,2],[4,4,-4],[-2,4,-10],[8,4,6]].forEach(([x,y,z])=>{
+    const fl=new THREE.PointLight(0x00ff88,0.8+Math.random()*0.4,8);
+    fl.position.set(x,y,z);_addNS(fl);
+  });
+
+  const floorM=new THREE.MeshLambertMaterial({color:0x0c1410,emissive:0x010302});
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorM);
+  floor.rotation.x=-Math.PI/2;_add(floor);
+
+  // כתמי חלודה על הרצפה
+  const rustM=new THREE.MeshLambertMaterial({color:0x3a1500,emissive:0x0a0400});
+  [[0,0],[−4,3],[6,−5],[−8,−2]].forEach(([rx,rz])=>{
+    const r=new THREE.Mesh(new THREE.PlaneGeometry(1.5+Math.random(),0.8+Math.random()),rustM);
+    r.rotation.x=-Math.PI/2;r.position.set(rx,0.01,rz);_addNS(r);
+  });
+
+  // קירות
+  const wallM=new THREE.MeshLambertMaterial({color:0x1a2218,emissive:0x020403});
+  const ceilM=new THREE.MeshLambertMaterial({color:0x0e1510,emissive:0x010201});
+  [[0,4,-15,30,8,0.4],[0,4,15,30,8,0.4],[-15,4,0,0.4,8,30],[15,4,0,0.4,8,30]].forEach(([x,y,z,w,h,d])=>{
+    _add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallM),{position:new THREE.Vector3(x,y,z)}));
+  });
+  const ceil=new THREE.Mesh(new THREE.PlaneGeometry(30,30),ceilM);
+  ceil.rotation.x=Math.PI/2;ceil.position.set(0,8,0);_add(ceil);
+
+  // צינורות על הקיר — סטייל מטאל גיר
+  const pipeM=new THREE.MeshLambertMaterial({color:0x1a2a18,emissive:0x020503});
+  const pipeRustM=new THREE.MeshLambertMaterial({color:0x4a2008,emissive:0x0c0400});
+  [[-13,5,-8],[-13,3,4],[-13,6,0]].forEach(([px,py,pz],i)=>{
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,i===1?8:5,8),i===1?pipeRustM:pipeM);
+    p.rotation.z=Math.PI/2;p.position.set(px,py,pz);_add(p);
+    // חיבורי צינור
+    const joint=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.4,8),pipeM);
+    joint.rotation.z=Math.PI/2;joint.position.set(px+2,py,pz);_add(joint);
+  });
+  // צינורות אנכיים
+  [[-11,4,10],[12,4,-5],[−5,4,14]].forEach(([px,py,pz])=>{
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,6,8),pipeM);
+    p.position.set(px,py,pz);_add(p);
+  });
+
+  // שולחנות מעבדה עם ציוד
+  const tableM=new THREE.MeshLambertMaterial({color:0x1c2c22,emissive:0x020402});
+  const metalM=new THREE.MeshLambertMaterial({color:0x2a3a2a,emissive:0x040604});
+  const glassM=new THREE.MeshLambertMaterial({color:0x0a2a18,transparent:true,opacity:0.6,emissive:0x002208});
+  [[−6,0,−8],[4,0,−10],[−4,0,−5],[8,0,−3]].forEach(([tx,ty,tz],i)=>{
+    const t=new THREE.Mesh(new THREE.BoxGeometry(3.5,0.12,1.2),tableM);
+    t.position.set(tx,0.88,tz);_add(t);
+    const leg1=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.88,0.1),metalM);
+    [[-1.6,0,-0.5],[1.6,0,-0.5],[-1.6,0,0.5],[1.6,0,0.5]].forEach(([lx,ly,lz])=>{
+      const l=leg1.clone();l.position.set(tx+lx,0.44,tz+lz);_add(l);
+    });
+    // ציוד על השולחן — צנצנות, מכשירים
+    const jar=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.1,0.35,8),glassM);
+    jar.position.set(tx+0.3,1.06,tz);_add(jar);
+    const box=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.25,0.3),metalM);
+    box.position.set(tx-0.5,1.06,tz);_add(box);
+    if(i%2===0){
+      // מסך ישן
+      const screen=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.4,0.1),new THREE.MeshLambertMaterial({color:0x003311,emissive:0x001a08}));
+      screen.position.set(tx+0.8,1.15,tz);screen.rotation.x=-0.2;_add(screen);
+    }
+  });
+
+  // כלובים — מרכז הסצנה, קיר שמאלי
+  const cageM=new THREE.MeshLambertMaterial({color:0x223322,emissive:0x040804});
+  const cageDarkM=new THREE.MeshLambertMaterial({color:0x1a2818,emissive:0x020602});
+  [[-10,0,-4],[-10,0,0],[-10,0,4],[-10,0,8]].forEach(([cx,cy,cz],i)=>{
+    // מסגרת
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.2,2.2),cageDarkM);
+    frame.position.set(cx,1.1,cz);
+    // חורים בכלוב — wire frame מדומה
+    const bars=new THREE.Group();
+    for(let b=0;b<5;b++){
+      const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.2,4),cageM);
+      bar.position.set(-1.1+b*0.55,0,1.1);bars.add(bar);
+      const barZ=bar.clone();barZ.rotation.x=Math.PI/2;barZ.position.set(-1.1+b*0.55,0,0);bars.add(barZ);
+    }
+    bars.position.set(cx,1.1,cz);labScene.add(bars);labObjects.push(bars);
+    _add(frame);
+    // אור אדום מעל כל כלוב
+    const cl=new THREE.PointLight(i<2?0xff2200:0x002200,1.2,4);
+    cl.position.set(cx,3.2,cz);_addNS(cl);
+  });
+
+  // קיר ממסכים / מד-מדדים בגב
+  const screenM=new THREE.MeshLambertMaterial({color:0x001a08,emissive:0x00aa44});
+  const screenOffM=new THREE.MeshLambertMaterial({color:0x050505,emissive:0x000000});
+  for(let i=0;i<6;i++){
+    const sc=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.0,0.08),i%3===0?screenM:screenOffM);
+    sc.position.set(-6+i*2.4,5.5,-14.8);_add(sc);
+    // מסגרת מסך
+    const fr=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.2,0.06),metalM);
+    fr.position.set(-6+i*2.4,5.5,-14.7);_add(fr);
+  }
+
+  // שרטוטים על הקיר — מד מתח, גרפים
+  const diagM=new THREE.MeshLambertMaterial({color:0x002200,emissive:0x004400});
+  const diag=new THREE.Mesh(new THREE.PlaneGeometry(3.5,2.5),diagM);
+  diag.position.set(6,4.5,-14.8);_add(diag);
+
+  // סיבוכי חוטים מהתקרה
+  const wireM=new THREE.MeshLambertMaterial({color:0x0a0a0a,emissive:0x010101});
+  [[-3,8,−6],[5,8,-2],[-8,8,-10]].forEach(([wx,wy,wz])=>{
+    const wire=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,8,4),wireM);
+    wire.rotation.z=0.1+Math.random()*0.2;wire.position.set(wx,wy-4,wz);_add(wire);
+    const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),
+      new THREE.MeshLambertMaterial({color:0xccff88,emissive:0x88ff44}));
+    bulb.position.set(wx,wy-8.1,wz);_add(bulb);
+    const bl=new THREE.PointLight(0x88ff44,1.0,4);bl.position.set(wx,wy-8,wz);_addNS(bl);
+  });
+
+  // שולחן ראשי — ד"ר כץ עבד כאן
+  const mainT=new THREE.Mesh(new THREE.BoxGeometry(5,0.15,2),tableM);
+  mainT.position.set(0,0.95,−10);_add(mainT);
+  [[-2,1.1,−10],[0.5,1.1,−10],[2,1.1,−10]].forEach(([px,py,pz],i)=>{
+    const item=[
+      new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.12,0.4,8),glassM),
+      new THREE.Mesh(new THREE.BoxGeometry(0.8,0.5,0.6),metalM),
+      new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,0.3),new THREE.MeshLambertMaterial({color:0x880000,emissive:0x330000})),
+    ][i];
+    item.position.set(px,py,pz);_add(item);
+  });
+  // נגן הקלטות — עליו לוחצים ב-mission 29
+  const recorder=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.2,0.4),
+    new THREE.MeshLambertMaterial({color:0x0a1a0a,emissive:0x001500}));
+  recorder.position.set(1.5,1.1,−10);_add(recorder);
+  const recBtn=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.06,8),
+    new THREE.MeshLambertMaterial({color:0xff2200,emissive:0x880000}));
+  recBtn.position.set(1.5,1.22,−10);_add(recBtn);
+  G._labRecorder=recorder;
+
+  // דלת יציאה — קיר ימין
+  const exitDoorM=new THREE.MeshLambertMaterial({color:0x0f1a0f,emissive:0x020302});
+  const exitDoor=new THREE.Mesh(new THREE.BoxGeometry(2,3,0.3),exitDoorM);
+  exitDoor.position.set(14.8,1.5,8);_add(exitDoor);
+  const exitSign=new THREE.Mesh(new THREE.BoxGeometry(1.5,0.5,0.1),
+    new THREE.MeshLambertMaterial({color:0x004400,emissive:0x002200}));
+  exitSign.position.set(14.8,3.2,8);_add(exitSign);
+  // חץ יציאה ירוק
+  const exitLight=new THREE.PointLight(0x00ff44,2.5,6);
+  exitLight.position.set(14,3.5,8);_addNS(exitLight);
+
+  // indicator — שחקן מגיע לנגן ב-mission 29
+  const recInd=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),
+    new THREE.MeshBasicMaterial({color:0xff4400}));
+  recInd.position.set(1.5,1.6,−10);_addNS(recInd);
+  G._labRecInd=recInd;
+}
+
+function enterLab(){
+  G.paused=true;
+  fadeOut(()=>{
+    if(!labScene)buildLabScene();
+    LAB.inLab=true;
+    LAB.playerX=0;LAB.playerZ=8;LAB.playerYaw=Math.PI;
+    G.yaw=Math.PI;LAB.enterGrace=3.0;
+    if(labCamera){
+      labCamera.position.set(0,4,12);
+      labCamera.lookAt(0,1,0);
+    }
+    scene.remove(PB);
+    labScene.add(PB);
+    PB.position.set(LAB.playerX,0,LAB.playerZ);
+    document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
+    showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+function exitLab(){
+  G.paused=true;
+  fadeOut(()=>{
+    LAB.inLab=false;
+    if(labScene)labScene.remove(PB);
+    scene.add(PB);
+    PB.position.set(90,0,88);
+    document.getElementById('tb').textContent='🐕 כלבי לוד — לוד';
+    // dispose
+    labObjects.forEach(o=>{
+      if(o.geometry)o.geometry.dispose();
+      if(o.material){
+        if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());
+        else o.material.dispose();
+      }
+    });
+    labObjects.length=0;
+    labScene=null;labCamera=null;
+    G._labRecorder=null;G._labRecInd=null;
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+// updLab — loop בתוך המעבדה
+function updLab(dt){
+  if(!LAB.inLab||G.paused||G.dlgOpen)return;
+  LAB.enterGrace=Math.max(0,(LAB.enterGrace||0)-dt);
+  const spd=G.dogs[G.dog].spd*4.2;
+  // תנועה — אותה מערכת כמו משחק חיצוני
+  const iln=Math.hypot(inputX,inputZ)||1;
+  let nx=LAB.playerX+(inputX/iln)*spd*dt;
+  let nz=LAB.playerZ+(inputZ/iln)*spd*dt;
+  nx=Math.max(-13,Math.min(13,nx));
+  nz=Math.max(-14,Math.min(13,nz));
+  LAB.playerX=nx;LAB.playerZ=nz;
+  PB.position.set(LAB.playerX,0,LAB.playerZ);
+  if(Math.abs(inputX)>.01||Math.abs(inputZ)>.01)
+    LAB.playerYaw=Math.atan2(inputX,inputZ);
+  PB.rotation.y=LAB.playerYaw;G.yaw=LAB.playerYaw;
+  // מצלמה — עוקבת מאחור ומעל
+  if(labCamera){
+    const tx=LAB.playerX,tz=LAB.playerZ;
+    labCamera.position.x+=(tx-Math.sin(LAB.playerYaw)*5-labCamera.position.x)*.1;
+    labCamera.position.y+=(5-labCamera.position.y)*.08;
+    labCamera.position.z+=(tz+Math.cos(LAB.playerYaw)*5+2-labCamera.position.z)*.1;
+    labCamera.lookAt(tx,1,tz);
+  }
+  // נגן הקלטות — mission 29
+  if(G.mission===29&&!G._ch6RecordingPlayed&&G._labRecorder){
+    const d=Math.hypot(LAB.playerX-1.5,LAB.playerZ+10);
+    if(G._labRecInd)G._labRecInd.rotation.y+=dt*2;
+    if(d<2.5){
+      G._ch6RecordingPlayed=true;
+      if(G._labRecInd)G._labRecInd.visible=false;
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_recording',()=>{
+        G.paused=false;
+        exitLab();
+        // אחרי היציאה — spawn הצל
+        setTimeout(()=>{
+          if(typeof _spawnShadowBoss==='function')_spawnShadowBoss();
+          setMission(30);
+        },1500);
+      }),400);
+    }
+  }
+  // יציאה — mission 28 (גילוי ראשוני) — אוטומטי אחרי 5 שניות
+  if(G.mission===28&&!G._ch6LabVisited){
+    G._ch6LabVisited=true;
+    G.paused=true;
+    setTimeout(()=>showCut('ch6_lab_found',()=>{
+      G.paused=false;
+      setMission(29);
+    }),300);
+  }
+  // יציאה דרך הדלת הצדדית — mission 31 (מפעל)
+  if(G.mission===31&&!G._ch6FactoryVisited&&LAB.playerX>12&&LAB.playerZ>6){
+    G._ch6FactoryVisited=true;
+    G.paused=true;
+    setTimeout(()=>showCut('ch6_factory',()=>{
+      G.paused=false;
+      exitLab();
+      setTimeout(()=>setMission(32),800);
+    }),300);
+  }
+  // יציאה רגילה — דלת ימין mission 30+ (אחרי הקלטה)
+  if(G.mission===30&&LAB.playerX>13){
+    exitLab();
+  }
+}
+
+// ════════════════════════════════════════════════
 // CH3 INTERACTION — פישקה + פלטו + רקס
 // ════════════════════════════════════════════════
 function updCh3Entities(dt){
@@ -6141,14 +6490,24 @@ function _applyWorldState(m){
 // ════════════════════════════════════════════════
 function updCh6(dt){
   if(G.mission<25||G.mission>32)return;
-  if(!PB)return;
+  if(!PB||LAB.inLab)return;
   const px=PB.position.x,pz=PB.position.z;
 
   // ── mission 25: הגיעו לבסיס הכנופייה ──
   if(G.mission===25&&!G._ch6BaseVisited){
     if(d2(px,pz,0,60)<6){
       G._ch6BaseVisited=true;
-      setMission(26);
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_open',()=>{
+        showCut('ch6_reks_dead',()=>{
+          G.paused=false;
+          // רקס נעלם — הוא "נפטר" לפני הפרק
+          if(G._reksAlly&&G._reksAlly.mesh){
+            G._reksAlly.mesh.visible=false;
+          }
+          setMission(26);
+        });
+      }),300);
     }
   }
 
@@ -6164,9 +6523,9 @@ function updCh6(dt){
     }
   }
 
-  // ── mission 27: נמל ישן — זיפו פוגש את הצל ──
+  // ── mission 27: עקוב אחרי הצל — מגיע לבניין הנטוש ──
   if(G.mission===27&&!G._ch6PortVisited){
-    if(d2(px,pz,80,120)<8){
+    if(d2(px,pz,90,95)<8){
       G._ch6PortVisited=true;
       G.paused=true;
       setTimeout(()=>showCut('ch6_shadow_zippo',()=>{
@@ -6176,29 +6535,14 @@ function updCh6(dt){
     }
   }
 
-  // ── mission 28: הגיעו לבניין הנטוש ──
-  if(G.mission===28&&!G._ch6LabVisited){
-    if(d2(px,pz,90,95)<7){
-      G._ch6LabVisited=true;
-      G.paused=true;
-      setTimeout(()=>showCut('ch6_lab_found',()=>{
-        G.paused=false;
-        setMission(29);
-      }),300);
+  // ── missions 28-29: כניסה למעבדה ──
+  if((G.mission===28||G.mission===29)&&!LAB.inLab){
+    // ind מהבל בניין ישן
+    if(G._labDoorInd){
+      G._labDoorInd.position.y=4.2+Math.sin(Date.now()*.003)*0.2;
     }
-  }
-
-  // ── mission 29: הקלטה של ד"ר כץ ──
-  if(G.mission===29&&!G._ch6RecordingPlayed){
-    if(d2(px,pz,90,95)<7){
-      G._ch6RecordingPlayed=true;
-      G.paused=true;
-      setTimeout(()=>showCut('ch6_recording',()=>{
-        G.paused=false;
-        // מסת הצל מופיעה
-        if(typeof _spawnShadowBoss==='function')_spawnShadowBoss();
-        setMission(30);
-      }),300);
+    if(d2(px,pz,90,95)<4&&!LAB.inLab){
+      enterLab();
     }
   }
 
@@ -6206,8 +6550,7 @@ function updCh6(dt){
   if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
     const se=G._shadowEnemy;
     const dd=d2(se.x,se.z,px,pz);
-
-    // תנועה — רודף את השחקן
+    // תנועה — רודף
     if(dd>2){
       const ang=Math.atan2(px-se.x,pz-se.z);
       se.x+=Math.sin(ang)*se.spd*dt;
@@ -6215,15 +6558,11 @@ function updCh6(dt){
       se.mesh.position.set(se.x,0,se.z);
       se.mesh.rotation.y=ang;
     }
-
-    // הצל תוקף
+    // תקיפה
     if(!se._atkT)se._atkT=0;
     se._atkT=Math.max(0,se._atkT-dt);
-    if(dd<2.5&&se._atkT<=0){
-      dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);
-    }
-
-    // השחקן תוקף את הצל
+    if(dd<2.5&&se._atkT<=0){dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);}
+    // פגיעה מהשחקן
     if(!se._hitT)se._hitT=0;
     se._hitT=Math.max(0,se._hitT-dt);
     if(dd<4&&G.atkCD<=0&&se._hitT<=0){
@@ -6233,7 +6572,6 @@ function updCh6(dt){
       spawnBlood(se.x,1.5,se.z,10);
       showDmg(se.x,2,se.z,dmg);
       se._hitT=0.45;G.atkCD=0.55;
-      // HP bar
       if(se.bar)se.bar.scale.x=Math.max(0,se.hp/se.mhp);
       if(se.hp<=0){
         se.dead=true;se.mesh.visible=false;
@@ -6241,47 +6579,38 @@ function updCh6(dt){
         sCapture();haptic([80,30,80,30,100]);
         addXP(180);G.coins+=150;updCoins();
         spawnBlood(se.x,2,se.z,25);
-        showN('⚔️ הצל הובס.');
+        showN('⚔️ הצל הובס.\n\n"הוא לא היה אויב. הוא היה כלי."');
         setTimeout(()=>showCut('ch6_shadow_fight',()=>{
-          setMission(31);
+          // אחרי הקרב — חוזרים למעבדה לגלות את המפעל
+          setTimeout(()=>setMission(31),600);
         }),600);
       }
     }
-
-    // HP bar מעל הצל — בנה פעם אחת
+    // HP bar
     if(!se.bar&&se.mesh){
-      const bg=new THREE.Mesh(
-        new THREE.BoxGeometry(1.2,.12,.1),
-        new THREE.MeshBasicMaterial({color:0x330033})
-      );
+      const bg=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0x330033}));
       bg.position.set(0,2.8,0);se.mesh.add(bg);
-      const bar=new THREE.Mesh(
-        new THREE.BoxGeometry(1.2,.12,.1),
-        new THREE.MeshBasicMaterial({color:0xaa00cc})
-      );
-      bar.position.set(0,.001,0.01);bg.add(bar);
-      se.bar=bar;
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0xaa00cc}));
+      bar.position.set(0,.001,0.01);bg.add(bar);se.bar=bar;
     }
   }
 
-  // ── mission 31: המפעל — דלת אחורית ──
-  if(G.mission===31&&!G._ch6FactoryVisited){
-    if(d2(px,pz,95,90)<7){
-      G._ch6FactoryVisited=true;
-      G.paused=true;
-      setTimeout(()=>showCut('ch6_factory',()=>{
-        G.paused=false;
-        setMission(32);
-      }),300);
+  // ── mission 31: חוזרים למעבדה לגלות "את השאר" ──
+  if(G.mission===31&&!G._ch6FactoryVisited&&!LAB.inLab){
+    if(G._labDoorInd)G._labDoorInd.visible=true;
+    if(d2(px,pz,90,95)<4){
+      enterLab(); // בתוך updLab יקרה ch6_factory
     }
   }
 
-  // ── mission 32: שריפה — סוף הפרק ──
+  // ── mission 32: שריפה — מחוץ לבניין ──
   if(G.mission===32&&!G._ch6FireDone){
-    if(d2(px,pz,88,92)<7){
+    if(d2(px,pz,90,95)<7){
       G._ch6FireDone=true;
       G.paused=true;
-      // אפקט שריפה — particles אדומים/כתומים
+      // אפקט שריפה
       for(let i=0;i<40;i++){
         const col=Math.random()<.5?0xff4400:0xff8800;
         const m=_pfxGet(col);
@@ -6289,10 +6618,12 @@ function updCh6(dt){
         scene.add(m);
         G.particles.push({mesh:m,vx:(Math.random()-.5)*3,vy:2+Math.random()*5,vz:(Math.random()-.5)*3,life:1.5+Math.random()*2});
       }
+      // כבה את אינדיקטור הכניסה
+      if(G._labDoorInd)G._labDoorInd.visible=false;
       setTimeout(()=>showCut('ch6_fire',()=>{
         setTimeout(()=>showCut('ch6_ending',()=>{
           G.paused=false;
-          showN('🏁 פרק ו׳ הסתיים!\n\nד"ר כץ נעלם. לוד בטוחה.');
+          showN('🏁 פרק ו׳ הסתיים!');
         }),1500);
       }),400);
     }
