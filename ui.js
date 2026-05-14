@@ -2087,17 +2087,14 @@ function updTitan(dt){
       spawnPfx(b.x,2,b.z,0xf5c518,32);
       spawnPfx(b.x,2,b.z,0xff4400,24);
       showN('🏆 טיטאן הובס!');
-      // ── רקס: התקף לב — קריסה ויזואלית ואז קאטסין ──
+      // ── רקס: התקף לב — קריסה ויזואלית ומעבר ישיר ──
       G._reksCollapsing=true;
       G._reksCollapseT=0;
       setTimeout(()=>{
-        // הצג ch5_finale (רקס מסתכל על לוד — הרגע לפני) ואז את הקריסה
-        G.paused=true;
-        showCut('ch5_finale',()=>{
-          showCut('rex_heart_attack',()=>{
-            G.paused=false;
-            if(typeof setMission==='function')setMission(24);
-          });
+        showCut('rex_heart_attack',()=>{
+          G.mission=24;
+          if(MISSIONS[24])MISSIONS[24].unlock();
+          updateMissionHUD();updateNavArrow();saveGame();
         });
       },2200);
     }
@@ -2546,4 +2543,23 @@ document.addEventListener('keydown',function(e){
   if(e.key==='p'||e.key==='P'){
     if(typeof togglePause==='function')togglePause();
   }
+});
+
+// ── Override MISSIONS[24].unlock — מעקף קאטסינים תקועים ──
+document.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{
+    if(typeof MISSIONS!=='undefined'&&MISSIONS[24]){
+      MISSIONS[24].unlock=function(){
+        showN('🏆 לוד שייכת לכלבים לעד! 🐾');
+        if(typeof _spawnFinalFireworks==='function')_spawnFinalFireworks();
+        setTimeout(()=>{
+          if(typeof MISSIONS!=='undefined'&&MISSIONS[25])MISSIONS[25].unlock();
+          if(typeof updateMissionHUD==='function')updateMissionHUD();
+          if(typeof updateNavArrow==='function')updateNavArrow();
+          G.mission=25;
+          if(typeof saveGame==='function')saveGame();
+        },3000);
+      };
+    }
+  },500); // מחכה שstory.js יגדיר MISSIONS קודם
 });
