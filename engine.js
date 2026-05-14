@@ -6451,8 +6451,8 @@ function _applyWorldState(m){
     }
     // titan boss
     if(m>=22&&m<=23&&typeof _spawnTitanBoss==='function'){
-      if(!G._titanEnemy)_spawnTitanBoss(m===22);
-      else if(m===23)G._titanEnemy.frozen=false;
+      if(!G._titanEnemy)_spawnTitanBoss(false);
+      else G._titanEnemy.frozen=false;
     }
     // titan dead אם mission 24+
     if(m>=24&&G._titanEnemy){G._titanEnemy.dead=true;if(G._titanEnemy.mesh)G._titanEnemy.mesh.visible=false;}

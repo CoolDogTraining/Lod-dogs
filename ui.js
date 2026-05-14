@@ -2264,11 +2264,11 @@ function updCh5(dt){
   }
   updReksAlly(dt);
   _checkCh5Progress();
-  if(G.mission===23){
+  if(G.mission===22||G.mission===23){
     // ודא שטיטאן קיים ופעיל
     if(!G._titanEnemy)_spawnTitanBoss(false);
-    else if(G._titanEnemy.frozen)G._titanEnemy.frozen=false;
-    updTitan(dt);
+    else if(G._titanEnemy.frozen&&G.mission===23)G._titanEnemy.frozen=false;
+    if(G._titanEnemy&&!G._titanEnemy.frozen)updTitan(dt);
   }
   // הגעה לבריכת הנחת — מיסיון 22 — guard מפני כפילות
   // ✅ תיקון: חסום מעבר לקרב טיטאן עד שכל 6 הסקאוטים הובסו
