@@ -2264,19 +2264,21 @@ function updCh5(dt){
   }
   updReksAlly(dt);
   _checkCh5Progress();
-  if(G.mission===22||G.mission===23){
-    // ודא שטיטאן קיים ופעיל
+
+  // ── קרב טיטאן ──
+  if(G.mission===23){
     if(!G._titanEnemy)_spawnTitanBoss(false);
-    else if(G._titanEnemy.frozen&&G.mission===23)G._titanEnemy.frozen=false;
-    if(G._titanEnemy&&!G._titanEnemy.frozen)updTitan(dt);
+    if(G._titanEnemy){
+      G._titanEnemy.frozen=false; // בטוח שלא קפוא
+      updTitan(dt);
+    }
   }
-  // הגעה לבריכת הנחת — מיסיון 22 — guard מפני כפילות
-  // ✅ תיקון: חסום מעבר לקרב טיטאן עד שכל 6 הסקאוטים הובסו
+
+  // הגעה לבריכת הנחת — מיסיון 22 — פתח קאטסין (רק אם לא כבר נפתח מ-_checkCh5Progress)
   if(G.mission===22&&PB&&!G._poolCutPlaying){
     if(d2(PB.position.x,PB.position.z,-120,130)<18){
       // בדוק אם עוד לא הובסו כל הסקאוטים
       if(!G._ch5ScoutsDone){
-        // הצג הודעה אחת בלבד — לא כל פריים
         if(!G._titanWarnShown){
           G._titanWarnShown=true;
           const killed=G.enemies.filter(e=>e._titan&&e.hp<=0).length;
@@ -2288,7 +2290,6 @@ function updCh5(dt){
       G._poolCutPlaying=true;
       showCut('titan_reveal',()=>{
         showCut('ch5_boss',()=>{
-          // טיטאן כבר קיים וקפוא — פשט אותו עכשיו
           if(G._titanEnemy){G._titanEnemy.frozen=false;}
           else{_spawnTitanBoss(false);}
           setMission(23);

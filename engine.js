@@ -6396,11 +6396,7 @@ function togglePause(e){
 // ════════════════════════════════════════════════
 // CH5 UPDATE — כניסה לפרק ה׳ (missions 20-24)
 // ════════════════════════════════════════════════
-function updCh5(dt){
-  if(G.mission<20||G.mission>24)return;
-  // titan boss logic מנוהלת ב-updCh3Entities / _checkCh5Progress
-  // כאן אפשר להוסיף logic נוסף בעתיד
-}
+// updCh5 מוגדרת ב-ui.js — כל ה-logic של פרק ה׳ שם
 
 // ════════════════════════════════════════════════
 // _applyWorldState — מסדר את העולם לפי mission
