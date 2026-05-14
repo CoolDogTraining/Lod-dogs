@@ -2159,9 +2159,14 @@ function _checkCh5Progress(){
       G._poolCutPlaying=true;
       showCut('titan_reveal',()=>{
         showCut('ch5_boss',()=>{
+          // כפה mission=23 ישירות — עוקף guard של setMission
+          G.mission=23;
+          if(typeof MISSIONS!=='undefined'&&MISSIONS[23])MISSIONS[23].unlock();
+          if(typeof updateMissionHUD==='function')updateMissionHUD();
+          if(typeof updateNavArrow==='function')updateNavArrow();
+          if(typeof saveGame==='function')saveGame();
           if(G._titanEnemy){G._titanEnemy.frozen=false;}
-          else{_spawnTitanBoss(false);}
-          setMission(23);
+          else if(typeof _spawnTitanBoss==='function'){_spawnTitanBoss(false);}
           G._poolCutPlaying=false;
         });
       });
