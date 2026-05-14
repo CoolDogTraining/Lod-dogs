@@ -4335,7 +4335,23 @@ function doAtk(){
           const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
           _ragdoll(e.mesh);
           updateMissionHUD();
-          if(e._titan&&G.mission===21)_checkCh5Progress();
+          if(e._titan&&G.mission===21){
+            _checkCh5Progress();
+            // בדיקה ישירה — אם כל 6 מתו, הפעל טיטאן עכשיו
+            const _titanDead=G.enemies.filter(x=>x._titan&&x.hp<=0).length;
+            if(_titanDead>=6&&!G._ch5ScoutsDone){
+              G._ch5ScoutsDone=true;
+              showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מגיע לתקוף!');
+              setTimeout(()=>{
+                G.mission=23;
+                if(MISSIONS[23])MISSIONS[23].unlock();
+                updateMissionHUD();updateNavArrow();
+                if(G._titanEnemy){G._titanEnemy.frozen=false;}
+                else if(typeof _spawnTitanBoss==='function'){_spawnTitanBoss(false);}
+                showN('💀 טיטאן תוקף!');
+              },1200);
+            }
+          }
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
           if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
