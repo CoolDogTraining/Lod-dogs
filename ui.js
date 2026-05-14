@@ -2156,19 +2156,15 @@ function _checkCh5Progress(){
     G._ch5ScoutsDone=true;
     showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מגיע — הכנו את עצמכם!');
     setTimeout(()=>{
-      setMission(22);
-      // טיטאן מתחיל לתקוף מיידית — בלי קשר למיקום השחקן
-      if(!G._poolCutPlaying){
-        G._poolCutPlaying=true;
-        showCut('titan_reveal',()=>{
-          showCut('ch5_boss',()=>{
-            if(G._titanEnemy){G._titanEnemy.frozen=false;}
-            else{_spawnTitanBoss(false);}
-            setMission(23);
-            G._poolCutPlaying=false;
-          });
+      G._poolCutPlaying=true;
+      showCut('titan_reveal',()=>{
+        showCut('ch5_boss',()=>{
+          if(G._titanEnemy){G._titanEnemy.frozen=false;}
+          else{_spawnTitanBoss(false);}
+          setMission(23);
+          G._poolCutPlaying=false;
         });
-      }
+      });
     },800);
   }
 }
