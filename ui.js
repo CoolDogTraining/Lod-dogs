@@ -2154,23 +2154,17 @@ function _checkCh5Progress(){
   }
   if(_ch5ScoutKills>=need&&G.mission===21&&!G._ch5ScoutsDone){
     G._ch5ScoutsDone=true;
-    showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מגיע — הכנו את עצמכם!');
+    showN('✅ כל גיסות טיטאן הובסו!\n💀 טיטאן מגיע לתקוף!');
     setTimeout(()=>{
-      G._poolCutPlaying=true;
-      showCut('titan_reveal',()=>{
-        showCut('ch5_boss',()=>{
-          // כפה mission=23 ישירות — עוקף guard של setMission
-          G.mission=23;
-          if(typeof MISSIONS!=='undefined'&&MISSIONS[23])MISSIONS[23].unlock();
-          if(typeof updateMissionHUD==='function')updateMissionHUD();
-          if(typeof updateNavArrow==='function')updateNavArrow();
-          if(typeof saveGame==='function')saveGame();
-          if(G._titanEnemy){G._titanEnemy.frozen=false;}
-          else if(typeof _spawnTitanBoss==='function'){_spawnTitanBoss(false);}
-          G._poolCutPlaying=false;
-        });
-      });
-    },800);
+      // הפעל קרב ישירות — בלי קאטסינים שצריך ללחוץ
+      G.mission=23;
+      if(typeof MISSIONS!=='undefined'&&MISSIONS[23])MISSIONS[23].unlock();
+      if(typeof updateMissionHUD==='function')updateMissionHUD();
+      if(typeof updateNavArrow==='function')updateNavArrow();
+      if(typeof saveGame==='function')saveGame();
+      if(G._titanEnemy){G._titanEnemy.frozen=false;}
+      else if(typeof _spawnTitanBoss==='function'){_spawnTitanBoss(false);}
+    },1200);
   }
 }
 
