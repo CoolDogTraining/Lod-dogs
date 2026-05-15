@@ -6552,13 +6552,8 @@ function updCh6(dt){
   if(G.mission===25&&!G._ch6BaseVisited){
     if(d2(px,pz,105,25)<10){
       G._ch6BaseVisited=true;
-      // רקס נעלם — התקף הלב
       if(G._reksAlly&&G._reksAlly.mesh)G._reksAlly.mesh.visible=false;
-      showCut('ch6_open',()=>{
-        showCut('ch6_reks_dead',()=>{
-          setMission(26);
-        });
-      });
+      showCut('ch6_open',()=>setMission(26));
     }
   }
 
@@ -6566,11 +6561,7 @@ function updCh6(dt){
   if(G.mission===26&&!G._ch6MarketVisited){
     if(d2(px,pz,-60,60)<8){
       G._ch6MarketVisited=true;
-      G.paused=true;
-      setTimeout(()=>showCut('ch6_shadow_seen',()=>{
-        G.paused=false;
-        setMission(27);
-      }),300);
+      showCut('ch6_shadow_seen',()=>setMission(27));
     }
   }
 
@@ -6578,11 +6569,7 @@ function updCh6(dt){
   if(G.mission===27&&!G._ch6PortVisited){
     if(d2(px,pz,25,-125)<8){
       G._ch6PortVisited=true;
-      G.paused=true;
-      setTimeout(()=>showCut('ch6_shadow_zippo',()=>{
-        G.paused=false;
-        setMission(28);
-      }),300);
+      showCut('ch6_shadow_zippo',()=>setMission(28));
     }
   }
 
