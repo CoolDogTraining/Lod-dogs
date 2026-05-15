@@ -2553,13 +2553,9 @@ document.addEventListener('DOMContentLoaded',()=>{
         showN('🏆 לוד שייכת לכלבים לעד! 🐾');
         if(typeof _spawnFinalFireworks==='function')_spawnFinalFireworks();
         setTimeout(()=>{
-          if(typeof MISSIONS!=='undefined'&&MISSIONS[25])MISSIONS[25].unlock();
-          if(typeof updateMissionHUD==='function')updateMissionHUD();
-          if(typeof updateNavArrow==='function')updateNavArrow();
-          G.mission=25;
-          if(typeof saveGame==='function')saveGame();
+          if(typeof setMission==='function')setMission(25);
         },3000);
       };
     }
-  },500); // מחכה שstory.js יגדיר MISSIONS קודם
+  },500);
 });
