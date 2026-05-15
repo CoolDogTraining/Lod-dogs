@@ -832,89 +832,44 @@ function bldPark(x,z){
 }
 
 function buildDogBase(){
-  const BX=0, BZ=80; // בסיס כלבי לוד — דרומית לרחוב וייצמן
-  const wallM   = new THREE.MeshLambertMaterial({color:0xf0ddb0});
-  const roofM   = new THREE.MeshLambertMaterial({color:0xc0392b});
-  const woodM   = new THREE.MeshLambertMaterial({color:0x6b3f1a});
-  const floorM  = new THREE.MeshLambertMaterial({color:0xd4b896});
-  const fenceM  = new THREE.MeshLambertMaterial({color:0x8B5a2a});
-  const goldM   = new THREE.MeshLambertMaterial({color:0xf5c518});
+  const X=105,Z=25;
+  const wM=new THREE.MeshLambertMaterial({color:0xf0ddb0});
+  const rM=new THREE.MeshLambertMaterial({color:0xc0392b});
+  const wdM=new THREE.MeshLambertMaterial({color:0x6b3f1a});
+  const gM=new THREE.MeshLambertMaterial({color:0xf5c518});
 
-  // רצפת חצר — אדמה מרוצפת
-  const yard = new THREE.Mesh(new THREE.PlaneGeometry(28,24), floorM);
-  yard.rotation.x=-Math.PI/2; yard.position.set(BX,.06,BZ); scene.add(yard);
+  // רצפת חצר — quad אחד
+  const yard=new THREE.Mesh(new THREE.PlaneGeometry(22,18),new THREE.MeshLambertMaterial({color:0xd4b896}));
+  yard.rotation.x=-Math.PI/2;yard.position.set(X,.06,Z);scene.add(yard);
 
-  // גוף הבניין הראשי
-  const body = new THREE.Mesh(new THREE.BoxGeometry(14,5,8), wallM);
-  body.position.set(BX,2.5,BZ-6); body.castShadow=true; body.receiveShadow=true; scene.add(body);
-  blds.push({x:BX,z:BZ-6,w:14,d:8});
+  // בניין — שני קוביות (גוף+גג)
+  const body=mkB(12,4,7,0xf0ddb0,X,2,Z-4);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(9,2.5,4),rM);
+  roof.position.set(X,5.25,Z-4);roof.rotation.y=Math.PI/4;scene.add(roof);
+  blds.push({x:X,z:Z-4,w:12,d:7});
 
-  // גג
-  const roofGeom = new THREE.ConeGeometry(10,3,4);
-  const roof = new THREE.Mesh(roofGeom, roofM);
-  roof.position.set(BX,6.5,BZ-6); roof.rotation.y=Math.PI/4; roof.castShadow=true; scene.add(roof);
+  // דלת + 2 חלונות — 3 קוביות
+  mkB(1.8,2.8,.15,0x6b3f1a,X,1.4,Z-.55);
+  mkB(1.6,1.2,.12,0x88ccff,X-3.5,2.8,Z-.52);
+  mkB(1.6,1.2,.12,0x88ccff,X+3.5,2.8,Z-.52);
 
-  // דלת כניסה
-  mkB(2.2,3.2,.2,0x6b3f1a, BX,1.6,BZ-2.1);
+  // שלט — קוביה אחת
+  mkB(6,.7,.15,0xf5c518,X,1,Z-.48);
 
-  // חלונות
-  [[-4,3],[ 4,3]].forEach(([ox,oy])=>{
-    mkB(2,.14,.22,0xf5c518, BX+ox,oy,BZ-2.05); // מסגרת
-    mkB(1.6,1.2,.15,0x88ccff, BX+ox,oy,BZ-2.0); // זגוגית
-  });
+  // עמוד דגל — 2 קוביות
+  mkB(.15,6,.15,0x6b3f1a,X-7,3,Z-7);
+  mkB(2.5,1.5,.08,0xf5c518,X-5.75,5.5,Z-7);
 
-  // עמוד דגל עם דגל
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,7,8), woodM);
-  pole.position.set(BX-8,3.5,BZ-9); scene.add(pole);
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(3,1.8),
-    new THREE.MeshLambertMaterial({color:0xf5c518,side:THREE.DoubleSide}));
-  flag.position.set(BX-6.5,6.5,BZ-9); scene.add(flag);
-  // פס על הדגל
-  const flagStripe = new THREE.Mesh(new THREE.PlaneGeometry(3,.35),
-    new THREE.MeshLambertMaterial({color:0x333333,side:THREE.DoubleSide}));
-  flagStripe.position.set(BX-6.5,6.5,BZ-8.98); scene.add(flagStripe);
+  // גדר — 4 קוביות בלבד
+  mkB(22,.8,.25,0x6b3f1a,X,.4,Z+6.8);
+  mkB(22,.8,.25,0x6b3f1a,X,.4,Z-14.8);
+  mkB(.25,.8,20,0x6b3f1a,X-10.8,.4,Z-4);
+  mkB(.25,.8,20,0x6b3f1a,X+10.8,.4,Z-4);
 
-  // גדר — 4 צלעות
-  const fenceSegs = [
-    [BX,    BZ+5.8, 28, .3, .2],  // דרום
-    [BX,    BZ-16,  28, .3, .2],  // צפון
-    [BX-13.8,BZ-5, .2, .3, 22],   // מערב
-    [BX+13.8,BZ-5, .2, .3, 22],   // מזרח
-  ];
-  fenceSegs.forEach(([x,z,w,h,d])=> mkB(w,.9,d,0x6b3f1a,x,.45,z));
-  // עמודי גדר
-  for(let i=0;i<6;i++){
-    mkB(.35,1.4,.35,0x4a2a0a, BX-13+i*5.2,.7,BZ+5.8);
-    mkB(.35,1.4,.35,0x4a2a0a, BX-13+i*5.2,.7,BZ-16);
-  }
-  for(let i=0;i<4;i++){
-    mkB(.35,1.4,.35,0x4a2a0a, BX-13.8,.7,BZ-12+i*5.5);
-    mkB(.35,1.4,.35,0x4a2a0a, BX+13.8,.7,BZ-12+i*5.5);
-  }
+  // שני עצים
+  bldTree(X-8,Z+4);bldTree(X+8,Z+4);
 
-  // שער כניסה
-  mkB(5,.3,.3,0xf5c518, BX,.85,BZ+5.8); // קשת עליונה
-  mkB(.3,1.7,.3,0xf5c518, BX-2.5,.85,BZ+5.8);
-  mkB(.3,1.7,.3,0xf5c518, BX+2.5,.85,BZ+5.8);
-
-  // שלט "בסיס כלבי לוד"
-  const sign = new THREE.Mesh(new THREE.BoxGeometry(7,.9,.2), goldM);
-  sign.position.set(BX,1.8,BZ+5.95); scene.add(sign);
-
-  // ספסלים בחצר
-  mkB(3,.35,.8,0x5c3317, BX-5,.2,BZ+2);
-  mkB(3,.35,.8,0x5c3317, BX+5,.2,BZ+2);
-  mkB(.3,.7,.8,0x5c3317, BX-6.4,.35,BZ+2);
-  mkB(.3,.7,.8,0x5c3317, BX-3.6,.35,BZ+2);
-  mkB(.3,.7,.8,0x5c3317, BX+3.6,.35,BZ+2);
-  mkB(.3,.7,.8,0x5c3317, BX+6.4,.35,BZ+2);
-
-  // עצים קטנים בפינות
-  bldTree(BX-11,BZ+3);
-  bldTree(BX+11,BZ+3);
-
-  // נקודת ניווט (addTerr)
-  addTerr(BX,BZ,14,'בסיס כלבי לוד');
+  addTerr(X,Z,12,'בסיס כלבי לוד');
 }
 
 function bldMarket(x,z){
@@ -4188,7 +4143,7 @@ function updateNavDirection(){
   } else if(G.mission>=14&&G.mission<=19){
     tx=80;tz=-80; // עיריית לוד
   } else if(G.mission===25){
-    tx=0;tz=80;   // בסיס כלבי לוד
+    tx=105;tz=25;   // בסיס כלבי לוד
   } else if(G.mission===26){
     tx=-60;tz=60; // שוק לוד
   } else if(G.mission===27){
@@ -6595,7 +6550,7 @@ function updCh6(dt){
 
   // ── mission 25: הגיעו לבסיס כלבי לוד ──
   if(G.mission===25&&!G._ch6BaseVisited){
-    if(d2(px,pz,0,80)<10){
+    if(d2(px,pz,105,25)<10){
       G._ch6BaseVisited=true;
       // רקס נעלם — התקף הלב
       if(G._reksAlly&&G._reksAlly.mesh)G._reksAlly.mesh.visible=false;
