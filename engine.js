@@ -6430,10 +6430,11 @@ function buildLabScene(){
 }
 
 function enterLab(){
+  if(LAB._entering)return;  // guard כפילות
+  LAB._entering=true;
   G.paused=true;
   fadeOut(()=>{
     if(!labScene)buildLabScene();
-    LAB.inLab=true;
     LAB.playerX=0;LAB.playerZ=8;LAB.playerYaw=Math.PI;
     G.yaw=Math.PI;LAB.enterGrace=3.0;
     if(labCamera){
@@ -6445,6 +6446,8 @@ function enterLab(){
     PB.position.set(LAB.playerX,0,LAB.playerZ);
     document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
     showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
+    LAB.inLab=true;   // ← רק כאן, אחרי שהכל מוכן
+    LAB._entering=false;
     G.paused=false;
     fadeIn();
   });
