@@ -4068,7 +4068,15 @@ function setupJoy(){
   cz.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){if(t.identifier!==G.cam.id)continue;G.yaw-=(t.clientX-G.cam.lx)*.004;G.pitch=Math.max(-.2,Math.min(1.1,G.pitch+(t.clientY-G.cam.ly)*.004));G.cam.lx=t.clientX;G.cam.ly=t.clientY;}},{passive:false});
   const ec=()=>{G.cam.on=false;};cz.addEventListener('touchend',ec);cz.addEventListener('touchcancel',ec);
 }
-function mAtk(){doAtk();}function mE(){if(G.near)doInteract();}function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
+function mAtk(){
+  if(LAB.inLab){
+    if(G.atkCD<=0){
+      const _c=G.dog==='zippo'?0.28:0.5;
+      G._labAtk=true;G.atkCD=_c;
+      sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
+    }
+  } else {doAtk();}
+}function mE(){if(G.near)doInteract();}function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
 // ════════════════════════════════════════════════
 // MISSION ENGINE — strict gates
@@ -6446,10 +6454,10 @@ function _spawnShadowInLab(){
     new THREE.MeshBasicMaterial({color:0x7700cc,transparent:true,opacity:.22,depthWrite:false})
   );
   grp.add(aura);
-  grp.position.set(0,0,-10);
+  grp.position.set(0,0,13);
   labScene.add(grp);
   G._shadowEnemy={
-    mesh:grp,x:0,z:-10,
+    mesh:grp,x:0,z:13,
     hp:320,mhp:320,pow:14,spd:4.5,
     dead:false,_atkT:0,_hitT:0,isShadow:true,name:'הצל',
     _inLab:true,
@@ -6516,6 +6524,10 @@ function exitLab(){
 function updLab(dt){
   if(!LAB.inLab||G.paused||G.dlgOpen)return;
   LAB.enterGrace=Math.max(0,(LAB.enterGrace||0)-dt);
+  // atkCD — יורד כאן כי updPlayer לא רץ במעבדה
+  if(G.atkCD>0)G.atkCD-=dt;
+  const _labAtkCD=G.dog==='zippo'?0.28:0.5;
+  if(G.keys['KeyF']&&G.atkCD<=0){G._labAtk=true;G.atkCD=_labAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);}
 
   // ── אנימציית תאורה: flicker / arc / pulse ──
   _labFlickerT+=dt;
@@ -6610,15 +6622,16 @@ function updLab(dt){
     // תקיפה
     se._atkT=Math.max(0,(se._atkT||0)-dt);
     if(dd<2.5&&se._atkT<=0){dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);}
-    // פגיעה מהשחקן
+    // פגיעה מהשחקן — F במקלדת או כפתור תקיפה במובייל
     se._hitT=Math.max(0,(se._hitT||0)-dt);
-    if(dd<4&&G.atkCD<=0&&se._hitT<=0){
+    if(dd<4&&G._labAtk&&se._hitT<=0){
+      G._labAtk=false;
       const dog=G.dogs[G.dog];
       const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
       se.hp-=dmg;haptic(22);
       spawnBlood(se.x,1.5,se.z,8);
       showDmg(se.x,2,se.z,dmg);
-      se._hitT=0.45;G.atkCD=0.55;
+      se._hitT=0.45;
       if(se.bar)se.bar.scale.x=Math.max(0,se.hp/se.mhp);
       if(se.hp<=0){
         se.dead=true;se.mesh.visible=false;
