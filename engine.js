@@ -3709,12 +3709,9 @@ function enterMosque(){
     PB.position.set(VILLA.playerX,0,VILLA.playerZ);
     document.getElementById('tb').textContent='🕌 המסגד הגדול — לוד';
     showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."');
-    LAB._entering=false;
     G.paused=false;
-    console.log('[LAB] enterLab done. inLab='+LAB.inLab);
-    fade.style.transition='opacity .6s';
     fadeIn();
-  }));
+  });
 }
 
 function exitMosque(won){
@@ -3741,12 +3738,9 @@ function exitMosque(won){
     if(won&&G.bruno&&G.bruno.dead){
       setMission(11);
     }
-    LAB._entering=false;
     G.paused=false;
-    console.log('[LAB] enterLab done. inLab='+LAB.inLab);
-    fade.style.transition='opacity .6s';
     fadeIn();
-  }));
+  });
 }
 // alias לתאימות
 function enterVilla(){enterMosque();}
@@ -6436,17 +6430,9 @@ function buildLabScene(){
 }
 
 function enterLab(){
-  console.log('[LAB] enterLab called. _entering='+LAB._entering+' inLab='+LAB.inLab+' paused='+G.paused);
-  if(LAB._entering)return;
-  LAB._entering=true;
   G.paused=true;
-  initFadeEl();
-  const fade=document.getElementById('fade-ov');
-  fade.style.transition='none';fade.style.opacity='1';fade.style.pointerEvents='all';
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    console.log('[LAB] building scene...');
+  fadeOut(()=>{
     if(!labScene)buildLabScene();
-    console.log('[LAB] scene ready');
     LAB.inLab=true;
     LAB.playerX=0;LAB.playerZ=8;LAB.playerYaw=Math.PI;
     G.yaw=Math.PI;LAB.enterGrace=3.0;
@@ -6459,12 +6445,9 @@ function enterLab(){
     PB.position.set(LAB.playerX,0,LAB.playerZ);
     document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
     showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
-    LAB._entering=false;
     G.paused=false;
-    console.log('[LAB] enterLab done. inLab='+LAB.inLab);
-    fade.style.transition='opacity .6s';
     fadeIn();
-  }));
+  });
 }
 
 function exitLab(){
@@ -6486,12 +6469,9 @@ function exitLab(){
     labObjects.length=0;
     labScene=null;labCamera=null;
     G._labRecorder=null;G._labRecInd=null;
-    LAB._entering=false;
     G.paused=false;
-    console.log('[LAB] enterLab done. inLab='+LAB.inLab);
-    fade.style.transition='opacity .6s';
     fadeIn();
-  }));
+  });
 }
 
 // updLab — loop בתוך המעבדה
@@ -6590,8 +6570,11 @@ function updLab(dt){
   // יציאה — mission 28 (גילוי ראשוני) — אוטומטי אחרי 5 שניות
   if(G.mission===28&&!G._ch6LabVisited){
     G._ch6LabVisited=true;
-    console.log('[LAB] mission 28 trigger - showCut');
-    showCut('ch6_lab_found',()=>{ console.log('[LAB] cut closed'); setMission(29); });
+    G.paused=true;
+    setTimeout(()=>showCut('ch6_lab_found',()=>{
+      G.paused=false;
+      setMission(29);
+    }),300);
   }
   // יציאה דרך הדלת הצדדית — mission 31 (מפעל)
   if(G.mission===31&&!G._ch6FactoryVisited&&LAB.playerX>12&&LAB.playerZ>6){
@@ -6987,7 +6970,6 @@ function updCh6(dt){
       G._labDoorInd.position.y=4.2+Math.sin(Date.now()*.003)*0.2;
     }
     if(d2(px,pz,25,-125)<4&&!LAB.inLab){
-      console.log('[LAB] door trigger mission='+G.mission);
       enterLab();
     }
   }
@@ -7294,76 +7276,48 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.body.appendChild(cs);
 });
 
-// ═══════════════════════════════════════
-// IN-GAME DEBUG CONSOLE
-// ═══════════════════════════════════════
 (function(){
-  // יצור overlay
-  const overlay = document.createElement('div');
-  overlay.id = 'dbg-overlay';
-  overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;flex-direction:column;font-family:monospace;font-size:11px;color:#00ff88;padding:8px;overflow-y:auto;';
-  document.body.appendChild(overlay);
+  const ov=document.createElement('div');
+  ov.id='dbg-ov';
+  ov.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9999;flex-direction:column;padding:8px;font-family:monospace;font-size:11px;color:#0f0;';
+  document.body.appendChild(ov);
 
-  // כפתור פתיחה
-  const btn = document.createElement('button');
-  btn.id = 'dbg-btn';
-  btn.textContent = '🐛';
-  btn.style.cssText = 'position:fixed;bottom:80px;left:8px;z-index:10000;background:#111;color:#0f0;border:1px solid #0f0;border-radius:50%;width:36px;height:36px;font-size:16px;cursor:pointer;opacity:0.7;';
-  btn.onclick = () => {
-    const o = document.getElementById('dbg-overlay');
-    o.style.display = o.style.display === 'none' ? 'flex' : 'none';
-  };
-  document.body.appendChild(btn);
+  const top=document.createElement('div');
+  top.style.cssText='display:flex;gap:8px;margin-bottom:6px;';
+  const btnClose=document.createElement('button');
+  btnClose.textContent='✕ סגור';
+  btnClose.style.cssText='padding:4px 10px;background:#300;color:#f55;border:1px solid #f55;';
+  btnClose.onclick=()=>{ov.style.display='none';};
+  const btnClear=document.createElement('button');
+  btnClear.textContent='נקה';
+  btnClear.style.cssText='padding:4px 10px;background:#030;color:#0f0;border:1px solid #0f0;';
+  btnClear.onclick=()=>{log.innerHTML='';};
+  top.appendChild(btnClose);top.appendChild(btnClear);ov.appendChild(top);
 
-  // כפתור סגירה
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕ סגור';
-  closeBtn.style.cssText = 'background:#200;color:#f00;border:1px solid #f00;padding:4px 12px;margin-bottom:8px;font-size:13px;cursor:pointer;align-self:flex-start;';
-  closeBtn.onclick = () => { overlay.style.display = 'none'; };
-  overlay.appendChild(closeBtn);
+  const log=document.createElement('div');
+  log.style.cssText='flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-all;';
+  ov.appendChild(log);
 
-  // כפתור נקה
-  const clearBtn = document.createElement('button');
-  clearBtn.textContent = '🗑 נקה';
-  clearBtn.style.cssText = 'background:#020;color:#0f0;border:1px solid #0f0;padding:4px 12px;margin-bottom:8px;margin-right:8px;font-size:13px;cursor:pointer;';
-  clearBtn.onclick = () => { logEl.innerHTML = ''; };
-  overlay.insertBefore(clearBtn, overlay.children[1]);
-
-  // אזור לוג
-  const logEl = document.createElement('div');
-  logEl.id = 'dbg-log';
-  logEl.style.cssText = 'flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-all;';
-  overlay.appendChild(logEl);
-
-  // עקוף console.log ו-console.error
-  const _log = console.log.bind(console);
-  const _err = console.error.bind(console);
-  const _warn = console.warn.bind(console);
-
-  function addLine(color, prefix, args){
-    const line = document.createElement('div');
-    line.style.color = color;
-    line.style.borderBottom = '1px solid #111';
-    line.style.padding = '2px 0';
-    line.textContent = prefix + Array.from(args).map(a => {
-      try { return typeof a === 'object' ? JSON.stringify(a) : String(a); }
-      catch(e){ return String(a); }
-    }).join(' ');
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
-    // הגבל ל-200 שורות
-    while(logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
+  function addLine(col,txt){
+    const d=document.createElement('div');
+    d.style.cssText='color:'+col+';border-bottom:1px solid #111;padding:1px 0;';
+    d.textContent=txt;
+    log.appendChild(d);
+    log.scrollTop=log.scrollHeight;
+    if(log.children.length>300)log.removeChild(log.firstChild);
   }
 
-  console.log = function(){ addLine('#00ff88','',arguments); _log.apply(console,arguments); };
-  console.error = function(){ addLine('#ff4444','ERR: ',arguments); _err.apply(console,arguments); };
-  console.warn = function(){ addLine('#ffaa00','WARN: ',arguments); _warn.apply(console,arguments); };
+  const _l=console.log.bind(console);
+  const _e=console.error.bind(console);
+  const _w=console.warn.bind(console);
+  console.log=function(){addLine('#0f0',[...arguments].join(' '));_l(...arguments);};
+  console.error=function(){addLine('#f44','ERR: '+[...arguments].join(' '));_e(...arguments);};
+  console.warn=function(){addLine('#fa0','WARN: '+[...arguments].join(' '));_w(...arguments);};
+  window.onerror=function(m,s,l){addLine('#f00','💥 line'+l+': '+m);return false;};
 
-  window.onerror = function(msg,src,line,col,err){
-    addLine('#ff0000','💥 '+line+': ', [msg]);
-    return false;
-  };
-  window.onunhandledrejection = function(e){
-    addLine('#ff4444','PROMISE: ',[e.reason]);
-  };
+  const btn=document.createElement('button');
+  btn.textContent='🐛';
+  btn.style.cssText='position:fixed;bottom:120px;left:8px;z-index:10000;width:38px;height:38px;background:#111;color:#0f0;border:1px solid #0f0;border-radius:50%;font-size:18px;';
+  btn.onclick=()=>{ov.style.display=ov.style.display==='none'?'flex':'none';};
+  document.body.appendChild(btn);
 })();
