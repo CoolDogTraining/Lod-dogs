@@ -6429,6 +6429,35 @@ function buildLabScene(){
   G._labRecInd=recInd;
 }
 
+// ── spawn הצל בתוך labScene (mission 30) ──
+function _spawnShadowInLab(){
+  if(G._shadowEnemy||!labScene)return;
+  const grp=mkCommander(1.05);
+  grp.traverse(c=>{
+    if(c.isMesh&&c.material){
+      const m=c.material.clone();
+      m.color.multiplyScalar(0.45);
+      m.emissive=new THREE.Color(0x220033);
+      c.material=m;
+    }
+  });
+  const aura=new THREE.Mesh(
+    new THREE.SphereGeometry(.65,8,8),
+    new THREE.MeshBasicMaterial({color:0x7700cc,transparent:true,opacity:.22,depthWrite:false})
+  );
+  grp.add(aura);
+  grp.position.set(0,0,-10);
+  labScene.add(grp);
+  G._shadowEnemy={
+    mesh:grp,x:0,z:-10,
+    hp:320,mhp:320,pow:14,spd:4.5,
+    dead:false,_atkT:0,_hitT:0,isShadow:true,name:'הצל',
+    _inLab:true,
+  };
+  G.bosses.push(G._shadowEnemy);
+  showN('⚔️ הצל — HP: 320\nהוא חיכה פה. היזהרו.');
+}
+
 function enterLab(){
   G.paused=true;
   fadeOut(()=>{
@@ -6444,7 +6473,12 @@ function enterLab(){
     labScene.add(PB);
     PB.position.set(LAB.playerX,0,LAB.playerZ);
     document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
-    showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
+    if(G.mission===30&&!G._shadowBossDead){
+      showN('⚠️ משהו מסתובב כאן...');
+      setTimeout(_spawnShadowInLab,800);
+    } else {
+      showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
+    }
     G.paused=false;
     fadeIn();
   });
@@ -6469,6 +6503,10 @@ function exitLab(){
     labObjects.length=0;
     labScene=null;labCamera=null;
     G._labRecorder=null;G._labRecInd=null;
+    // נקה הצל מה-labScene אם מת/יצא
+    if(G._shadowEnemy&&G._shadowEnemy._inLab){
+      G._shadowEnemy._inLab=false;
+    }
     G.paused=false;
     fadeIn();
   });
@@ -6528,7 +6566,7 @@ function updLab(dt){
     G._labReksInTank.position.y=2.2+Math.sin(_labFlickerT*0.8)*0.15;
   }
 
-  const spd=G.dogs[G.dog].spd*4.2;
+  const spd=G.dogs[G.dog].spd;
   // תנועה — בדיוק כמו עולם רגיל: וקטורים לפי G.yaw (עכבר/מגע)
   _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
   _vRgt.set( Math.cos(G.yaw),0,-Math.sin(G.yaw));
@@ -6555,6 +6593,57 @@ function updLab(dt){
     _vCamTarget.set(px+Math.sin(G.yaw)*cd,py+ch,pz+Math.cos(G.yaw)*cd);
     labCamera.position.lerp(_vCamTarget,.1);
     labCamera.lookAt(px,py+.7,pz);
+  }
+  // ── mission 30: קרב הצל בתוך המעבדה ──
+  if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead&&G._shadowEnemy._inLab){
+    const se=G._shadowEnemy;
+    const px=LAB.playerX,pz=LAB.playerZ;
+    const dd=Math.hypot(se.x-px,se.z-pz);
+    // תנועה — רודף
+    if(dd>1.8){
+      const ang=Math.atan2(px-se.x,pz-se.z);
+      se.x+=Math.sin(ang)*se.spd*dt;
+      se.z+=Math.cos(ang)*se.spd*dt;
+      se.mesh.position.set(se.x,0,se.z);
+      se.mesh.rotation.y=ang;
+    }
+    // תקיפה
+    se._atkT=Math.max(0,(se._atkT||0)-dt);
+    if(dd<2.5&&se._atkT<=0){dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);}
+    // פגיעה מהשחקן
+    se._hitT=Math.max(0,(se._hitT||0)-dt);
+    if(dd<4&&G.atkCD<=0&&se._hitT<=0){
+      const dog=G.dogs[G.dog];
+      const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
+      se.hp-=dmg;haptic(22);
+      spawnBlood(se.x,1.5,se.z,8);
+      showDmg(se.x,2,se.z,dmg);
+      se._hitT=0.45;G.atkCD=0.55;
+      if(se.bar)se.bar.scale.x=Math.max(0,se.hp/se.mhp);
+      if(se.hp<=0){
+        se.dead=true;se.mesh.visible=false;
+        G._shadowBossDead=true;
+        sCapture();haptic([80,30,80,30,100]);
+        addXP(180);G.coins+=150;updCoins();
+        spawnBlood(se.x,2,se.z,20);
+        showN('⚔️ הצל הובס.\n\n"הוא לא היה אויב. הוא היה כלי."');
+        G.paused=true;
+        setTimeout(()=>showCut('ch6_shadow_fight',()=>{
+          G.paused=false;
+          exitLab();
+          setTimeout(()=>setMission(31),600);
+        }),600);
+      }
+    }
+    // HP bar
+    if(!se.bar&&se.mesh){
+      const bg=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0x330033}));
+      bg.position.set(0,2.8,0);se.mesh.add(bg);
+      const bar=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
+        new THREE.MeshBasicMaterial({color:0xaa00cc}));
+      bar.position.set(0,.001,0.01);bg.add(bar);se.bar=bar;
+    }
   }
   // נגן הקלטות — mission 29
   if(G.mission===29&&!G._ch6RecordingPlayed&&G._labRecorder){
@@ -6920,10 +7009,7 @@ function _applyWorldState(m){
     if(m>30){G._shadowBossDead=true;if(G._shadowEnemy)G._shadowEnemy.dead=true;}
     if(m>31)G._ch6FactoryVisited=true;
     if(m>32)G._ch6FireDone=true;
-    // boss הצל — spawn אם mission 30 ועדיין לא מת
-    if(m===30&&!G._shadowBossDead&&typeof _spawnShadowBoss==='function'){
-      if(!G._shadowEnemy)_spawnShadowBoss();
-    }
+    // boss הצל — יspawn בתוך המעבדה בכניסה למשימה 30 (ראה enterLab)
   }
 
   // ── אויבים — הצג לפי פרק ──
@@ -6967,65 +7053,14 @@ function updCh6(dt){
     }
   }
 
-  // ── missions 28-29: כניסה למעבדה ──
-  if((G.mission===28||G.mission===29)&&!LAB.inLab){
+  // ── missions 28-30: כניסה למעבדה ──
+  if((G.mission===28||G.mission===29||G.mission===30)&&!LAB.inLab){
     // ind מהבל בניין ישן
     if(G._labDoorInd){
       G._labDoorInd.position.y=4.2+Math.sin(Date.now()*.003)*0.2;
     }
     if(d2(px,pz,25,-125)<4&&!LAB.inLab){
       enterLab();
-    }
-  }
-
-  // ── mission 30: קרב הצל ──
-  if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
-    const se=G._shadowEnemy;
-    const dd=d2(se.x,se.z,px,pz);
-    // תנועה — רודף
-    if(dd>2){
-      const ang=Math.atan2(px-se.x,pz-se.z);
-      se.x+=Math.sin(ang)*se.spd*dt;
-      se.z+=Math.cos(ang)*se.spd*dt;
-      se.mesh.position.set(se.x,0,se.z);
-      se.mesh.rotation.y=ang;
-    }
-    // תקיפה
-    if(!se._atkT)se._atkT=0;
-    se._atkT=Math.max(0,se._atkT-dt);
-    if(dd<2.5&&se._atkT<=0){dmgPlayer(se.pow);se._atkT=1.1;haptic([30,15,30]);}
-    // פגיעה מהשחקן
-    if(!se._hitT)se._hitT=0;
-    se._hitT=Math.max(0,se._hitT-dt);
-    if(dd<4&&G.atkCD<=0&&se._hitT<=0){
-      const dog=G.dogs[G.dog];
-      const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
-      se.hp-=dmg;haptic(22);
-      spawnBlood(se.x,1.5,se.z,10);
-      showDmg(se.x,2,se.z,dmg);
-      se._hitT=0.45;G.atkCD=0.55;
-      if(se.bar)se.bar.scale.x=Math.max(0,se.hp/se.mhp);
-      if(se.hp<=0){
-        se.dead=true;se.mesh.visible=false;
-        G._shadowBossDead=true;
-        sCapture();haptic([80,30,80,30,100]);
-        addXP(180);G.coins+=150;updCoins();
-        spawnBlood(se.x,2,se.z,25);
-        showN('⚔️ הצל הובס.\n\n"הוא לא היה אויב. הוא היה כלי."');
-        setTimeout(()=>showCut('ch6_shadow_fight',()=>{
-          // אחרי הקרב — חוזרים למעבדה לגלות את המפעל
-          setTimeout(()=>setMission(31),600);
-        }),600);
-      }
-    }
-    // HP bar
-    if(!se.bar&&se.mesh){
-      const bg=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
-        new THREE.MeshBasicMaterial({color:0x330033}));
-      bg.position.set(0,2.8,0);se.mesh.add(bg);
-      const bar=new THREE.Mesh(new THREE.BoxGeometry(1.2,.12,.1),
-        new THREE.MeshBasicMaterial({color:0xaa00cc}));
-      bar.position.set(0,.001,0.01);bg.add(bar);se.bar=bar;
     }
   }
 
