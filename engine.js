@@ -6529,7 +6529,15 @@ function updLab(dt){
   }
 
   const spd=G.dogs[G.dog].spd*4.2;
-  // תנועה — אותה מערכת כמו משחק חיצוני
+  // תנועה — חישוב קלט
+  _vFwd.set(-Math.sin(LAB.playerYaw),0,-Math.cos(LAB.playerYaw));
+  _vRgt.set( Math.cos(LAB.playerYaw),0,-Math.sin(LAB.playerYaw));
+  let inputX=0,inputZ=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp'])   {inputX+=_vFwd.x;inputZ+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']) {inputX-=_vFwd.x;inputZ-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']) {inputX-=_vRgt.x;inputZ-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){inputX+=_vRgt.x;inputZ+=_vRgt.z;}
+  if(G.joy.on){inputX+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;inputZ+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
   const iln=Math.hypot(inputX,inputZ)||1;
   let nx=LAB.playerX+(inputX/iln)*spd*dt;
   let nz=LAB.playerZ+(inputZ/iln)*spd*dt;
@@ -6570,11 +6578,7 @@ function updLab(dt){
   // יציאה — mission 28 (גילוי ראשוני) — אוטומטי אחרי 5 שניות
   if(G.mission===28&&!G._ch6LabVisited){
     G._ch6LabVisited=true;
-    G.paused=true;
-    setTimeout(()=>showCut('ch6_lab_found',()=>{
-      G.paused=false;
-      setMission(29);
-    }),300);
+    showCut('ch6_lab_found',()=>setMission(29));
   }
   // יציאה דרך הדלת הצדדית — mission 31 (מפעל)
   if(G.mission===31&&!G._ch6FactoryVisited&&LAB.playerX>12&&LAB.playerZ>6){
@@ -7275,49 +7279,3 @@ document.addEventListener('DOMContentLoaded',()=>{
   cs.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(10,15,10,.97);border:2px solid #f5c518;border-radius:14px;padding:16px;width:min(320px,85vw);display:none;color:#fff;';
   document.body.appendChild(cs);
 });
-
-(function(){
-  const ov=document.createElement('div');
-  ov.id='dbg-ov';
-  ov.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);z-index:9999;flex-direction:column;padding:8px;font-family:monospace;font-size:11px;color:#0f0;';
-  document.body.appendChild(ov);
-
-  const top=document.createElement('div');
-  top.style.cssText='display:flex;gap:8px;margin-bottom:6px;';
-  const btnClose=document.createElement('button');
-  btnClose.textContent='✕ סגור';
-  btnClose.style.cssText='padding:4px 10px;background:#300;color:#f55;border:1px solid #f55;';
-  btnClose.onclick=()=>{ov.style.display='none';};
-  const btnClear=document.createElement('button');
-  btnClear.textContent='נקה';
-  btnClear.style.cssText='padding:4px 10px;background:#030;color:#0f0;border:1px solid #0f0;';
-  btnClear.onclick=()=>{log.innerHTML='';};
-  top.appendChild(btnClose);top.appendChild(btnClear);ov.appendChild(top);
-
-  const log=document.createElement('div');
-  log.style.cssText='flex:1;overflow-y:auto;white-space:pre-wrap;word-break:break-all;';
-  ov.appendChild(log);
-
-  function addLine(col,txt){
-    const d=document.createElement('div');
-    d.style.cssText='color:'+col+';border-bottom:1px solid #111;padding:1px 0;';
-    d.textContent=txt;
-    log.appendChild(d);
-    log.scrollTop=log.scrollHeight;
-    if(log.children.length>300)log.removeChild(log.firstChild);
-  }
-
-  const _l=console.log.bind(console);
-  const _e=console.error.bind(console);
-  const _w=console.warn.bind(console);
-  console.log=function(){addLine('#0f0',[...arguments].join(' '));_l(...arguments);};
-  console.error=function(){addLine('#f44','ERR: '+[...arguments].join(' '));_e(...arguments);};
-  console.warn=function(){addLine('#fa0','WARN: '+[...arguments].join(' '));_w(...arguments);};
-  window.onerror=function(m,s,l){addLine('#f00','💥 line'+l+': '+m);return false;};
-
-  const btn=document.createElement('button');
-  btn.textContent='🐛';
-  btn.style.cssText='position:fixed;bottom:120px;left:8px;z-index:10000;width:38px;height:38px;background:#111;color:#0f0;border:1px solid #0f0;border-radius:50%;font-size:18px;';
-  btn.onclick=()=>{ov.style.display=ov.style.display==='none'?'flex':'none';};
-  document.body.appendChild(btn);
-})();
