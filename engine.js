@@ -5936,12 +5936,10 @@ function buildLabScene(){
   _labFlickerLights=[];
 
   const _add=m=>{labScene.add(m);labObjects.push(m);return m;};
-  const _box=(w,h,d,col,em,x,y,z,rx,ry,rz)=>{
+  const _box=(w,h,d,col,em,x,y,z)=>{
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
-      new THREE.MeshLambertMaterial({color:col,emissive:em||0x000000}));
-    m.position.set(x,y,z);
-    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
-    return _add(m);
+      new THREE.MeshLambertMaterial({color:col,emissive:em||0}));
+    m.position.set(x,y,z);return _add(m);
   };
 
   // תאורה
@@ -5956,25 +5954,21 @@ function buildLabScene(){
   const blueL=new THREE.PointLight(0x0066ff,3.5,20);
   blueL.position.set(10,4,-5);_add(blueL);
   _labFlickerLights.push({light:blueL,base:3.5,type:'arc',t:0,period:0.08});
-  const recL=new THREE.PointLight(0xff6600,2.5,8);
-  recL.position.set(1.5,4,-10);_add(recL);
   const exitLight=new THREE.PointLight(0x00ff44,2.8,8);
   exitLight.position.set(14,3.5,8);_add(exitLight);
   _labFlickerLights.push({light:exitLight,base:2.8,type:'flicker',t:10,period:0.25});
 
-  // רצפה — קופסה אחת
+  // רצפה
   _box(30,0.12,30,0x0a0d0b,0,0,0,0);
-
-  // קירות — 4 קופסאות
+  // קירות
   _box(30,9,0.35,0x0e1512,0x010201,0,4.5,-14.85);
   _box(30,9,0.35,0x0e1512,0x010201,0,4.5,14.85);
   _box(0.35,9,30,0x0e1512,0x010201,-14.85,4.5,0);
   _box(0.35,9,30,0x0e1512,0x010201,14.85,4.5,0);
-
   // תקרה
   _box(30.4,0.3,30.4,0x0a0e0c,0x010101,0,9,0);
 
-  // 4 כלובים — פשוט 5 קופסאות לכל כלוב (רצפה + 4 קירות)
+  // 4 כלובים
   [[-11,-5],[-11,-3],[-11,-1],[-11,1]].forEach(([cx,cz])=>{
     _box(2.4,0.1,2.4,0x141c14,0x010201,cx,0.05,cz);
     _box(2.4,2.4,0.08,0x1c2c1c,0x020402,cx,1.2,cz-1.2);
@@ -5984,13 +5978,13 @@ function buildLabScene(){
     _box(2.4,0.08,2.4,0x141c14,0x010201,cx,2.44,cz);
   });
 
-  // שולחן ראשי
+  // שולחן + רגליים
   _box(5.5,0.14,2.2,0x1a2a1c,0x020302,0,0.97,-10.5);
-  [[-2.5,-10.5+1.0],[-2.5,-10.5-1.0],[2.5,-10.5+1.0],[2.5,-10.5-1.0]].forEach(([lx,lz])=>{
-    _box(0.1,0.97,0.1,0x1c2418,0x020301,lx,0.485,lz);
+  [[-2.5,1.0],[-2.5,-1.0],[2.5,1.0],[2.5,-1.0]].forEach(([lx,lz])=>{
+    _box(0.1,0.97,0.1,0x1c2418,0x020301,lx,0.485,-10.5+lz);
   });
 
-  // מסך על השולחן
+  // מסך
   _box(0.85,0.65,0.65,0x0e1410,0x010201,-1.2,1.45,-10.6);
   _box(0.72,0.52,0.08,0x001a06,0x008830,-1.2,1.48,-10.26);
 
@@ -6000,20 +5994,29 @@ function buildLabScene(){
   recorder.position.set(1.5,1.12,-10.5);_add(recorder);
   G._labRecorder=recorder;
 
-  // דלת יציאה
-  _box(2.2,3.5,0.3,0x0c1410,0x010201,14.75,1.75,8);
-  _box(1.5,0.45,0.1,0x001a08,0x008830,14.8,3.9,8);
-
-  // indicator לנגן (mission 29)
+  // indicator
   const recInd=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),
     new THREE.MeshBasicMaterial({color:0xff4400}));
   recInd.position.set(1.5,1.75,-10.5);_add(recInd);
   G._labRecInd=recInd;
+
+  // דלת יציאה
+  _box(2.2,3.5,0.3,0x0c1410,0x010201,14.75,1.75,8);
+  _box(1.5,0.45,0.1,0x001a08,0x008830,14.8,3.9,8);
 }
 
 function enterLab(){
-  G.paused=true;
-  fadeOut(()=>{
+  if(LAB._entering)return;
+  LAB._entering=true;
+  // הצג מסך שחור מיידי — לפני buildLabScene שחוסמת את ה-thread
+  const fade=document.getElementById('fade-ov')||(() => {
+    initFadeEl();return document.getElementById('fade-ov');
+  })();
+  fade.style.transition='none';
+  fade.style.opacity='1';
+  fade.style.pointerEvents='all';
+  // requestAnimationFrame מבטיח שהמסך השחור יצויר לפני שנמשיך
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(!labScene)buildLabScene();
     LAB.inLab=true;
     LAB.playerX=0;LAB.playerZ=8;LAB.playerYaw=Math.PI;
@@ -6027,9 +6030,11 @@ function enterLab(){
     PB.position.set(LAB.playerX,0,LAB.playerZ);
     document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
     showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
+    LAB._entering=false;
     G.paused=false;
+    fade.style.transition='opacity .6s';
     fadeIn();
-  });
+  }));
 }
 
 function exitLab(){
