@@ -6529,9 +6529,9 @@ function updLab(dt){
   }
 
   const spd=G.dogs[G.dog].spd*4.2;
-  // תנועה — חישוב קלט
-  _vFwd.set(-Math.sin(LAB.playerYaw),0,-Math.cos(LAB.playerYaw));
-  _vRgt.set( Math.cos(LAB.playerYaw),0,-Math.sin(LAB.playerYaw));
+  // תנועה — בדיוק כמו עולם רגיל: וקטורים לפי G.yaw (עכבר/מגע)
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
+  _vRgt.set( Math.cos(G.yaw),0,-Math.sin(G.yaw));
   let inputX=0,inputZ=0;
   if(G.keys['KeyW']||G.keys['ArrowUp'])   {inputX+=_vFwd.x;inputZ+=_vFwd.z;}
   if(G.keys['KeyS']||G.keys['ArrowDown']) {inputX-=_vFwd.x;inputZ-=_vFwd.z;}
@@ -6545,16 +6545,16 @@ function updLab(dt){
   nz=Math.max(-14,Math.min(13,nz));
   LAB.playerX=nx;LAB.playerZ=nz;
   PB.position.set(LAB.playerX,0,LAB.playerZ);
+  // השחקן מסתובב לכיוון התנועה — בדיוק כמו updPlayer
   if(Math.abs(inputX)>.01||Math.abs(inputZ)>.01)
-    LAB.playerYaw=Math.atan2(inputX,inputZ);
-  PB.rotation.y=LAB.playerYaw;G.yaw=LAB.playerYaw;
-  // מצלמה — עוקבת מאחור ומעל
+    PB.rotation.y=Math.atan2(-inputX,-inputZ);
+  // מצלמה — בדיוק כמו updCamera() בעולם הרגיל (עם pitch)
   if(labCamera){
-    const tx=LAB.playerX,tz=LAB.playerZ;
-    labCamera.position.x+=(tx-Math.sin(LAB.playerYaw)*5-labCamera.position.x)*.1;
-    labCamera.position.y+=(5-labCamera.position.y)*.08;
-    labCamera.position.z+=(tz+Math.cos(LAB.playerYaw)*5+2-labCamera.position.z)*.1;
-    labCamera.lookAt(tx,1,tz);
+    const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
+    const px=LAB.playerX,py=1.1*sz,pz=LAB.playerZ;
+    _vCamTarget.set(px+Math.sin(G.yaw)*cd,py+ch,pz+Math.cos(G.yaw)*cd);
+    labCamera.position.lerp(_vCamTarget,.1);
+    labCamera.lookAt(px,py+.7,pz);
   }
   // נגן הקלטות — mission 29
   if(G.mission===29&&!G._ch6RecordingPlayed&&G._labRecorder){
