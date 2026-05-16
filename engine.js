@@ -5942,7 +5942,6 @@ function buildLabScene(){
     m.position.set(x,y,z);return _add(m);
   };
 
-  // תאורה
   labScene.add(new THREE.AmbientLight(0x0d1f18,3.5));
   labScene.add(new THREE.HemisphereLight(0x002a14,0x000d1a,1.2));
   const mainL=new THREE.PointLight(0x00ff88,4.5,40);
@@ -5958,17 +5957,13 @@ function buildLabScene(){
   exitLight.position.set(14,3.5,8);_add(exitLight);
   _labFlickerLights.push({light:exitLight,base:2.8,type:'flicker',t:10,period:0.25});
 
-  // רצפה
   _box(30,0.12,30,0x0a0d0b,0,0,0,0);
-  // קירות
   _box(30,9,0.35,0x0e1512,0x010201,0,4.5,-14.85);
   _box(30,9,0.35,0x0e1512,0x010201,0,4.5,14.85);
   _box(0.35,9,30,0x0e1512,0x010201,-14.85,4.5,0);
   _box(0.35,9,30,0x0e1512,0x010201,14.85,4.5,0);
-  // תקרה
   _box(30.4,0.3,30.4,0x0a0e0c,0x010101,0,9,0);
 
-  // 4 כלובים
   [[-11,-5],[-11,-3],[-11,-1],[-11,1]].forEach(([cx,cz])=>{
     _box(2.4,0.1,2.4,0x141c14,0x010201,cx,0.05,cz);
     _box(2.4,2.4,0.08,0x1c2c1c,0x020402,cx,1.2,cz-1.2);
@@ -5978,29 +5973,23 @@ function buildLabScene(){
     _box(2.4,0.08,2.4,0x141c14,0x010201,cx,2.44,cz);
   });
 
-  // שולחן + רגליים
   _box(5.5,0.14,2.2,0x1a2a1c,0x020302,0,0.97,-10.5);
   [[-2.5,1.0],[-2.5,-1.0],[2.5,1.0],[2.5,-1.0]].forEach(([lx,lz])=>{
     _box(0.1,0.97,0.1,0x1c2418,0x020301,lx,0.485,-10.5+lz);
   });
-
-  // מסך
   _box(0.85,0.65,0.65,0x0e1410,0x010201,-1.2,1.45,-10.6);
   _box(0.72,0.52,0.08,0x001a06,0x008830,-1.2,1.48,-10.26);
 
-  // נגן הקלטות (mission 29)
   const recorder=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.22,0.45),
     new THREE.MeshLambertMaterial({color:0x0a1408,emissive:0x000e04}));
   recorder.position.set(1.5,1.12,-10.5);_add(recorder);
   G._labRecorder=recorder;
 
-  // indicator
   const recInd=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),
     new THREE.MeshBasicMaterial({color:0xff4400}));
   recInd.position.set(1.5,1.75,-10.5);_add(recInd);
   G._labRecInd=recInd;
 
-  // דלת יציאה
   _box(2.2,3.5,0.3,0x0c1410,0x010201,14.75,1.75,8);
   _box(1.5,0.45,0.1,0x001a08,0x008830,14.8,3.9,8);
 }
@@ -6008,14 +5997,13 @@ function buildLabScene(){
 function enterLab(){
   if(LAB._entering)return;
   LAB._entering=true;
-  // הצג מסך שחור מיידי — לפני buildLabScene שחוסמת את ה-thread
-  const fade=document.getElementById('fade-ov')||(() => {
-    initFadeEl();return document.getElementById('fade-ov');
-  })();
+  G.paused=true;  // עוצר את ה-loop מיד — מונע קריאות חוזרות ל-enterLab
+  // מסך שחור מיידי ללא transition, ואז rAF כפול מבטיח שהדפדפן יצייר אותו
+  initFadeEl();
+  const fade=document.getElementById('fade-ov');
   fade.style.transition='none';
   fade.style.opacity='1';
   fade.style.pointerEvents='all';
-  // requestAnimationFrame מבטיח שהמסך השחור יצויר לפני שנמשיך
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(!labScene)buildLabScene();
     LAB.inLab=true;
