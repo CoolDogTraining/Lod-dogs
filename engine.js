@@ -6655,12 +6655,9 @@ function updLab(dt){
       G.paused=true;
       setTimeout(()=>showCut('ch6_recording',()=>{
         G.paused=false;
-        exitLab();
-        // אחרי היציאה — spawn הצל
-        setTimeout(()=>{
-          if(typeof _spawnShadowBoss==='function')_spawnShadowBoss();
-          setMission(30);
-        },1500);
+        setMission(30);
+        // הצל מופיע מיד בתוך המעבדה — הקרב מתחיל
+        setTimeout(_spawnShadowInLab,500);
       }),400);
     }
   }
