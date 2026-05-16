@@ -5930,511 +5930,92 @@ let _labFlickerT=0;
 function buildLabScene(){
   labScene=new THREE.Scene();
   labScene.background=new THREE.Color(0x030508);
-  labScene.fog=new THREE.FogExp2(0x030508,.032);
-  labCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,.1,120);
+  labScene.fog=new THREE.FogExp2(0x030508,.05);
+  labCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,.1,80);
   labScene.add(labCamera);
   _labFlickerLights=[];
 
-  const _add=m=>{m.castShadow=true;m.receiveShadow=true;labScene.add(m);labObjects.push(m);return m;};
-  const _addNS=m=>{labScene.add(m);labObjects.push(m);return m;};
-  // helper — build box and add
+  const _add=m=>{labScene.add(m);labObjects.push(m);return m;};
   const _box=(w,h,d,col,em,x,y,z,rx,ry,rz)=>{
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
       new THREE.MeshLambertMaterial({color:col,emissive:em||0x000000}));
     m.position.set(x,y,z);
     if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
-    _add(m);return m;
-  };
-  const _cyl=(rt,rb,h,seg,col,em,x,y,z,rx,rz)=>{
-    const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),
-      new THREE.MeshLambertMaterial({color:col,emissive:em||0x000000}));
-    m.position.set(x,y,z);
-    if(rx)m.rotation.x=rx;if(rz)m.rotation.z=rz;
-    _add(m);return m;
+    return _add(m);
   };
 
-  // ════════════════════════════════
-  // LIGHTS — מפחיד, לא שחור
-  // ════════════════════════════════
-  // אמביינט — מספיק לראות אבל כהה
+  // תאורה
   labScene.add(new THREE.AmbientLight(0x0d1f18,3.5));
-  // hemisphere — ירוק מעל, כחול מתחת
   labScene.add(new THREE.HemisphereLight(0x002a14,0x000d1a,1.2));
-
-  // נאון ירוק ראשי מהתקרה
   const mainL=new THREE.PointLight(0x00ff88,4.5,40);
-  mainL.position.set(0,7,0);_addNS(mainL);
+  mainL.position.set(0,7,0);_add(mainL);
   _labFlickerLights.push({light:mainL,base:4.5,type:'flicker',t:0,period:0.18});
-
-  // אור אדום — צד שמאל (כלובים)
   const redL=new THREE.PointLight(0xff1500,5.0,22);
-  redL.position.set(-10,4,-2);_addNS(redL);
+  redL.position.set(-10,4,-2);_add(redL);
   _labFlickerLights.push({light:redL,base:5.0,type:'pulse',t:0,period:1.1});
-
-  // אור כחול-חשמלי — צד ימין (מחולל)
   const blueL=new THREE.PointLight(0x0066ff,3.5,20);
-  blueL.position.set(10,4,-5);_addNS(blueL);
+  blueL.position.set(10,4,-5);_add(blueL);
   _labFlickerLights.push({light:blueL,base:3.5,type:'arc',t:0,period:0.08});
-
-  // אור ירוק-רדיואקטיבי על מיכלי השיבוט
-  [[-4,3,-11],[4,3,-11]].forEach(([x,y,z])=>{
-    const gl=new THREE.PointLight(0x00ff44,3.5,10);
-    gl.position.set(x,y,z);_addNS(gl);
-    _labFlickerLights.push({light:gl,base:3.5,type:'bubble',t:Math.random()*6,period:0.6+Math.random()*0.5});
-  });
-
-  // אור לבן-קר מהתקרה (מנורה שבורה)
-  const coldL=new THREE.PointLight(0xccffee,2.0,15);
-  coldL.position.set(-5,7,-7);_addNS(coldL);
-  _labFlickerLights.push({light:coldL,base:2.0,type:'flicker',t:2,period:0.13});
-
-  // אור כתום על שולחן הנגן
   const recL=new THREE.PointLight(0xff6600,2.5,8);
-  recL.position.set(1.5,4,-10);_addNS(recL);
+  recL.position.set(1.5,4,-10);_add(recL);
+  const exitLight=new THREE.PointLight(0x00ff44,2.8,8);
+  exitLight.position.set(14,3.5,8);_add(exitLight);
+  _labFlickerLights.push({light:exitLight,base:2.8,type:'flicker',t:10,period:0.25});
 
-  // ════════════════════════════════
-  // FLOOR — רצפת מתכת עם רשת
-  // ════════════════════════════════
-  _box(30,0.12,30,0x0a0d0b,0x000000,0,0,0);
-  // רשת מתכת — פסי גריל
-  for(let i=-14;i<=14;i+=2){
-    _box(30,0.04,0.08,0x111814,0x020402,0,0.07,i);
-    _box(0.08,0.04,30,0x111814,0x020402,i,0.07,0);
-  }
-  // כתמי שמן/נוזל
-  [[0,-2,0x1a0800],[-5,4,0x001a08],[6,-8,0x0a0012],[-8,1,0x1a0000]].forEach(([rx,rz,col])=>{
-    const stain=new THREE.Mesh(new THREE.PlaneGeometry(1.2+Math.random()*1.5,0.9+Math.random()),
-      new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:0.75}));
-    stain.rotation.x=-Math.PI/2;stain.position.set(rx,0.02,rz);_addNS(stain);
-  });
-  // כתמי דם על הרצפה
-  [[-9,-3],[-11,2],[-12,-6]].forEach(([bx,bz])=>{
-    const blood=new THREE.Mesh(new THREE.PlaneGeometry(0.6+Math.random()*0.8,0.5+Math.random()*0.6),
-      new THREE.MeshLambertMaterial({color:0x3a0000,transparent:true,opacity:0.9}));
-    blood.rotation.x=-Math.PI/2;blood.position.set(bx,0.02,bz);_addNS(blood);
-  });
+  // רצפה — קופסה אחת
+  _box(30,0.12,30,0x0a0d0b,0,0,0,0);
 
-  // ════════════════════════════════
-  // WALLS — לוחות מתכת, ריוטים, צינורות
-  // ════════════════════════════════
-  const wallCol=0x0e1512,wallEm=0x010201;
-  // 4 קירות
-  _box(30,9,0.35,wallCol,wallEm,0,4.5,-14.85);  // צפון
-  _box(30,9,0.35,wallCol,wallEm,0,4.5,14.85);   // דרום
-  _box(0.35,9,30,wallCol,wallEm,-14.85,4.5,0);  // מערב
-  _box(0.35,9,30,wallCol,wallEm,14.85,4.5,0);   // מזרח
+  // קירות — 4 קופסאות
+  _box(30,9,0.35,0x0e1512,0x010201,0,4.5,-14.85);
+  _box(30,9,0.35,0x0e1512,0x010201,0,4.5,14.85);
+  _box(0.35,9,30,0x0e1512,0x010201,-14.85,4.5,0);
+  _box(0.35,9,30,0x0e1512,0x010201,14.85,4.5,0);
 
-  // לוחות מתכת — פאנלים על הקיר הצפוני
-  for(let pi=0;pi<6;pi++){
-    _box(4.5,7,0.12,0x121a14,0x020303,-11+pi*4.8,4,-14.7);
-    // ריוטים על הלוחות
-    [[-2,-3],[-2,3],[2,-3],[2,3]].forEach(([ox,oy])=>{
-      _cyl(0.07,0.07,0.1,6,0x1a2018,0x030302,-11+pi*4.8+ox,4+oy,-14.65);
-    });
-  }
-  // פסי אזהרה צהוב-שחור על הקיר הצפוני
-  for(let s=0;s<7;s++){
-    _box(1.0,0.3,0.08,s%2===0?0x1a1400:0x0a0a06,s%2===0?0x1a1000:0x000000,-12+s*4,0.5,-14.7);
-  }
-  // פאנלים על קיר מזרח (דלת יציאה)
-  _box(0.1,7,10,0x121810,0x010201,14.7,4.5,2);
-  _box(0.1,7,10,0x0e1410,0x010201,14.7,4.5,-8);
-
-  // ════════════════════════════════
-  // CEILING — תקרת בטון, קורות, חוטים
-  // ════════════════════════════════
+  // תקרה
   _box(30.4,0.3,30.4,0x0a0e0c,0x010101,0,9,0);
-  // קורות תקרה
-  for(let b=0;b<4;b++){
-    _box(30,0.35,0.5,0x0d1210,0x010201,0,8.8,-9+b*6);  // E-W
-    _box(0.5,0.35,30,0x0d1210,0x010201,-9+b*6,8.8,0);  // N-S
-  }
-  // נורות פלואורסנט על התקרה — כמה שבורות
-  [[-7,8.6,-5],[1,8.6,-5],[9,8.6,-5],[-7,8.6,5],[5,8.6,5]].forEach(([x,y,z],i)=>{
-    _box(3.2,0.1,0.22,0x111a14,0x010201,x,y,z);
-    const tubeM=new THREE.MeshLambertMaterial({color:0xaaffcc,emissive:i===2?0x002200:0x44cc88});
-    const tube=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,3.0,8),tubeM);
-    tube.rotation.z=Math.PI/2;tube.position.set(x,y-0.12,z);_addNS(tube);
-    if(i!==2){
-      const fl=new THREE.PointLight(0x44ffaa,1.8,10);fl.position.set(x,y-0.5,z);_addNS(fl);
-      _labFlickerLights.push({light:fl,base:1.8,type:'fluorescent',t:i*1.3,period:0.07+i*0.03});
-    }
-  });
-  // שרשראות תלויות מהתקרה
-  [[-3,0],[-1,-9],[7,-6]].forEach(([cx,cz])=>{
-    for(let link=0;link<6;link++){
-      _box(0.12,0.28,0.08,0x1a1810,0x020201,cx,8.4-link*0.5,cz,0,link%2===0?0:Math.PI/2);
-    }
-    // ווי ברזל בסוף
-    _box(0.25,0.08,0.08,0x222018,0x030201,cx,8.4-6*0.5,cz);
-  });
 
-  // ════════════════════════════════
-  // TESLA COILS — שני טסלה קויל ראשיים
-  // ════════════════════════════════
-  const _buildTeslaCoil=(x,z,scale=1)=>{
-    const h=scale;
-    // בסיס מתכת
-    _box(1.2*h,0.25,1.2*h,0x1a2020,0x020304,x,0.12,z);
-    _box(0.9*h,0.2,0.9*h,0x222828,0x030404,x,0.32,z);
-    // גוף ראשי — גליל
-    _cyl(0.22*h,0.28*h,2.5*h,12,0x1e2820,0x020403,x,1.5*h,z);
-    // גוף עליון
-    _cyl(0.2*h,0.22*h,1.0*h,12,0x242e26,0x030404,x,2.75*h+0.5*h,z);
-    // כיפה — טורוס
-    const torusM=new THREE.MeshLambertMaterial({color:0x2a3828,emissive:0x042008});
-    const torus=new THREE.Mesh(new THREE.TorusGeometry(0.55*h,0.18*h,8,20),torusM);
-    torus.position.set(x,3.5*h,z);_add(torus);
-    // כדור על הקצה — דולק
-    const ballM=new THREE.MeshLambertMaterial({color:0x80ffee,emissive:0x40ffcc});
-    const ball=new THREE.Mesh(new THREE.SphereGeometry(0.32*h,12,10),ballM);
-    ball.position.set(x,4.1*h,z);_addNS(ball);
-    // אור מהכדור
-    const tcL=new THREE.PointLight(0x00ffee,4.5*h,14*h);
-    tcL.position.set(x,4.2*h,z);_addNS(tcL);
-    _labFlickerLights.push({light:tcL,base:4.5*h,type:'arc',t:Math.random()*3,period:0.06+Math.random()*0.04});
-    // חישוקי סליל על הגוף
-    for(let r=0;r<8;r++){
-      const ring=new THREE.Mesh(new THREE.TorusGeometry(0.28*h,0.03*h,6,14),
-        new THREE.MeshLambertMaterial({color:0x334030,emissive:0x041008}));
-      ring.position.set(x,0.5*h+r*0.32*h,z);_addNS(ring);
-    }
-    // כבלים לאדמה
-    [[-0.7,0],[0.7,0],[0,-0.7],[0,0.7]].forEach(([ox,oz])=>{
-      _cyl(0.04,0.04,0.4,6,0x0a0e0c,0x010101,x+ox,0.2,z+oz,0.3);
-    });
-    return {light:tcL};
-  };
-  _buildTeslaCoil(-8,-10,1.1);  // שמאל-אחורי
-  _buildTeslaCoil(7,-8,0.95);   // ימין-אחורי
-
-  // ════════════════════════════════
-  // CLONE TANKS — מיכלי שיבוט
-  // ════════════════════════════════
-  const tankGlassM=new THREE.MeshLambertMaterial({color:0x003318,transparent:true,opacity:0.35,emissive:0x001a08});
-  const tankFluidM=new THREE.MeshLambertMaterial({color:0x004a20,transparent:true,opacity:0.55,emissive:0x003314});
-  const tankFrameM=new THREE.MeshLambertMaterial({color:0x1c2420,emissive:0x020302});
-  [[-4.5,-11],[0.5,-11],[5.5,-11]].forEach(([tx,tz],i)=>{
-    // בסיס
-    _box(1.5,0.25,1.5,0x1a1e1c,0x020201,tx,0.12,tz);
-    // גוף זכוכית
-    const tank=new THREE.Mesh(new THREE.CylinderGeometry(0.62,0.65,4.0,16),tankGlassM);
-    tank.position.set(tx,2.25,tz);_addNS(tank);
-    labObjects.push(tank);
-    // נוזל פנימי
-    const fluid=new THREE.Mesh(new THREE.CylinderGeometry(0.58,0.60,3.6,16),tankFluidM);
-    fluid.position.set(tx,2.05,tz);_addNS(fluid);
-    labObjects.push(fluid);
-    // מכסה עליון + תחתון
-    _cyl(0.68,0.68,0.2,16,0x1c2420,0x020302,tx,4.35,tz);
-    _cyl(0.68,0.68,0.2,16,0x1c2420,0x020302,tx,0.25,tz);
-    // בועות — גלגלים קטנים
-    for(let b=0;b<5;b++){
-      const bubble=new THREE.Mesh(new THREE.SphereGeometry(0.05+Math.random()*0.06,6,5),
-        new THREE.MeshLambertMaterial({color:0x80ffaa,transparent:true,opacity:0.6,emissive:0x004420}));
-      bubble.position.set(tx+(Math.random()-0.5)*0.8,0.4+b*0.7,tz+(Math.random()-0.5)*0.8);
-      _addNS(bubble);labObjects.push(bubble);
-    }
-    // מספר דגימה
-    _box(0.6,0.35,0.06,0x001a08,0x004420,tx,1.0,tz+0.67);
-    // צינורות חיבור לקיר
-    _cyl(0.06,0.06,1.6+i*0.4,6,0x161e18,0x010201,tx-0.3,3.5,tz+(i===1?0.6:0.55),0,0.4);
-    // אינדיקטור LED
-    const ledM=new THREE.MeshLambertMaterial({color:i===1?0xff2200:0x00ff44,emissive:i===1?0xcc0000:0x00cc22});
-    _addNS(new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6),ledM)).position.set(tx+0.7,0.9,tz+0.1);
-  });
-  // ״תמונה״ של רקס בתוך מיכל — סיבוב איטי
-  const reksInTankM=new THREE.MeshLambertMaterial({color:0x554420,emissive:0x221a08,transparent:true,opacity:0.8});
-  const reksInTank=new THREE.Mesh(new THREE.SphereGeometry(0.28,8,8),reksInTankM);
-  reksInTank.scale.set(0.8,1.1,0.7);
-  reksInTank.position.set(0.5,2.2,-11);
-  _addNS(reksInTank);labObjects.push(reksInTank);
-  G._labReksInTank=reksInTank; // לאנימציה ב-updLab
-
-  // ════════════════════════════════
-  // OPERATING TABLE — שולחן ניתוחים
-  // ════════════════════════════════
-  const opTableM=new THREE.MeshLambertMaterial({color:0x202e28,emissive:0x020402});
-  const steelM=new THREE.MeshLambertMaterial({color:0x2a3830,emissive:0x030503});
-  // שולחן
-  _box(3.2,0.12,1.4,0x2c3a30,0x030403,5,0.96,3);
-  // רגליים
-  [[5-1.4,3-0.6],[5+1.4,3-0.6],[5-1.4,3+0.6],[5+1.4,3+0.6]].forEach(([lx,lz])=>{
-    _box(0.1,0.96,0.1,0x1c2820,0x020302,lx,0.48,lz);
-  });
-  // ראש השולחן — כרית מקולקלת
-  _box(2.6,0.1,1.0,0x1a0a08,0x080200,5,1.08,3);
-  // רצועות עצירה
-  [[5-0.8,0.14,3],[5+0.8,0.14,3]].forEach(([bx,by,bz])=>{
-    _box(0.12,0.14,1.6,0x2a1800,0x0c0600,bx,by+1.04,bz);
-  });
-  _box(3.4,0.12,0.1,0x2a1800,0x0c0600,5,1.15,3-0.3);
-  _box(3.4,0.12,0.1,0x2a1800,0x0c0600,5,1.15,3+0.3);
-  // מנורת ניתוח — מעל השולחן
-  _box(0.08,3.0,0.08,0x1a2018,0x020301,5,7.5,3);
-  const lampArmM=new THREE.MeshLambertMaterial({color:0x222e22,emissive:0x030402});
-  const lampArm=new THREE.Mesh(new THREE.BoxGeometry(1.4,0.1,0.1),lampArmM);
-  lampArm.position.set(5,6.2,3);_add(lampArm);
-  const lampHead=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.55,0.25,10),steelM);
-  lampHead.position.set(5,5.9,3);_add(lampHead);
-  const lampBulb=new THREE.PointLight(0xffffff,3.0,6);
-  lampBulb.position.set(5,5.6,3);_addNS(lampBulb);
-  _labFlickerLights.push({light:lampBulb,base:3.0,type:'flicker',t:5,period:0.22});
-
-  // ════════════════════════════════
-  // MAIN MONITOR WALL — קיר מסכים
-  // ════════════════════════════════
-  const monitorFrameM=new THREE.MeshLambertMaterial({color:0x0f1810,emissive:0x010201});
-  const monGreenM=new THREE.MeshLambertMaterial({color:0x002200,emissive:0x00aa44});   // רקס — ירוק
-  const monRedM=new THREE.MeshLambertMaterial({color:0x1a0000,emissive:0x880000});     // שגיאה — אדום
-  const monOffM=new THREE.MeshLambertMaterial({color:0x050505,emissive:0x000000});     // כבוי
-  const monBlueM=new THREE.MeshLambertMaterial({color:0x001220,emissive:0x0033aa});    // data — כחול
-  // 8 מסכים בגודל שונה
-  const monData=[
-    [-11,6,-14.6,1.6,1.1,monGreenM],  // רקס 1
-    [-8.0,6,-14.6,1.6,1.1,monGreenM], // רקס 2
-    [-5.0,6,-14.6,1.6,1.1,monGreenM], // רקס 3
-    [-2.0,6,-14.6,1.6,1.1,monRedM],   // שגיאה
-    [1.0,6,-14.6,1.6,1.1,monBlueM],   // data
-    [4.0,6,-14.6,1.6,1.1,monBlueM],   // data
-    [7.0,5.2,-14.6,2.2,3.0,monGreenM],// מסך גדול — ראשי
-    [-9.5,2.8,-14.6,2.0,1.6,monOffM], // כבוי
-  ];
-  monData.forEach(([mx,my,mz,mw,mh,mat])=>{
-    _box(mw+0.2,mh+0.2,0.12,0x0a100c,0x010101,mx,my,mz);     // מסגרת
-    const sc=new THREE.Mesh(new THREE.BoxGeometry(mw,mh,0.1),mat);
-    sc.position.set(mx,my,mz+0.06);_add(sc);
-    if(mat!==monOffM){
-      const sl=new THREE.PointLight(mat===monGreenM?0x00ff44:mat===monRedM?0xff2200:0x0055ff,0.6,4);
-      sl.position.set(mx,my,mz+0.5);_addNS(sl);
-    }
-  });
-  // שרטוט-קיר ענק — מפת DNA/תהליך שיבוט
-  _box(5.5,3.5,0.08,0x000e06,0x002a10,-2,2.5,-14.62);
-
-  // ════════════════════════════════
-  // CONTROL PANEL — פאנל בקרה גדול
-  // ════════════════════════════════
-  // בסיס הפאנל
-  _box(8.0,0.2,1.5,0x181e18,0x020201,-4,0.9,11);
-  _box(8.0,2.5,0.12,0x141c14,0x020201,-4,2.15,11.74); // לוח אחורי
-  // מכשירים על הפאנל
-  for(let i=0;i<10;i++){
-    const knobM=new THREE.MeshLambertMaterial({color:0x1a2018,emissive:0x020201});
-    _cyl(0.1,0.1,0.14,8,0x202820,0x030302,-8.2+i*1.6,1.2,11.1,Math.PI/2);
-    // LED קטן
-    const ledCol=i%3===0?0xff2200:i%3===1?0x00ff44:0x0088ff;
-    _addNS(new THREE.Mesh(new THREE.SphereGeometry(0.055,6,6),
-      new THREE.MeshLambertMaterial({color:ledCol,emissive:ledCol}))).position.set(-8.2+i*1.6,1.35,11.12);
-  }
-  // שני מסכי CRT על הפאנל
-  [[-6.5,2.2,11.7],[-2.5,2.2,11.7]].forEach(([cx,cy,cz])=>{
-    _box(1.2,0.9,0.6,0x0e1610,0x010201,cx,cy,cz);    // גוף CRT
-    const crtM=new THREE.MeshLambertMaterial({color:0x001a06,emissive:0x009933});
-    _box(0.88,0.66,0.08,0x001a06,0x009933,cx,cy,cz+0.3);  // מסך
-    const crtL=new THREE.PointLight(0x00ff44,0.8,3);crtL.position.set(cx,cy,cz+0.8);_addNS(crtL);
-    _labFlickerLights.push({light:crtL,base:0.8,type:'crt',t:Math.random()*4,period:0.9+Math.random()*0.4});
-  });
-  // מד לחץ — gauge
-  _cyl(0.28,0.28,0.08,16,0x1a2018,0x020201,-1.5,1.55,11.72);
-  _cyl(0.22,0.22,0.05,16,0x0d1208,0x010101,-1.5,1.6,11.72);
-  // ידיות מנוף
-  [[-3.5,1.45,11.15],[-4.8,1.45,11.15]].forEach(([lx,ly,lz])=>{
-    _box(0.1,0.4,0.1,0x222820,0x030302,lx,ly,lz);
-    _box(0.22,0.08,0.22,0x1a2018,0x020201,lx,ly+0.24,lz);
-  });
-
-  // ════════════════════════════════
-  // CAGES — כלובים (קיר שמאל)
-  // ════════════════════════════════
-  const cageBarM=new THREE.MeshLambertMaterial({color:0x1c2c1c,emissive:0x020402});
-  const cageLockM=new THREE.MeshLambertMaterial({color:0x3a1010,emissive:0x120202});
-  [[-11,-5],[-11,-3],[-11,-1],[-11,1]].forEach(([cx,cz],i)=>{
-    // רצפת כלוב
+  // 4 כלובים — פשוט 5 קופסאות לכל כלוב (רצפה + 4 קירות)
+  [[-11,-5],[-11,-3],[-11,-1],[-11,1]].forEach(([cx,cz])=>{
     _box(2.4,0.1,2.4,0x141c14,0x010201,cx,0.05,cz);
-    // 4 קיר כלוב (עמודים)
-    for(let side=0;side<4;side++){
-      const isZ=side<2;
-      const off=side%2===0?-1.2:1.2;
-      for(let b=0;b<6;b++){
-        const barX=isZ?cx+(-2.4+b*0.88):cx+off;
-        const barZ=isZ?cz+off:cz+(-2.4+b*0.88);
-        if(isZ)_box(0.07,2.4,0.07,0x1c2c1c,0x020402,barX,1.2,cz+off);
-        else _box(0.07,2.4,0.07,0x1c2c1c,0x020402,cx+off,1.2,barZ);
-      }
-    }
-    // גג הכלוב
+    _box(2.4,2.4,0.08,0x1c2c1c,0x020402,cx,1.2,cz-1.2);
+    _box(2.4,2.4,0.08,0x1c2c1c,0x020402,cx,1.2,cz+1.2);
+    _box(0.08,2.4,2.4,0x1c2c1c,0x020402,cx-1.2,1.2,cz);
+    _box(0.08,2.4,2.4,0x1c2c1c,0x020402,cx+1.2,1.2,cz);
     _box(2.4,0.08,2.4,0x141c14,0x010201,cx,2.44,cz);
-    // אור אדום/ירוק מעל הכלוב
-    const clCol=i<2?0xff1100:0x001a00;
-    const clL=new THREE.PointLight(i<2?0xff2200:0x002200,i<2?2.0:0.5,5);
-    clL.position.set(cx,3.5,cz);_addNS(clL);
-    if(i<2)_labFlickerLights.push({light:clL,base:2.0,type:'pulse',t:i*0.7,period:0.8});
-    // מנעול
-    _box(0.22,0.28,0.1,0x3a1010,0x120202,cx+1.22,1.1,cz-1.18);
-    // כתמי שריטות על הרצפה
-    _box(0.08,0.02,1.2,0x2a0a0a,0x0a0000,cx-0.4,0.08,cz);
-    _box(0.08,0.02,0.8,0x2a0a0a,0x0a0000,cx+0.3,0.08,cz-0.2);
   });
 
-  // ════════════════════════════════
-  // PIPES — צינורות (Metal Gear style)
-  // ════════════════════════════════
-  const pipeM=new THREE.MeshLambertMaterial({color:0x1a2418,emissive:0x020301});
-  const pipeRustM=new THREE.MeshLambertMaterial({color:0x3a1808,emissive:0x0c0400});
-  const pipeGlowM=new THREE.MeshLambertMaterial({color:0x002a18,emissive:0x001a0c});
-  // צינורות אופקיים על קיר צפוני
-  [[-14,6,-10,28],[-14,5,-6,20],[-14,7.5,2,22]].forEach(([px,py,pz,len],i)=>{
-    const pm=i===1?pipeRustM:i===2?pipeGlowM:pipeM;
-    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,len,10),pm);
-    p.rotation.z=Math.PI/2;p.position.set(px+len/2,py,pz);_add(p);
-    // חיבורים
-    [0,len].forEach(ox=>{
-      _cyl(0.28,0.28,0.3,10,0x1a2018,0x020201,px+ox,py,pz,0,Math.PI/2);
-    });
-    if(i===2){
-      const pipeL=new THREE.PointLight(0x00ff88,0.7,6);pipeL.position.set(px+len/2,py+0.5,pz);_addNS(pipeL);
-    }
-  });
-  // צינורות אנכיים
-  [[-13,4,8],[12,4,-11],[-5,4,13],[10,4,10]].forEach(([px,py,pz])=>{
-    _cyl(0.18,0.18,8,10,0x161e14,0x020201,px,py,pz);
-    _cyl(0.26,0.26,0.25,10,0x1a2018,0x020301,px,5.5,pz);  // חיבור
-  });
-  // צינור ראשי אדום — קיר מערב
-  const bigPipe=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,28,12),pipeRustM);
-  bigPipe.rotation.z=Math.PI/2;bigPipe.position.set(0,5.5,-14.2);_add(bigPipe);
-  const warningStripe=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.5,12),
-    new THREE.MeshLambertMaterial({color:0x1a1200,emissive:0x0a0800}));
-  [-8,-4,0,4,8].forEach(ox=>{warningStripe.clone().position.set(ox,5.5,-14.2);_add(warningStripe.clone());});
-
-  // ════════════════════════════════
-  // GENERATOR — מחולל חשמל (פינה ימין)
-  // ════════════════════════════════
-  _box(3.0,2.2,2.0,0x161e14,0x020201,11,1.1,4);   // גוף
-  _box(3.0,0.15,2.0,0x202820,0x020301,11,2.3,4);  // גג
-  _cyl(0.7,0.7,1.6,16,0x0e1610,0x010201,11,1.8,4,Math.PI/2);  // גליל מנוע
-  _cyl(0.75,0.75,0.2,16,0x1a2018,0x020201,11,1.8,3.2,Math.PI/2);
-  _cyl(0.75,0.75,0.2,16,0x1a2018,0x020201,11,1.8,4.8,Math.PI/2);
-  // נורית ירוקה על המחולל
-  _addNS(new THREE.Mesh(new THREE.SphereGeometry(0.1,6,6),
-    new THREE.MeshLambertMaterial({color:0x00ff44,emissive:0x00cc22}))).position.set(12.3,2.4,4);
-  const genL=new THREE.PointLight(0x00ff44,1.5,5);genL.position.set(12,2.5,4);_addNS(genL);
-  _labFlickerLights.push({light:genL,base:1.5,type:'bubble',t:0,period:0.3});
-  // צינור פליטה
-  _cyl(0.2,0.2,2.5,8,0x1a1810,0x020201,12.5,4.5,3);
-
-  // ════════════════════════════════
-  // JAKOB'S LADDER — מעלה ניצוץ חשמלי
-  // ════════════════════════════════
-  const _buildJakob=(x,z)=>{
-    // שני עמודים
-    _box(0.1,4.5,0.1,0x222820,0x030402,x-0.3,2.25,z);
-    _box(0.1,4.5,0.1,0x222820,0x030402,x+0.3,2.25,z);
-    // בסיס
-    _box(0.8,0.15,0.4,0x1a2018,0x020201,x,0.07,z);
-    // מוט V-שייפד
-    for(let h=0;h<4;h++){
-      const spread=0.3+h*0.18;
-      _box(spread*2+0.1,0.04,0.04,0x00eecc,0x009977,x,0.5+h*0.9,z);
-    }
-    // אור קשת
-    const arcL=new THREE.PointLight(0x00ffee,2.5,5);arcL.position.set(x,3.5,z);_addNS(arcL);
-    _labFlickerLights.push({light:arcL,base:2.5,type:'arc',t:Math.random()*2,period:0.04+Math.random()*0.04});
-  };
-  _buildJakob(-11,-12);
-  _buildJakob(12,6);
-
-  // ════════════════════════════════
-  // WARNING SIGNS — שלטי אזהרה
-  // ════════════════════════════════
-  // BIOHAZARD
-  _box(1.4,1.4,0.06,0x1a0e00,0x0a0600,-5,3.5,-14.65);
-  _box(1.0,1.0,0.04,0x1a1000,0x0a0800,-5,3.5,-14.62);
-  // DANGER
-  _box(2.4,0.7,0.06,0x1a0000,0x0e0000,5,6.5,-14.65);
-  _box(2.0,0.45,0.04,0x1a0600,0x0e0300,5,6.5,-14.62);
-  // שלט מידע — מספרי ניסוי
-  _box(1.8,0.9,0.06,0x001008,0x000e04,-12,4.5,-14.65);
-  _box(1.4,0.65,0.04,0x001410,0x001208,-12,4.5,-14.62);
-  // פסי אזהרה על הרצפה ליד הכלובים
-  for(let s=0;s<5;s++){
-    _box(0.4,0.02,2.4,s%2===0?0x1a1200:0x0e0000,s%2===0?0x0a0800:0x060000,-13.2,0.03,-5+s*2);
-  }
-
-  // ════════════════════════════════
-  // MAIN TABLE — שולחן ראשי (ד"ר כץ)
-  // ════════════════════════════════
-  const tableM=new THREE.MeshLambertMaterial({color:0x1a2a1c,emissive:0x020302});
-  const metalM=new THREE.MeshLambertMaterial({color:0x252e24,emissive:0x030402});
-  const glassM=new THREE.MeshLambertMaterial({color:0x003318,transparent:true,opacity:0.55,emissive:0x001a08});
-  const mainT=new THREE.Mesh(new THREE.BoxGeometry(5.5,0.14,2.2),tableM);
-  mainT.position.set(0,0.97,-10.5);_add(mainT);
-  [[0-2.5,-10.5+1.0],[0-2.5,-10.5-1.0],[0+2.5,-10.5+1.0],[0+2.5,-10.5-1.0]].forEach(([lx,lz])=>{
+  // שולחן ראשי
+  _box(5.5,0.14,2.2,0x1a2a1c,0x020302,0,0.97,-10.5);
+  [[-2.5,-10.5+1.0],[-2.5,-10.5-1.0],[2.5,-10.5+1.0],[2.5,-10.5-1.0]].forEach(([lx,lz])=>{
     _box(0.1,0.97,0.1,0x1c2418,0x020301,lx,0.485,lz);
   });
-  // כלי מעבדה
-  [[-2,1.1,-10.5],[-0.5,1.1,-10.5],[1.2,1.1,-10.5],[2.2,1.1,-11.0]].forEach(([ix,iy,iz],i)=>{
-    const items=[
-      new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,0.45,8),glassM),
-      new THREE.Mesh(new THREE.BoxGeometry(0.7,0.45,0.5),metalM),
-      new THREE.Mesh(new THREE.BoxGeometry(0.28,0.45,0.28),new THREE.MeshLambertMaterial({color:0x6a0000,emissive:0x280000})),
-      new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.1,0.3,8),new THREE.MeshLambertMaterial({color:0x003318,transparent:true,opacity:0.7,emissive:0x001a08})),
-    ];
-    const obj=items[i]||items[0];
-    obj.position.set(ix,iy,iz);_add(obj);
-  });
-  // מסך מחשב ישן על השולחן
-  _box(0.85,0.65,0.65,0x0e1410,0x010201,-1.2,1.45,-10.6);  // גוף CRT
-  _box(0.72,0.52,0.08,0x001a06,0x008830,-1.2,1.48,-10.26);  // מסך
-  _addNS(new THREE.PointLight(0x00bb44,0.7,3)).position.set(-1.2,1.7,-9.8);
 
-  // ════════════════════════════════
-  // RECORDER — נגן הקלטות (mission 29)
-  // ════════════════════════════════
+  // מסך על השולחן
+  _box(0.85,0.65,0.65,0x0e1410,0x010201,-1.2,1.45,-10.6);
+  _box(0.72,0.52,0.08,0x001a06,0x008830,-1.2,1.48,-10.26);
+
+  // נגן הקלטות (mission 29)
   const recorder=new THREE.Mesh(new THREE.BoxGeometry(0.65,0.22,0.45),
     new THREE.MeshLambertMaterial({color:0x0a1408,emissive:0x000e04}));
   recorder.position.set(1.5,1.12,-10.5);_add(recorder);
-  // כפתורים
-  [[0.14,0],[0,0],[-0.14,0]].forEach(([ox,oz])=>{
-    _cyl(0.045,0.045,0.06,8,0x1a2818,0x020301,1.5+ox,1.25,-10.5+oz,Math.PI/2);
-  });
-  const recBtn=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.07,8),
-    new THREE.MeshLambertMaterial({color:0xff2200,emissive:0xaa0000}));
-  recBtn.position.set(1.5,1.27,-10.5);_add(recBtn);
-  // רצועת קלטת
-  _box(0.55,0.08,0.32,0x0d1508,0x010201,1.5,1.24,-10.48);
   G._labRecorder=recorder;
 
-  // ════════════════════════════════
-  // EXIT DOOR — דלת יציאה (ימין)
-  // ════════════════════════════════
+  // דלת יציאה
   _box(2.2,3.5,0.3,0x0c1410,0x010201,14.75,1.75,8);
-  // מסגרת
-  _box(2.6,0.18,0.32,0x1a2018,0x020201,14.75,3.6,8);
-  _box(0.18,3.5,0.32,0x1a2018,0x020201,14.75-1.1,1.75,8);
-  _box(0.18,3.5,0.32,0x1a2018,0x020201,14.75+1.1,1.75,8);
-  // שלט יציאה
   _box(1.5,0.45,0.1,0x001a08,0x008830,14.8,3.9,8);
-  const exitLight=new THREE.PointLight(0x00ff44,2.8,8);
-  exitLight.position.set(14,3.5,8);_addNS(exitLight);
-  _labFlickerLights.push({light:exitLight,base:2.8,type:'flicker',t:10,period:0.25});
 
-  // ════════════════════════════════
-  // INDICATOR — מצביע לנגן (mission 29)
-  // ════════════════════════════════
+  // indicator לנגן (mission 29)
   const recInd=new THREE.Mesh(new THREE.SphereGeometry(0.2,6,6),
     new THREE.MeshBasicMaterial({color:0xff4400}));
-  recInd.position.set(1.5,1.75,-10.5);_addNS(recInd);
+  recInd.position.set(1.5,1.75,-10.5);_add(recInd);
   G._labRecInd=recInd;
 }
 
 function enterLab(){
-  if(LAB._entering)return;  // guard כפילות
-  LAB._entering=true;
   G.paused=true;
   fadeOut(()=>{
     if(!labScene)buildLabScene();
+    LAB.inLab=true;
     LAB.playerX=0;LAB.playerZ=8;LAB.playerYaw=Math.PI;
     G.yaw=Math.PI;LAB.enterGrace=3.0;
     if(labCamera){
@@ -6446,8 +6027,6 @@ function enterLab(){
     PB.position.set(LAB.playerX,0,LAB.playerZ);
     document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
     showN('😨 ריח חריף. אור ירוק. מישהו עבד פה זמן רב.');
-    LAB.inLab=true;   // ← רק כאן, אחרי שהכל מוכן
-    LAB._entering=false;
     G.paused=false;
     fadeIn();
   });
