@@ -4096,6 +4096,9 @@ function setMission(idx){
 }
 
 function updateMissionHUD(){
+  if(G._gameComplete){
+    const mp=document.getElementById('mp');if(mp)mp.style.display='none';return;
+  }
   let txt=MISSIONS[G.mission].txt;
   // Update counters dynamically
   if(G.mission===1)txt=txt.replace('0/3',`${G.foodEaten}/3`);
@@ -6628,6 +6631,18 @@ function updLab(dt){
   nz=Math.max(-14,Math.min(13,nz));
   LAB.playerX=nx;LAB.playerZ=nz;
   PB.position.set(LAB.playerX,0,LAB.playerZ);
+  // ── אנימציית הליכה — זהה ל-updPlayer ──
+  const _labMoving=Math.abs(inputX)>.01||Math.abs(inputZ)>.01;
+  if(_labMoving){
+    walkT+=dt*8;
+    dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y=_by+Math.abs(Math.sin(walkT))*.09;}
+    if(dogTail)dogTail.rotation.z=Math.sin(walkT*2)*.35;
+  } else {
+    dogLegs.forEach(lg=>{lg.node.rotation.x*=.85;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y+=(_by-dogModel.position.y)*.15;}
+    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
+  }
   // השחקן מסתובב לכיוון התנועה — בדיוק כמו updPlayer
   if(Math.abs(inputX)>.01||Math.abs(inputZ)>.01)
     PB.rotation.y=Math.atan2(-inputX,-inputZ);
@@ -7298,7 +7313,11 @@ function _startBigFire(){
       G.paused=true;
       setTimeout(()=>showCut('ch6_fire',()=>{
         setTimeout(()=>showCut('ch6_ending',()=>{
-          G.paused=false;showN('🏁 פרק ו׳ הסתיים!');
+          G.paused=false;
+          G._gameComplete=true;
+          const mp=document.getElementById('mp');if(mp)mp.style.display='none';
+          const nav=document.getElementById('nav');if(nav)nav.style.display='none';
+          showN('🏁 פרק ו׳ הסתיים!');
         }),1500);
       }),600);
     }
