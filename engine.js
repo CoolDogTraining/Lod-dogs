@@ -4076,7 +4076,10 @@ function mAtk(){
       sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     }
   } else {doAtk();}
-}function mE(){if(G.near)doInteract();}function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
+}function mE(){
+  if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
+  if(G.near)doInteract();
+}function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
 // ════════════════════════════════════════════════
 // MISSION ENGINE — strict gates
@@ -6371,6 +6374,33 @@ function buildLabScene(){
   }
 
   // ════════════════════════════════
+  // CAGE ROOM DOORWAY — כניסה לחדר הכלובים
+  // ════════════════════════════════
+  // עמודי מסגרת — שני צידי הפתח
+  _box(0.28,4.8,0.28,0x2a1a1a,0x0a0303,-9,2.4,-3.2);   // עמוד צפוני
+  _box(0.28,4.8,0.28,0x2a1a1a,0x0a0303,-9,2.4, 1.2);   // עמוד דרומי
+  // משקוף עליון
+  _box(0.3,0.28,4.72,0x2a1a1a,0x0a0303,-9,4.85,-1.0);
+  // קיר מעל הפתח
+  _box(0.22,1.1,4.6,0x0e1210,0x010101,-9,5.6,-1.0);
+  // שלט "⚠ כלובים" — אדום
+  const cageDoorSign=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.5,2.6),
+    new THREE.MeshLambertMaterial({color:0x4a0000,emissive:0x220000}));
+  cageDoorSign.position.set(-9,5.55,-1.0);_addNS(cageDoorSign);
+  // תאורה אדומה מהבהבת מעל הפתח
+  const cageDoorL=new THREE.PointLight(0xff1100,4.0,12);
+  cageDoorL.position.set(-9,5.2,-1.0);_addNS(cageDoorL);
+  _labFlickerLights.push({light:cageDoorL,base:4.0,type:'pulse',t:0,period:0.65});
+  // נורית אדומה גלויה
+  const cageDoorBulb=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,8),
+    new THREE.MeshBasicMaterial({color:0xff2200}));
+  cageDoorBulb.position.set(-9,4.55,-1.0);_addNS(cageDoorBulb);
+  // פסי אזהרה צהוב-שחור על הרצפה בפתח
+  for(let s=0;s<6;s++){
+    _box(1.6,0.025,0.4,s%2===0?0x2a1a00:0x0e0e0e,s%2===0?0x140c00:0x000000,-9.8,0.02,-3.0+s*0.72);
+  }
+
+  // ════════════════════════════════
   // MAIN TABLE — שולחן ראשי (ד"ר כץ)
   // ════════════════════════════════
   const tableM=new THREE.MeshLambertMaterial({color:0x1a2a1c,emissive:0x020302});
@@ -6643,8 +6673,8 @@ function updLab(dt){
         G.paused=true;
         setTimeout(()=>showCut('ch6_shadow_fight',()=>{
           G.paused=false;
-          exitLab();
-          setTimeout(()=>setMission(31),600);
+          setMission(31);
+          showN('🚪 מצא את הדלת הצדדית ביציאה מימין');
         }),600);
       }
     }
@@ -7034,6 +7064,7 @@ function _applyWorldState(m){
 // CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
 // ════════════════════════════════════════════════
 function updCh6(dt){
+  const _hudIP=document.getElementById('ip');
   if(G.mission<25||G.mission>32)return;
   if(!PB||LAB.inLab)return;
   const px=PB.position.x,pz=PB.position.z;
@@ -7084,25 +7115,75 @@ function updCh6(dt){
 
   // ── mission 32: שריפה — מחוץ לבניין ──
   if(G.mission===32&&!G._ch6FireDone){
-    if(d2(px,pz,25,-125)<7){
-      G._ch6FireDone=true;
-      G.paused=true;
-      // אפקט שריפה
-      for(let i=0;i<40;i++){
-        const col=Math.random()<.5?0xff4400:0xff8800;
-        const m=_pfxGet(col);
-        m.position.set(25+(Math.random()-.5)*8,0,-125+(Math.random()-.5)*8);
-        scene.add(m);
-        G.particles.push({mesh:m,vx:(Math.random()-.5)*3,vy:2+Math.random()*5,vz:(Math.random()-.5)*3,life:1.5+Math.random()*2});
+    const nearFire=d2(px,pz,25,-125)<9;
+    if(nearFire){
+      G._fireNearActive=true;
+      if(_hudIP)_hudIP.textContent='🔥 E — הצת את המעבדה';
+      if(_hudIP)_hudIP.style.display='block';
+      if(G.keys['KeyE']||G._fireKeyMob){
+        G.keys['KeyE']=false;G._fireKeyMob=false;
+        G._ch6FireDone=true;
+        if(G._labDoorInd)G._labDoorInd.visible=false;
+        // ── אנימציית אש משודרגת ──
+        const BX=25,BZ=-125;
+        // אור אש ראשי — מהבהב
+        const fireLight=new THREE.PointLight(0xff4400,0,50);
+        fireLight.position.set(BX,6,BZ);scene.add(fireLight);
+        // כדור זוהר כתום על הבניין
+        const fireBall=new THREE.Mesh(
+          new THREE.SphereGeometry(5,12,8),
+          new THREE.MeshBasicMaterial({color:0xff3300,transparent:true,opacity:0.0,depthWrite:false})
+        );
+        fireBall.position.set(BX,5,BZ);scene.add(fireBall);
+        let _fireT=0;
+        const _fireInterval=setInterval(()=>{
+          _fireT+=0.08;
+          // עדכן אור ואש
+          fireLight.intensity=6+Math.random()*10;
+          fireBall.material.opacity=Math.min(0.22,_fireT*0.04+Math.random()*0.08);
+          fireBall.scale.setScalar(1+_fireT*0.08);
+          // גזרי אש
+          for(let i=0;i<12;i++){
+            const col=[0xff8800,0xff4400,0xffcc00,0xff2200][Math.floor(Math.random()*4)];
+            const m=_pfxGet(col);
+            m.position.set(BX+(Math.random()-.5)*14,0.5+Math.random()*3,BZ+(Math.random()-.5)*10);
+            scene.add(m);
+            G.particles.push({mesh:m,vx:(Math.random()-.5)*2.5,vy:4+Math.random()*8,vz:(Math.random()-.5)*2,life:1+Math.random()*1.8});
+          }
+          // עשן
+          for(let i=0;i<4;i++){
+            const sm=_pfxGet(0x1a1a1a);
+            sm.material=sm.material.clone();sm.material.opacity=0.35+Math.random()*0.3;
+            sm.scale.setScalar(1.2+Math.random()*0.8);
+            sm.position.set(BX+(Math.random()-.5)*10,5+Math.random()*4,BZ+(Math.random()-.5)*8);
+            scene.add(sm);
+            G.particles.push({mesh:sm,vx:(Math.random()-.5)*1.5,vy:1.5+Math.random()*3,vz:(Math.random()-.5)*1.5,life:2.5+Math.random()*2});
+          }
+          // ניצוצות
+          if(Math.random()<0.4){
+            for(let i=0;i<5;i++){
+              const sp=_pfxGet(0xffee00);sp.scale.setScalar(0.4);
+              const ang=Math.random()*Math.PI*2;
+              sp.position.set(BX+(Math.random()-.5)*8,2+Math.random()*6,BZ+(Math.random()-.5)*6);
+              scene.add(sp);
+              G.particles.push({mesh:sp,vx:Math.cos(ang)*4,vy:3+Math.random()*5,vz:Math.sin(ang)*4,life:0.4+Math.random()*0.5});
+            }
+          }
+          if(_fireT>3.5){
+            clearInterval(_fireInterval);
+            G.paused=true;
+            setTimeout(()=>showCut('ch6_fire',()=>{
+              setTimeout(()=>showCut('ch6_ending',()=>{
+                G.paused=false;
+                showN('🏁 פרק ו׳ הסתיים!');
+              }),1500);
+            }),400);
+          }
+        },80);
       }
-      // כבה את אינדיקטור הכניסה
-      if(G._labDoorInd)G._labDoorInd.visible=false;
-      setTimeout(()=>showCut('ch6_fire',()=>{
-        setTimeout(()=>showCut('ch6_ending',()=>{
-          G.paused=false;
-          showN('🏁 פרק ו׳ הסתיים!');
-        }),1500);
-      }),400);
+    } else {
+      G._fireNearActive=false;
+      if(_hudIP&&_hudIP.textContent.includes('הצת')){_hudIP.textContent='';_hudIP.style.display='none';}
     }
   }
 }
