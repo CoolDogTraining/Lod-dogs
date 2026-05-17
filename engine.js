@@ -7069,6 +7069,58 @@ function _applyWorldState(m){
 // ════════════════════════════════════════════════
 // FIRE — שריפה ראליסטית + קריסה (mission 32)
 // ════════════════════════════════════════════════
+function _buildBurntRuins(BX,BZ){
+  const charM=()=>new THREE.MeshLambertMaterial({color:0x1a0d05,emissive:0x0a0300});
+  const ashM=()=>new THREE.MeshLambertMaterial({color:0x2a2218,emissive:0x060400});
+  const emberM=new THREE.MeshBasicMaterial({color:0xff3300});
+  const add=(geo,mat,x,y,z,rx,ry,rz)=>{
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(x,y,z);
+    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+    m.receiveShadow=true;m.castShadow=true;scene.add(m);
+    return m;
+  };
+  // רצפה שטוחה — בסיס שרוף
+  add(new THREE.BoxGeometry(19,0.35,15),charM(),BX,0.17,BZ);
+  // שכבת אפר על הרצפה
+  add(new THREE.BoxGeometry(17,0.12,13),ashM(),BX,0.36,BZ);
+
+  // שרידי קירות — לוחות שטוחים על הקרקע בזוויות שונות
+  add(new THREE.BoxGeometry(14,0.4,2.5),charM(),BX-1,0.5,BZ+3,   0.08, 0.2,0);
+  add(new THREE.BoxGeometry(10,0.4,2.0),charM(),BX+3,0.45,BZ-4,  0.05,-0.3,0);
+  add(new THREE.BoxGeometry(7, 0.4,1.8),charM(),BX-5,0.4, BZ-2,  0.06, 0.5,0);
+  add(new THREE.BoxGeometry(5, 0.4,1.5),charM(),BX+2,0.42,BZ+1,  0.04,-0.15,0);
+
+  // קטעי קיר עומדים חלקית — גבוהים קצת
+  add(new THREE.BoxGeometry(0.3,1.8,4),charM(),BX-8,0.9,BZ+1,     0,0.1, 0.18);
+  add(new THREE.BoxGeometry(0.3,1.2,3),charM(),BX+7,0.6,BZ-2,     0,-0.2,-0.14);
+  add(new THREE.BoxGeometry(3,1.4,0.3),charM(),BX-2,0.7,BZ-6,    0.15, 0,  0.08);
+
+  // חתיכות בטון קטנות מפוזרות
+  [[4,1],[-3,3],[7,-1],[-6,-3],[2,-5],[-4,5],[6,4],[-1,-4],[5,-4],[-7,2]].forEach(([ox,oz],i)=>{
+    const s=0.4+Math.random()*1.2;
+    add(new THREE.BoxGeometry(s,s*.4,s*0.9+(i%3)*0.3),charM(),
+      BX+ox+(Math.random()-.5),s*.2,BZ+oz+(Math.random()-.5),
+      (Math.random()-.5)*.3,(Math.random()-.5)*Math.PI,(Math.random()-.5)*.25);
+  });
+
+  // גחלים — נקודות כתומות זוהרות
+  [[1,2],[-3,-1],[4,-3],[-5,3],[2,4],[-1,-3],[3,1],[-4,-4]].forEach(([ox,oz])=>{
+    const e=new THREE.Mesh(new THREE.SphereGeometry(0.08+Math.random()*0.1,5,4),emberM);
+    e.position.set(BX+ox,0.4+Math.random()*0.3,BZ+oz);
+    scene.add(e);
+  });
+  // אור גחלים עמום — ממשיך לדגדג
+  const emberLight=new THREE.PointLight(0xff2200,1.5,18);
+  emberLight.position.set(BX,1.5,BZ);scene.add(emberLight);
+  let _eT=0;
+  const _eInt=setInterval(()=>{
+    _eT+=0.1;
+    emberLight.intensity=0.8+Math.sin(_eT*2.3)*0.4+Math.random()*0.5;
+    if(_eT>60)clearInterval(_eInt); // כבה אחרי דקה
+  },80);
+}
+
 function _startBigFire(){
   const BX=25,BZ=-125;
   const bld=G._labBldMeshes||{};
@@ -7234,10 +7286,15 @@ function _startBigFire(){
       }
     }
 
-    // ── סוף — cutscene ──
+    // ── סוף — שאריות שרופות + cutscene ──
     if(_t>=10.5&&!_done){
       _done=true;clearInterval(fireInterval);
       fireLights.forEach(l=>scene.remove(l));scene.remove(smokeL);
+      innerGlow.visible=false;outerGlow.visible=false;
+      // הסתר את שברי הבניין המפורקים
+      Object.values(bld).forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;});
+      // ── שאריות שרופות סטטיות ──
+      _buildBurntRuins(BX,BZ);
       G.paused=true;
       setTimeout(()=>showCut('ch6_fire',()=>{
         setTimeout(()=>showCut('ch6_ending',()=>{
