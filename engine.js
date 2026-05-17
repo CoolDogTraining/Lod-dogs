@@ -3007,9 +3007,12 @@ function updCityHall(dt){
   }
   // קומה אחת — Y=0 תמיד
   PB.position.set(CITY.playerX,0,CITY.playerZ);
-  // אנימציה — זהה למעבדה
+  // אנימציה
   if(hasInput){
-    PB.rotation.y=Math.atan2(-inputX/il,-inputZ/il);
+    const moveAngle=Math.atan2(inputX/il,inputZ/il);
+    let diff=(-moveAngle+Math.PI)-PB.rotation.y;
+    while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    PB.rotation.y+=diff*Math.min(1,12*dt);
     walkT+=dt*8;
     dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});
     if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y=_by+Math.abs(Math.sin(walkT))*.09;}
@@ -3019,14 +3022,10 @@ function updCityHall(dt){
     if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y=_by+(dogModel.position.y-_by)*.85;}
     if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
   }
-  // מצלמה — זהה למעבדה ולעולם הרגיל (עם pitch מלא)
-  if(cityCamera){
-    const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
-    const _px=CITY.playerX,_py=1.1*sz,_pz=CITY.playerZ;
-    _vCamTarget.set(_px+Math.sin(G.yaw)*cd,_py+ch,_pz+Math.cos(G.yaw)*cd);
-    cityCamera.position.lerp(_vCamTarget,.1);
-    cityCamera.lookAt(_px,_py+.7,_pz);
-  }
+  // מצלמה
+  _vCamTarget.set(CITY.playerX+Math.sin(G.yaw)*7,5,CITY.playerZ+Math.cos(G.yaw)*7);
+  cityCamera.position.lerp(_vCamTarget,.1);
+  cityCamera.lookAt(CITY.playerX,1.2,CITY.playerZ);
   // שם
   document.getElementById('tb').textContent='🏛️ עיריית לוד';
   // יציאה דרום
@@ -3790,18 +3789,24 @@ function updVilla(dt){
     if(!bz)VILLA.playerZ=Math.max(-43,Math.min(46,nz));
   }
 
-  // מצלמה — זהה למעבדה ולעולם הרגיל (עם pitch מלא)
-  if(mosqueCamera){
-    const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
-    const _px=VILLA.playerX,_py=1.1*sz,_pz=VILLA.playerZ;
-    _vCamTarget.set(_px+Math.sin(G.yaw)*cd,_py+ch,_pz+Math.cos(G.yaw)*cd);
-    mosqueCamera.position.lerp(_vCamTarget,.1);
-    mosqueCamera.lookAt(_px,_py+.7,_pz);
-  }
+  // מצלמה מאחורי השחקן — בדיוק כמו העולם הרגיל
+  _vCamTarget.set(
+    VILLA.playerX+Math.sin(G.yaw)*7,
+    4,
+    VILLA.playerZ+Math.cos(G.yaw)*7
+  );
+  mosqueCamera.position.lerp(_vCamTarget,.12);
+  mosqueCamera.lookAt(VILLA.playerX,1,VILLA.playerZ);
 
   PB.position.set(VILLA.playerX,0,VILLA.playerZ);
-  // כיוון הכלב — זהה למעבדה ולעולם הרגיל
-  if(hasInput) PB.rotation.y=Math.atan2(-inputX/iln,-inputZ/iln);
+  // כיוון הכלב — לכיוון ההליכה (ריאליסטי), לא לכיוון המצלמה
+  if(hasInput){
+    const moveAngle=Math.atan2(inputX/iln,inputZ/iln);
+    const targetY=-moveAngle+Math.PI;
+    let diff=targetY-PB.rotation.y;
+    while(diff>Math.PI)diff-=Math.PI*2;while(diff<-Math.PI)diff+=Math.PI*2;
+    PB.rotation.y+=diff*Math.min(1,12*dt);
+  }
   if(hasInput){
     villaWalkT+=dt*8;
     dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(villaWalkT+lg.ph)*.38;});
@@ -7074,6 +7079,63 @@ function _applyWorldState(m){
 }
 
 // ════════════════════════════════════════════════
+// ZIPPO LIGHTER — מצית זיפו (פריט עלילתי, mission 32)
+// ════════════════════════════════════════════════
+let _zippoLighterMesh=null;
+
+function _buildZippoLighter(){
+  if(!scene||_zippoLighterMesh)return;
+  const g=new THREE.Group();
+  // גוף — מתכת כסופה
+  const bodyM=new THREE.MeshLambertMaterial({color:0xc8c8c8,emissive:0x111111});
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(.12,.18,.07),bodyM));
+  // כיסוי עליון
+  const lid=new THREE.Mesh(new THREE.BoxGeometry(.12,.08,.07),new THREE.MeshLambertMaterial({color:0xaaaaaa,emissive:0x0a0a0a}));
+  lid.position.y=.13;g.add(lid);
+  // להבה
+  const flame=new THREE.Mesh(new THREE.ConeGeometry(.025,.06,5),
+    new THREE.MeshLambertMaterial({color:0xff8800,emissive:0xff4400,transparent:true,opacity:.85}));
+  flame.position.y=.21;g.add(flame);
+  // אור להבה
+  const flameLight=new THREE.PointLight(0xff6600,1.8,2.5);
+  flameLight.position.y=.22;g.add(flameLight);
+  g._flame=flame;g._flameLight=flameLight;
+  // חריטת Z על הגוף
+  const eng=new THREE.Mesh(new THREE.BoxGeometry(.02,.06,.01),
+    new THREE.MeshLambertMaterial({color:0x555555,emissive:0x050505}));
+  eng.position.set(.03,0,.04);g.add(eng);
+  g.scale.setScalar(1.8);
+  g.visible=false;
+  scene.add(g);
+  _zippoLighterMesh=g;
+}
+
+function _updateZippoLighter(){
+  if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
+  const t=Date.now()*.001;
+  // ביד ימין של הכלב — קצת קדימה וצידה
+  const off=new THREE.Vector3(.38,.58,.45);
+  off.applyQuaternion(PB.quaternion);
+  _zippoLighterMesh.position.copy(PB.position).add(off);
+  _zippoLighterMesh.rotation.y=PB.rotation.y;
+  // אנימציית להבה
+  if(_zippoLighterMesh._flame){
+    _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
+    _zippoLighterMesh._flame.position.y=.21+Math.sin(t*11)*.006;
+  }
+  if(_zippoLighterMesh._flameLight)
+    _zippoLighterMesh._flameLight.intensity=1.5+Math.sin(t*15)*.6;
+}
+
+function _showZippoLighter(){
+  if(!_zippoLighterMesh)_buildZippoLighter();
+  if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
+}
+function _hideZippoLighter(){
+  if(_zippoLighterMesh)_zippoLighterMesh.visible=false;
+}
+
+// ════════════════════════════════════════════════
 // CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
 // ════════════════════════════════════════════════
 // ════════════════════════════════════════════════
@@ -7372,23 +7434,36 @@ function updCh6(dt){
   // ── mission 32: שריפה — מחוץ לבניין ──
   if(G.mission===32&&!G._ch6FireDone){
     const nearFire=d2(px,pz,25,-125)<9;
+    // עדכן מצית זיפו — מוצג מעל הקרקע ליד הכלב
+    if(typeof _updateZippoLighter==='function')_updateZippoLighter(dt);
     if(nearFire){
       G._fireNearActive=true;
-      if(_hudIP)_hudIP.textContent='🔥 E — הצת את המעבדה';
-      if(_hudIP)_hudIP.style.display='block';
-      if(G.keys['KeyE']||G._fireKeyMob){
+      // הדגש: רק זיפו יכול להצית
+      const isZippo=G.dog==='zippo';
+      if(_hudIP){
+        _hudIP.textContent=isZippo?'🔥 E — הצת את המעבדה (מצית זיפו)':'🔥 רק זיפו יכול להצית כאן!';
+        _hudIP.style.display='block';
+      }
+      if((G.keys['KeyE']||G._fireKeyMob)&&isZippo){
         G.keys['KeyE']=false;G._fireKeyMob=false;
         G._ch6FireDone=true;
         if(G._labDoorInd)G._labDoorInd.visible=false;
         if(_hudIP){_hudIP.textContent='';_hudIP.style.display='none';}
         G._fireNearActive=false;
+        // הסתר מצית ואז שרוף
+        if(typeof _hideZippoLighter==='function')_hideZippoLighter();
         _startBigFire();
+      } else if((G.keys['KeyE']||G._fireKeyMob)&&!isZippo){
+        G.keys['KeyE']=false;G._fireKeyMob=false;
+        showN('🔥 רק זיפו יכול להצית — החלף לזיפו!');
       }
     } else {
       G._fireNearActive=false;
       if(_hudIP&&_hudIP.textContent.includes('הצת')){_hudIP.textContent='';_hudIP.style.display='none';}
     }
   }
+  // הסתר מצית אם לא במשימה 32
+  if(G.mission!==32&&typeof _hideZippoLighter==='function')_hideZippoLighter();
 }
 
 

@@ -52,7 +52,7 @@ const CUTS={
   ch6_recording:{ch:'פרק ו׳ — הקלטה',ti:'🎙️ קול ד"ר כץ',tx:'זיפו מצא את הנגן על השולחן.\n\nלחץ על PLAY.\n\nקול יבש, מדוד:\n"דגימה 7. כלב זכר, בוגר, ניסיון קרב גבוה. מקור: לוד.\nתהליך העתקה — הצלחה חלקית. זיכרונות עד 14 חודשים לאחור.\nחסר: זיכרונות חצי השנה האחרונה. ההתנהגות יציבה.\nמוכן לשחרור ניסיוני."\n\nהקלטה נגמרה.\n\nאיש לא דיבר דקה שלמה.'},
   ch6_shadow_fight:{ch:'פרק ו׳ — הצל',ti:'⚔️ הוא לא יצא בשקט',tx:'הצל עמד בין הכלובים.\n\nקולין: "אתה לא רקס. רקס מת. מישהו עשה אותך."\nהצל: "אני זוכר את לוד. אני זוכר את בלה. אני זוכר—"\nמומו: "אתה זוכר את מה שהוא זכר. זה לא אותו דבר."\n\nהצל הסתכל עליה. משהו ברצף שלו השתבש.\n\nואז הוא תקף.'},
   ch6_factory:{ch:'פרק ו׳ — המפעל',ti:'😱 יש עוד',tx:'מעבר לדלת האחורית — חדר גדול יותר.\n\nעוד כלובים. עשרה. חמישה עשר.\nחלקם עם עיניים פקוחות. חלקם לא.\n\nפרצופים שהכנופייה הכירה — כלבים שנעלמו מלוד בחודשים האחרונים.\n\nמומו: "כמה זמן זה קיים?"\nזיפו: "הריח... חצי שנה לפחות."\n\nקולין: "הוציאו את כולם מבחוץ."'},
-  ch6_fire:{ch:'פרק ו׳ — שריפה',ti:'🔥 לוד לא תדע',tx:'הם הוציאו את כל הכלובים.\n\nהכלבים שבחוץ התפזרו לכל הכיוונים — בלי לפרוס, בלי לעצור.\nחופשיים בפעם הראשונה.\n\nקולין עמד בכניסה.\n\nהוא הפיל את הנגן על הרצפה.\nהלך לארון הכימיקלים. פתח אותו.\n\nזיפו: "קולין."\nקולין: "לכו. אני מסיים."'},
+  ch6_fire:{ch:'פרק ו׳ — שריפה',ti:'🔥 המצית של זיפו',tx:'הם הוציאו את כל הכלובים.\n\nהכלבים שבחוץ התפזרו לכל הכיוונים — בלי לפרוס, בלי לעצור.\nחופשיים בפעם הראשונה.\n\nזיפו עמד בכניסה. המצית שלו נפתחה בקליק אחד.\n\nקולין: "זיפו."\nזיפו: "אני יודע."\nקולין: "לא צריך שאתה—"\nזיפו: "כן. צריך אותי."\n\nהוא זרק את המצית פנימה.\nצעד אחד אחורה. שניים.\n\nהאש הייתה מיידית.'},
   ch6_ending:{ch:'פרק ו׳ — אחרי',ti:'🌆 שתיקה',tx:'הם ישבו על הגשר. הבניין בוער מאחוריהם.\n\nזיפו: "מה נגיד לאנשים?"\nקולין: "שהיה שריפה בבניין נטוש."\nמומו: "זה הכל?"\nקולין: "זה הכל."\n\nמומו הסתכלה על המים.\n\nמומו: "הוא חשב שהוא רקס. עד הסוף."\nזיפו: "אני יודע."\nמומו: "זה עצוב."\nקולין: "כן."\n\nאיש לא הוסיף כלום.\nלוד המשיכה לנוע מתחתם.\n\n🏁 פרק ו׳ — הסתיים.'},
 };
 let cutCb=null;
@@ -105,6 +105,25 @@ function openDlg(av,sp,tx,choices){
   });
 }
 function closeDlg(){G.dlgOpen=false;document.getElementById('mm-wrap').style.display='block';document.getElementById('dlg-ov').style.display='none';}
+// ════════════════════════════════════════════════
+// AUTO DOG SWITCH — החלפת כלב אוטומטית לפי עלילה
+// ════════════════════════════════════════════════
+// forceDog(id, reason) — מחליף לכלב id עם הודעה קצרה
+// id: 'colin' | 'zippo' | 'momo'
+function forceDog(id, reason){
+  if(!G||!G.dogs||G.dog===id)return;
+  const prev=G.dogs[G.dog].name;
+  G.dog=id;
+  const el=document.getElementById('hdn');
+  if(el)el.textContent=G.dogs[id].name;
+  if(typeof buildPlayer==='function'&&typeof PB!=='undefined'&&PB){
+    const pos=PB.position.clone();
+    buildPlayer();
+    PB.position.copy(pos);
+  }
+  if(reason)showN(`🔄 עוברים ל${G.dogs[id].name} — ${reason}`);
+}
+
 // ════════════════════════════════════════════════
 // CONSTANTS
 // ════════════════════════════════════════════════
@@ -251,12 +270,8 @@ const MISSIONS=[
    hint:'דלת המסגד — מרכז העיר',
    targetFn:()=>({x:-51,z:-100}),
    unlock:()=>{
-     // אם השחקן מומו — עובר לקולין (מומו נחטפה)
-     if(G.dog==='momo'){
-       G.dog='colin';
-       document.getElementById('hdn').textContent=G.dogs['colin'].name;
-       const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
-     }
+     // זיפו הוא זה שמתגנב — מומו נחטפה, קולין ממתין בחוץ
+     forceDog('zippo','זיפו מתגנב למסגד — קולין ממתין בחוץ');
      // אור ירוק על הדלת (נוסף רק עכשיו)
      const doorGlow=new THREE.Mesh(new THREE.SphereGeometry(.5,8,8),new THREE.MeshLambertMaterial({color:0x00ff88,emissive:0x00aa44}));
      doorGlow.position.set(-51,7,-100);scene.add(doorGlow);
@@ -273,15 +288,13 @@ const MISSIONS=[
    unlock:()=>{
      showCut('ch2_stealth',()=>enterMosque());
    }},
-  // 10 — קרב ברונו (במסגד)
+  // 10 — קרב ברונו (במסגד) — קולין נכנס
   {txt:'🔟 קולין: הכנע את ברונו! ⚔️',
    hint:'ברונו — חצר המסגד',
    targetFn:()=>G.gateMarker||{x:-51,z:-100},
    unlock:()=>{
      showCut('ch2_boss',()=>{
-       G.dog='colin';
-       document.getElementById('hdn').textContent=G.dogs['colin'].name;
-       const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
+       forceDog('colin','קולין נלחם בברונו');
        enterMosque();
      });
    }},
@@ -293,6 +306,8 @@ const MISSIONS=[
   {txt:'1️⃣2️⃣ מצאו את בלה ליד השוק 🔍',hint:'בלה — השוק',
    targetFn:()=>({x:-60,z:60}),
    unlock:()=>{
+     // קולין מגיב לגופת בלה — הוא מוביל את פרק ג׳
+     forceDog('colin','קולין מוביל את חקירת בלה');
      // בלה מוסרת מהמפה — נשכבת על הצד (נפלה)
      const bella=G.npcs.find(n=>n.name==='בלה הזקנה');
      if(bella){
@@ -330,20 +345,15 @@ const MISSIONS=[
    targetFn:()=>({x:40,z:0}),
    unlock:()=>{
      showCut('fishka_reveal',()=>{
-       // פישקה כבר רצה (הופעלה מיד בסיום bella_dead)
-       // fallback — אם נטען משמירה ישירות למשימה 13
-       if(!G._fishkaEnemy){
-         G.dog='zippo';
-         document.getElementById('hdn').textContent=G.dogs['zippo'].name;
-         const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
-         spawnFishkaHostile();
-       }
+       forceDog('zippo','זיפו — הכי מהיר לרדוף אחרי פישקה');
+       if(!G._fishkaEnemy)spawnFishkaHostile();
      });
    }},
   // 14 — כלבי ביטחון מגיעים + פישקה נלכדת
   {txt:'1️⃣4️⃣ פרק ד׳: הגיעו לעיריית לוד 🏛️',hint:'עיריית לוד — דלת כניסה',
    targetFn:()=>({x:80,z:-68}),
    unlock:()=>{
+     forceDog('colin','קולין מוביל את פשיטת העירייה');
      showCut('fishka_caught',()=>{
        showCut('guards_arrive',()=>{
          spawnGuardDogs();
@@ -452,7 +462,8 @@ const MISSIONS=[
    hint:'בסיס הכנופייה',
    targetFn:()=>({x:0,z:60}),
    unlock:()=>{
-     // הקאטסינים יקרו ב-updCh6 כשמגיעים לבסיס
+     // קולין מוביל את חקירת פרק ו׳
+     forceDog('colin','קולין חוקר את מסתורין הצל');
    }},
 
   // 26 — קולין רואה את הצל בשוק
@@ -465,7 +476,10 @@ const MISSIONS=[
   {txt:'2️⃣7️⃣ עקבו אחריו — הוא הלך לשכונת הגשר ⚡',
    hint:'בניין נטוש — שכונת הגשר',
    targetFn:()=>({x:25,z:-125}),
-   unlock:()=>{}},
+   unlock:()=>{
+     // לפי הקאטסין — זיפו הוא זה שעקב אחרי הצל
+     forceDog('zippo','זיפו עוקב אחרי הצל');
+   }},
 
   // 28 — כניסה למעבדה (גילוי ראשוני)
   {txt:'2️⃣8️⃣ כנסו לבניין הנטוש 🔬',
@@ -495,6 +509,14 @@ const MISSIONS=[
   {txt:'3️⃣2️⃣ הצתו את המקום 🔥',
    hint:'ליד הבניין הנטוש',
    targetFn:()=>({x:25,z:-125}),
-   unlock:()=>showN('🔥 קולין: "לכו. אני מסיים."')},
+   unlock:()=>{
+     // זיפו הוא זה ששורף — עם המצית שלו
+     forceDog('zippo','זיפו שורף את המעבדה עם המצית שלו 🔥');
+     // הצג מצית זיפו — פריט עלילתי
+     setTimeout(()=>{
+       _showZippoLighter();
+       showN('🔥 זיפו הוציא את המצית שלו.\nקולין: "לכו. אני מסיים."\nזיפו: "לא. אני מסיים."');
+     },600);
+   }},
 ];
 
