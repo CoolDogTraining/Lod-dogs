@@ -194,7 +194,7 @@ function updDayNight(dt){
     // לילה→שחר
     const f=t/0.21;
     sky.copy(_SKY_NIGHT).lerp(_SKY_DAWN,f*f); // slow at night, faster near dawn
-    _ambLight&&(_ambLight.intensity=0.05+f*0.12,_ambLight.color.setHex(0x223366));
+    _ambLight&&(_ambLight.intensity=0.14+f*0.12,_ambLight.color.setHex(0x334477));
     _sunLight&&(_sunLight.intensity=0.02+f*0.04);
     _hemiLight&&(_hemiLight.intensity=0.06+f*0.06);
   } else if(t<0.29){
@@ -228,9 +228,9 @@ function updDayNight(dt){
     // סגול→לילה
     const f=(t-0.81)/0.19;
     sky.copy(_SKY_DUSK2).lerp(_SKY_NIGHT,f);
-    _ambLight&&(_ambLight.intensity=Math.max(0.05,0.14-f*0.09),_ambLight.color.setHex(0x223366));
+    _ambLight&&(_ambLight.intensity=Math.max(0.20,0.14-f*0.09),_ambLight.color.setHex(0x334477));
     _sunLight&&(_sunLight.intensity=0);
-    _hemiLight&&(_hemiLight.intensity=Math.max(0.05,0.06));
+    _hemiLight&&(_hemiLight.intensity=Math.max(0.16,0.06));
   }
 
   if(scene) scene.background.copy(sky);
