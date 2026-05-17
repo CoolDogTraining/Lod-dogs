@@ -4107,15 +4107,7 @@ function updateMissionHUD(){
   document.getElementById('mtx').textContent=txt;
 }
 
-function updateNavArrow(){
-  const nav=document.getElementById('nav');
-  if(G.mission>=23&&(G.mission<25||G.mission>32)){nav.style.display='none';return;}
-  if(G.mission===7){nav.style.display='none';return;}
-  const m=MISSIONS[G.mission];
-  if(!m||!m.hint){nav.style.display='none';return;}
-  document.getElementById('nav-lbl').textContent=m.hint;
-  nav.style.display='flex';
-}
+let _navTargetWorld=null;
 
 function nearestOf(arr,getFn){
   const px=PB.position.x,pz=PB.position.z;
@@ -4128,56 +4120,76 @@ function nearestOf(arr,getFn){
   return best;
 }
 
+function updateNavArrow(){
+  // מופעל מ-updHUD — רק מפעיל/מכבה
+  const el=document.getElementById('nav-edge-arrow');
+  if(!el)return;
+  const m=MISSIONS[G.mission];
+  const hide=!m||!m.hint||(G.mission>=23&&(G.mission<25||G.mission>32))||G.mission===7;
+  if(hide){el.style.display='none';return;}
+  el.style.display='flex';
+}
+
 function updateNavDirection(){
   if(G.mission===7)return;
   const m=MISSIONS[G.mission];if(!m)return;
+  const el=document.getElementById('nav-edge-arrow');
+  const lbl=document.getElementById('nav-edge-lbl');
+  if(!el||!lbl)return;
   const px=PB.position.x,pz=PB.position.z;
   let tx,tz;
-  if(G.mission===0){
-    tx=-60;tz=60;
-  } else if(G.mission===1){
-    const p=nearestOf(G.pickups.filter(p=>!p.done),o=>({x:o.x,z:o.z}));
-    if(!p)return;tx=p.x;tz=p.z;
-  } else if(G.mission===2){
-    const t=nearestOf(G.terrs.filter(t=>!t.cap),o=>({x:o.x,z:o.z}));
-    if(!t)return;tx=t.x;tz=t.z;
-  } else if(G.mission===3){
-    const e=nearestOf(G.enemies.filter(e=>e.hp>0&&e.mesh.visible),o=>({x:o.mesh.position.x,z:o.mesh.position.z}));
-    if(!e)return;tx=e.x;tz=e.z;
-  } else if(G.mission===4){
-    const n=nearestOf(G.npcs.filter(n=>n.type==='recruit'&&!n.recruited),o=>({x:o.x,z:o.z}));
-    if(!n)return;tx=n.x;tz=n.z;
-  } else if(G.mission===5){
-    const t=nearestOf(G.terrs.filter(t=>!t.cap),o=>({x:o.x,z:o.z}));
-    if(!t)return;tx=t.x;tz=t.z;
-  } else if(G.mission===11||G.mission===12){
-    tx=-60;tz=60; // מקום בלה
-  } else if(G.mission===13){
-    tx=G._fishkaEnemy?G._fishkaEnemy.x:35;tz=G._fishkaEnemy?G._fishkaEnemy.z:35;
-  } else if(G.mission>=14&&G.mission<=19){
-    tx=80;tz=-80; // עיריית לוד
-  } else if(G.mission===25){
-    tx=105;tz=25;   // בסיס כלבי לוד
-  } else if(G.mission===26){
-    tx=-60;tz=60; // שוק לוד
-  } else if(G.mission===27){
-    tx=25;tz=-125; // בניין נטוש / מעבדה
-  } else if(G.mission===28||G.mission===29||G.mission===30||G.mission===31||G.mission===32){
-    tx=25;tz=-125;  // בניין נטוש / מעבדה
-    if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){
-      tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;
-    }
+  if(G.mission===0){tx=-60;tz=60;}
+  else if(G.mission===1){const p=nearestOf(G.pickups.filter(p=>!p.done),o=>({x:o.x,z:o.z}));if(!p)return;tx=p.x;tz=p.z;}
+  else if(G.mission===2){const t=nearestOf(G.terrs.filter(t=>!t.cap),o=>({x:o.x,z:o.z}));if(!t)return;tx=t.x;tz=t.z;}
+  else if(G.mission===3){const e=nearestOf(G.enemies.filter(e=>e.hp>0&&e.mesh.visible),o=>({x:o.mesh.position.x,z:o.mesh.position.z}));if(!e)return;tx=e.x;tz=e.z;}
+  else if(G.mission===4){const n=nearestOf(G.npcs.filter(n=>n.type==='recruit'&&!n.recruited),o=>({x:o.x,z:o.z}));if(!n)return;tx=n.x;tz=n.z;}
+  else if(G.mission===5){const t=nearestOf(G.terrs.filter(t=>!t.cap),o=>({x:o.x,z:o.z}));if(!t)return;tx=t.x;tz=t.z;}
+  else if(G.mission===11||G.mission===12){tx=-60;tz=60;}
+  else if(G.mission===13){tx=G._fishkaEnemy?G._fishkaEnemy.x:35;tz=G._fishkaEnemy?G._fishkaEnemy.z:35;}
+  else if(G.mission>=14&&G.mission<=19){tx=80;tz=-80;}
+  else if(G.mission===25){tx=105;tz=25;}
+  else if(G.mission===26){tx=-60;tz=60;}
+  else if(G.mission===27){tx=25;tz=-125;}
+  else if(G.mission>=28&&G.mission<=32){
+    tx=25;tz=-125;
+    if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;}
   } else {
     const tgt=m.targetFn();if(!tgt)return;
     tx=(tgt.mesh?tgt.mesh.position.x:tgt.x)||0;
     tz=(tgt.mesh?tgt.mesh.position.z:tgt.z)||0;
   }
-  const dx=tx-px, dz=tz-pz;
-  const worldAngle=Math.atan2(dx,dz);
-  const screenAngle=worldAngle-G.yaw+Math.PI;
-  document.getElementById('nav-arrow').style.transform=`rotate(${screenAngle}rad)`;
+  const dx=tx-px,dz=tz-pz;
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
-  document.getElementById('nav-lbl').textContent=`${m.hint} (${dist}מ׳)`;
+  // כיוון בעולם → זווית על המסך
+  const worldAngle=Math.atan2(dx,dz);
+  const camAngle=worldAngle-G.yaw; // זווית יחסית למצלמה
+  // מיקום החץ על שפת המסך
+  const W=window.innerWidth,H=window.innerHeight;
+  const margin=36;
+  const cx=W/2,cy=H/2;
+  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים
+  // מוצאים את נקודת החיתוך עם שפת המסך
+  const scaleX=(rx===0)?Infinity:(rx>0?(cx-margin):(cx-margin))/Math.abs(rx);
+  const scaleY=(ry===0)?Infinity:(ry>0?(cy-margin):(cy-margin))/Math.abs(ry);
+  const scale=Math.min(
+    Math.abs(rx)>0?(cx-margin)/Math.abs(rx):Infinity,
+    Math.abs(ry)>0?(cy-margin)/Math.abs(ry):Infinity
+  );
+  const ex=Math.round(cx+rx*scale);
+  const ey=Math.round(cy+ry*scale);
+  // סיבוב החץ המשולש
+  const arrowAngle=Math.atan2(rx,ry); // ← כיוון החץ
+  el.style.left=ex+'px';
+  el.style.top=ey+'px';
+  el.style.transform=`translate(-50%,-50%)`;
+  el.style.display='flex';
+  // סובבים רק את המשולש
+  const icon=document.getElementById('nav-edge-icon');
+  if(icon)icon.style.transform=`rotate(${arrowAngle}rad)`;
+  // תווית מרחק
+  lbl.textContent=dist<50?`📍 ${m.hint}`:`${m.hint} ${dist}מ׳`;
+  // נקודת יעד על המיניmap
+  _navTargetWorld={x:tx,z:tz};
 }
 
 // ════════════════════════════════════════════════
@@ -4278,15 +4290,12 @@ function updPlayer(dt){
   G.vz+=(targetVZ-G.vz)*Math.min(1,accel*dt);
   const moving=Math.abs(G.vx)+Math.abs(G.vz)>.05;
   if(dogModel&&dogModel._bipedalMode){
-    // מצב דו-רגלי — שומרים על הסיבוב, רק הרגליים האחוריות מתנדנדות קצת
-    if(moving){
-      PB.rotation.y=Math.atan2(-G.vx,-G.vz);
-      walkT+=dt*4;
-      if(dogLegs[2])dogLegs[2].node.rotation.x=Math.PI/2+Math.sin(walkT)*.1;
-      if(dogLegs[3])dogLegs[3].node.rotation.x=Math.PI/2+Math.sin(walkT+Math.PI)*.1;
-      dog.stam=Math.max(0,dog.stam-5*dt);
-    }
-    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.003)*.3;
+    // מצב עמידה — שומרים על הסיבוב, רק הרגליים האחוריות מתנדנדות קצת
+    if(moving){PB.rotation.y=Math.atan2(-G.vx,-G.vz);walkT+=dt*3;
+      dogLegs[2].node.rotation.x=Math.sin(walkT)*.12;
+      dogLegs[3].node.rotation.x=Math.sin(walkT+Math.PI)*.12;
+      dog.stam=Math.max(0,dog.stam-5*dt);}
+    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.003)*.25;
   } else if(moving){
     PB.rotation.y=Math.atan2(-G.vx,-G.vz);
     walkT+=dt*8;
@@ -5024,6 +5033,20 @@ function drawMM(){
     if(c.done)return;
     ctx.beginPath();ctx.arc(cx+c.x*sc,cy+c.z*sc,3,0,Math.PI*2);ctx.fill();
   });
+  // נקודת יעד GPS — כוכב/X צהוב מהבהב
+  if(_navTargetWorld){
+    const tx2=cx+_navTargetWorld.x*sc,tz2=cy+_navTargetWorld.z*sc;
+    const blink=Math.sin(Date.now()*.006)>.0;
+    if(blink){
+      ctx.strokeStyle='#f5c518';ctx.lineWidth=1.5;
+      const r=5;
+      // X
+      ctx.beginPath();ctx.moveTo(tx2-r,tz2-r);ctx.lineTo(tx2+r,tz2+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(tx2+r,tz2-r);ctx.lineTo(tx2-r,tz2+r);ctx.stroke();
+      // עיגול
+      ctx.beginPath();ctx.arc(tx2,tz2,r+2,0,Math.PI*2);ctx.stroke();
+    }
+  }
   // שחקן — עם חץ כיוון
   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx+px*sc,cy+pz*sc,5,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle='#f5c518';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx+px*sc,cy+pz*sc);ctx.lineTo(cx+px*sc-Math.sin(G.yaw)*8,cy+pz*sc-Math.cos(G.yaw)*8);ctx.stroke();
@@ -7096,34 +7119,32 @@ let _zippoLighterMesh=null;
 function _buildZippoLighter(){
   if(!scene||_zippoLighterMesh)return;
   const g=new THREE.Group();
-  // חומרים — זהב-ברונזה מחורטת כמו המצית האמיתית
   const goldM=new THREE.MeshStandardMaterial({color:0xc8960a,roughness:.28,metalness:.82,emissive:new THREE.Color(0x2a1a00)});
   const goldD=new THREE.MeshStandardMaterial({color:0x9a7000,roughness:.35,metalness:.75,emissive:new THREE.Color(0x150c00)});
-  const engM =new THREE.MeshStandardMaterial({color:0x7a5500,roughness:.55,metalness:.5, emissive:new THREE.Color(0x080400)});
-  // גוף ראשי
+  const engM =new THREE.MeshStandardMaterial({color:0x7a5500,roughness:.55,metalness:.5,emissive:new THREE.Color(0x080400)});
+  // גוף
   g.add(new THREE.Mesh(new THREE.BoxGeometry(.12,.18,.07),goldM));
-  // פסים דקורטיביים בצדדים
+  // פסים דקורטיביים
   [-1,1].forEach(sx=>{const s=new THREE.Mesh(new THREE.BoxGeometry(.002,.14,.072),engM);s.position.set(sx*.06,0,0);g.add(s);});
   // חריטת "19"
   const n1=new THREE.Mesh(new THREE.BoxGeometry(.008,.08,.008),engM);n1.position.set(-.022,-.01,.036);g.add(n1);
   const n9c=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.008,10),engM);n9c.rotation.x=Math.PI/2;n9c.position.set(.022,.02,.036);g.add(n9c);
   const n9t=new THREE.Mesh(new THREE.BoxGeometry(.008,.036,.008),engM);n9t.position.set(.032,-.012,.036);g.add(n9t);
-  // כיסוי עליון פתוח
+  // כיסוי פתוח
   const lidG=new THREE.Group();lidG.position.y=.13;lidG.rotation.x=-.6;g.add(lidG);
   lidG.add(new THREE.Mesh(new THREE.BoxGeometry(.12,.09,.07),goldD));
   // ציר
   const hinge=new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,.074,6),goldD);hinge.rotation.z=Math.PI/2;hinge.position.set(0,.133,-.034);g.add(hinge);
-  // גלגלת הצתה
+  // גלגלת
   const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.02,8),goldD);wheel.rotation.z=Math.PI/2;wheel.position.set(.01,.19,0);g.add(wheel);
   // להבה פנימית
   const flame=new THREE.Mesh(new THREE.ConeGeometry(.022,.065,6),
     new THREE.MeshStandardMaterial({color:0xff9900,emissive:new THREE.Color(0xff5500),transparent:true,opacity:.9,roughness:.1}));
   flame.position.y=.24;g.add(flame);
-  // הילת להבה חיצונית
+  // הילה חיצונית
   const outerFlame=new THREE.Mesh(new THREE.ConeGeometry(.038,.055,6),
     new THREE.MeshStandardMaterial({color:0xffcc00,emissive:new THREE.Color(0xff8800),transparent:true,opacity:.35,roughness:.1}));
   outerFlame.position.y=.235;g.add(outerFlame);
-  // אור להבה
   const flameLight=new THREE.PointLight(0xff7700,2.2,4);flameLight.position.y=.28;g.add(flameLight);
   g._flame=flame;g._outerFlame=outerFlame;g._flameLight=flameLight;
   g.scale.setScalar(1.8);
@@ -7135,18 +7156,12 @@ function _buildZippoLighter(){
 function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
-  let off;
-  if(dogModel&&dogModel._bipedalMode){
-    // זיפו עומד זקוף — המצית קדימה ולמעלה (גובה הידיים)
-    off=new THREE.Vector3(0, 1.1, 0.6);
-  } else {
-    // תנוחה רגילה — ביד ימין של הכלב
-    off=new THREE.Vector3(.38,.58,.45);
-  }
+  // מצית בידיים הקדמיות — קדימה ולמעלה יותר בתנוחת עמידה
+  const bm=dogModel&&dogModel._bipedalMode;
+  const off=bm?new THREE.Vector3(0,1.55,.7):new THREE.Vector3(.38,.58,.45);
   off.applyQuaternion(PB.quaternion);
   _zippoLighterMesh.position.copy(PB.position).add(off);
   _zippoLighterMesh.rotation.y=PB.rotation.y;
-  // אנימציית להבה
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
     _zippoLighterMesh._flame.position.y=.21+Math.sin(t*11)*.006;
@@ -7162,28 +7177,29 @@ function _updateZippoLighter(){
 function _showZippoLighter(){
   if(!_zippoLighterMesh)_buildZippoLighter();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
-  if(dogModel&&G.dog==='zippo'){
+  if(dogModel&&G.dog==='zippo'&&dogLegs.length>=4){
     dogModel._bipedalMode=true;
-    // הראש נמצא ב-+Z, אז סיבוב +90° על X מעמיד זקוף עם הראש למעלה
+    // ── הגוף שכוב על Z, ראש ב+Z. סיבוב +90° על X: ראש→למעלה, רגליים קדמיות→למעלה, אחוריות→למטה
     dogModel.rotation.x=Math.PI/2;
-    PB.position.y=(PB.position.y||0)+0.7;
-    dogModel._bipedalYOffset=0.7;
-    // אחרי סיבוב +90°: ציר Z הפך ל-Y. הרגליים הקדמיות (z=+0.36) עכשיו למעלה.
-    // מסובבים אותן חזרה למטה-קדימה כ"ידיים"
-    if(dogLegs[0]){dogLegs[0].node.rotation.x=-Math.PI/2+0.6;}
-    if(dogLegs[1]){dogLegs[1].node.rotation.x=-Math.PI/2+0.6;}
-    // הרגליים האחוריות (z=-0.34) עכשיו למטה — מיישרים אותן
-    if(dogLegs[2]){dogLegs[2].node.rotation.x=Math.PI/2-0.2;}
-    if(dogLegs[3]){dogLegs[3].node.rotation.x=Math.PI/2-0.2;}
+    // גוף אורך 1.1 על Z → אחרי סיבוב גובה 1.1. מרכז גוף ב-y=0.5 → הרגליים התחתונות
+    // מגיעות לy≈0.5-0.55-0.32-0.31 ≈ -0.68 ממרכז הגוף.
+    // צריך PB.y כך שהרגליים יגעו ב-0: PB.y = 0.68+0.5 = ~1.15 מעל הקרקע
+    dogModel._bipedalYOffset=0.85;
+    PB.position.y+=dogModel._bipedalYOffset;
+    // רגליים קדמיות [0,1] (z=+0.36 → עכשיו y=+גבוה) — מורידים קדימה כידיים
+    dogLegs[0].node.rotation.x=1.1;
+    dogLegs[1].node.rotation.x=1.1;
+    // רגליים אחוריות [2,3] (z=-0.34 → עכשיו y=מטה) — ישרות
+    dogLegs[2].node.rotation.x=0;
+    dogLegs[3].node.rotation.x=0;
   }
 }
 function _hideZippoLighter(){
   if(_zippoLighterMesh)_zippoLighterMesh.visible=false;
-  // חזרה לתנוחת 4 רגליים
   if(dogModel&&dogModel._bipedalMode){
     dogModel._bipedalMode=false;
     dogModel.rotation.x=0;
-    if(PB)PB.position.y=Math.max(0,(PB.position.y||0)-(dogModel._bipedalYOffset||0.7));
+    PB.position.y=Math.max(0,PB.position.y-(dogModel._bipedalYOffset||0.85));
     dogModel._bipedalYOffset=0;
     dogLegs.forEach(lg=>{lg.node.rotation.x=0;});
   }
