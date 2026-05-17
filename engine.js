@@ -7162,21 +7162,19 @@ function _updateZippoLighter(){
 function _showZippoLighter(){
   if(!_zippoLighterMesh)_buildZippoLighter();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
-  // זיפו עומד על שתיים — מסובבים את dogModel כולו זקוף
   if(dogModel&&G.dog==='zippo'){
     dogModel._bipedalMode=true;
-    // הגוף של זיפו שכוב על ציר Z — סיבוב X של -90° מעמיד אותו זקוף
-    dogModel.rotation.x=-Math.PI/2;
-    // מרימים את PB כדי שהרגליים יגעו בקרקע
-    // הגוף גבוה ~1.1 יחידות לאורכו, הרגליים ~0.7 — מרכז הגוף צריך להיות גבוה ~0.85
+    // הראש נמצא ב-+Z, אז סיבוב +90° על X מעמיד זקוף עם הראש למעלה
+    dogModel.rotation.x=Math.PI/2;
     PB.position.y=(PB.position.y||0)+0.7;
     dogModel._bipedalYOffset=0.7;
-    // הרגליים האחוריות [2,3] (z=-0.34 → הופכות ל-y למטה) — ישרות מטה
-    if(dogLegs[2]){dogLegs[2].node.rotation.x=Math.PI/2;}
-    if(dogLegs[3]){dogLegs[3].node.rotation.x=Math.PI/2;}
-    // הרגליים הקדמיות [0,1] (z=+0.36 → הופכות ל-y למעלה) — מורדות קדימה כ"ידיים"
-    if(dogLegs[0]){dogLegs[0].node.rotation.x=-Math.PI/2+0.5;}
-    if(dogLegs[1]){dogLegs[1].node.rotation.x=-Math.PI/2+0.5;}
+    // אחרי סיבוב +90°: ציר Z הפך ל-Y. הרגליים הקדמיות (z=+0.36) עכשיו למעלה.
+    // מסובבים אותן חזרה למטה-קדימה כ"ידיים"
+    if(dogLegs[0]){dogLegs[0].node.rotation.x=-Math.PI/2+0.6;}
+    if(dogLegs[1]){dogLegs[1].node.rotation.x=-Math.PI/2+0.6;}
+    // הרגליים האחוריות (z=-0.34) עכשיו למטה — מיישרים אותן
+    if(dogLegs[2]){dogLegs[2].node.rotation.x=Math.PI/2-0.2;}
+    if(dogLegs[3]){dogLegs[3].node.rotation.x=Math.PI/2-0.2;}
   }
 }
 function _hideZippoLighter(){
