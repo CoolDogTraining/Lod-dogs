@@ -5931,6 +5931,9 @@ function buildLabExterior(){
   );
   ind.position.set(x,4.2,z+7);scene.add(ind);
   G._labDoorInd=ind;
+  // שמור refs לאנימציית שריפה/קריסה
+  G._labBldMeshes={body,top,roof,roof2,pipe,sign};
+  G._labBldMat={wall:wallM,roof:roofM};
   G._labBuilt=true;
 }
 
@@ -7063,6 +7066,188 @@ function _applyWorldState(m){
 // ════════════════════════════════════════════════
 // CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// FIRE — שריפה ראליסטית + קריסה (mission 32)
+// ════════════════════════════════════════════════
+function _startBigFire(){
+  const BX=25,BZ=-125;
+  const bld=G._labBldMeshes||{};
+  const mat=G._labBldMat||{};
+
+  // ── 4 אורות אש ממוקמים סביב הבניין ──
+  const fireLights=[];
+  [[BX,5,BZ+5],[BX-5,4,BZ-3],[BX+5,4,BZ-3],[BX,9,BZ-1]].forEach(([lx,ly,lz])=>{
+    const l=new THREE.PointLight(0xff4400,0,45);l.position.set(lx,ly,lz);scene.add(l);fireLights.push(l);
+  });
+  // אור עשן — לבנבן גבוה
+  const smokeL=new THREE.PointLight(0x887766,0,30);smokeL.position.set(BX,18,BZ);scene.add(smokeL);
+
+  // ── כדורי זוהר ──
+  const mkGlow=(r,col,op)=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,depthWrite:false}));
+    scene.add(m);return m;
+  };
+  const innerGlow=mkGlow(8,0xff4400,0);   // זוהר כתום פנימי
+  const outerGlow=mkGlow(16,0xff1100,0);  // זוהר אדום חיצוני
+  innerGlow.position.set(BX,4,BZ);
+  outerGlow.position.set(BX,5,BZ);
+
+  // ── מצב התחלתי של הבניין ──
+  const origBodyY=bld.body?bld.body.position.y:3;
+  const origTopX=bld.top?bld.top.position.x:23;
+  const origTopY=bld.top?bld.top.position.y:7.5;
+  const origTopZ=bld.top?bld.top.position.z:-126;
+  const origRoofY=bld.roof?bld.roof.position.y:6.2;
+  const origRoof2Y=bld.roof2?bld.roof2.position.y:9.2;
+  const origPipeY=bld.pipe?bld.pipe.position.y:8;
+  const origSignY=bld.sign?bld.sign.position.y:5.2;
+
+  // ── צבעי חרוך ──
+  const charWall=new THREE.Color(0x1a0800);
+  const origWall=new THREE.Color(0x4a3e2e);
+  const origRoofC=new THREE.Color(0x2a2218);
+  const charRoof=new THREE.Color(0x0e0500);
+
+  let _t=0,_colT=0,_done=false;
+
+  const fireInterval=setInterval(()=>{
+    if(G._fireIntervalDead){clearInterval(fireInterval);return;}
+    _t+=0.08;
+    const norm=Math.min(1,_t/8);  // 0→1 במהלך 8 שניות ראשונות
+
+    // ── חרוך הבניין בהדרגה ──
+    if(mat.wall){
+      mat.wall.color.copy(origWall).lerp(charWall,norm);
+      mat.wall.emissive.setRGB(norm*0.35,norm*0.06,0);
+    }
+    if(mat.roof){
+      mat.roof.color.copy(origRoofC).lerp(charRoof,norm);
+      mat.roof.emissive.setRGB(norm*0.25,norm*0.04,0);
+    }
+
+    // ── אורות מהבהבים ──
+    const baseI=Math.min(12,_t*1.8);
+    fireLights.forEach((l,i)=>{
+      l.intensity=baseI*(0.5+Math.random()*1.0)*(1+Math.sin(_t*7+i*1.3)*0.3);
+      if(_t>5)l.color.setHSL(0.05+Math.random()*0.06,1,0.5); // גוון מתחלף
+    });
+    smokeL.intensity=Math.min(3,_t*0.4);
+
+    // ── כדורי זוהר ──
+    innerGlow.material.opacity=Math.min(0.35,norm*0.4+Math.random()*0.05);
+    outerGlow.material.opacity=Math.min(0.18,norm*0.2+Math.random()*0.03);
+    innerGlow.scale.setScalar(0.8+norm*0.6+Math.random()*0.1);
+    outerGlow.scale.setScalar(0.7+norm*0.5);
+
+    // ── להבות — עולות מכל הבניין ──
+    const fCount=Math.min(25,Math.floor(_t*3));
+    for(let i=0;i<fCount;i++){
+      const col=[0xff8800,0xff4400,0xffcc00,0xff2200,0xff6600,0xffaa00][Math.floor(Math.random()*6)];
+      const m=_pfxGet(col);
+      const fromRoof=Math.random()<norm*0.6;
+      const baseH=fromRoof?(6+Math.random()*4):(0.3+Math.random()*2);
+      m.position.set(BX+(Math.random()-.5)*18,baseH,BZ+(Math.random()-.5)*14);
+      m.scale.setScalar(0.5+Math.random()*1.8*norm);
+      scene.add(m);
+      G.particles.push({mesh:m,vx:(Math.random()-.5)*3,vy:5+Math.random()*10,vz:(Math.random()-.5)*2.5,life:0.8+Math.random()*2.2});
+    }
+    // ── עשן כבד ──
+    const sCount=Math.min(12,Math.floor(_t*1.5));
+    for(let i=0;i<sCount;i++){
+      const bright=Math.round(0x0a+norm*0x16);
+      const sm=_pfxGet((bright<<16)|(bright<<8)|bright);
+      sm.material=sm.material.clone();sm.material.opacity=0.45+Math.random()*0.3;
+      sm.scale.setScalar(2.5+Math.random()*3*norm);
+      sm.position.set(BX+(Math.random()-.5)*14,8+Math.random()*8,BZ+(Math.random()-.5)*10);
+      scene.add(sm);
+      G.particles.push({mesh:sm,vx:(Math.random()-.5)*2,vy:1.5+Math.random()*3,vz:(Math.random()-.5)*2,life:3+Math.random()*4});
+    }
+    // ── ניצוצות (גוברים עם הזמן) ──
+    if(Math.random()<Math.min(0.95,norm*1.2)){
+      const sc=Math.floor(3+norm*10);
+      for(let i=0;i<sc;i++){
+        const sp=_pfxGet(Math.random()<0.5?0xffee00:0xff8800);sp.scale.setScalar(0.25+Math.random()*0.4);
+        const ang=Math.random()*Math.PI*2,spd=3+Math.random()*6;
+        sp.position.set(BX+(Math.random()-.5)*16,1+Math.random()*8,BZ+(Math.random()-.5)*12);
+        scene.add(sp);
+        G.particles.push({mesh:sp,vx:Math.cos(ang)*spd,vy:3+Math.random()*8,vz:Math.sin(ang)*spd,life:0.25+Math.random()*0.6});
+      }
+    }
+
+    // ── רעידה (t=8-9) ──
+    if(_t>8&&_t<9&&bld.body){
+      bld.body.position.x=BX+(Math.random()-.5)*0.5;
+      bld.body.position.z=BZ+(Math.random()-.5)*0.4;
+      if(bld.top){bld.top.position.x=origTopX+(Math.random()-.5)*0.6;}
+      // רעש קריסה — פצצות גדולות לפני
+      if(Math.random()<0.25){
+        for(let i=0;i<20;i++){
+          const dc=[0x4a3e2e,0x3a2a1a,0x8a6a00][i%3];
+          const dm=_pfxGet(dc);dm.scale.setScalar(0.8+Math.random()*2);
+          dm.position.set(BX+(Math.random()-.5)*22,6+Math.random()*6,BZ+(Math.random()-.5)*16);
+          scene.add(dm);
+          G.particles.push({mesh:dm,vx:(Math.random()-.5)*10,vy:3+Math.random()*8,vz:(Math.random()-.5)*10,life:1.2+Math.random()});
+        }
+      }
+    }
+
+    // ── קריסה (t=9→10.5) ──
+    if(_t>=9&&bld.body){
+      _colT+=0.08;
+      const ct=Math.min(1,_colT/1.8);
+      const ease=ct*ct*(3-2*ct); // smoothstep
+      // גוף ראשי שוקע
+      bld.body.position.x=BX;
+      bld.body.position.z=BZ;
+      bld.body.position.y=origBodyY-ease*10;
+      bld.body.rotation.z=ease*0.08;
+      // גג ראשי קורס
+      if(bld.roof){bld.roof.position.y=origRoofY-ease*11;bld.roof.rotation.z=ease*0.06;}
+      // קומה שנייה נופלת הצידה
+      if(bld.top){
+        bld.top.rotation.z=ease*1.4;
+        bld.top.position.x=origTopX+ease*7;
+        bld.top.position.y=origTopY-ease*6;
+        bld.top.position.z=origTopZ+ease*3;
+      }
+      if(bld.roof2){bld.roof2.rotation.z=ease*1.2;bld.roof2.position.y=origRoof2Y-ease*12;}
+      if(bld.pipe){bld.pipe.rotation.z=ease*-0.9;bld.pipe.position.y=origPipeY-ease*8;}
+      if(bld.sign){bld.sign.position.y=origSignY-ease*7;bld.sign.rotation.x=ease*0.6;}
+      // פסולת קריסה מאסיבית
+      if(_colT<1.6){
+        for(let i=0;i<18;i++){
+          const dc=[0x4a3e2e,0x3a2010,0x1a0800,0x8a6a00][i%4];
+          const dm=_pfxGet(dc);dm.scale.setScalar(0.8+Math.random()*2.5);
+          dm.position.set(BX+(Math.random()-.5)*24,2+Math.random()*8,BZ+(Math.random()-.5)*18);
+          scene.add(dm);
+          G.particles.push({mesh:dm,vx:(Math.random()-.5)*12,vy:-1+Math.random()*8,vz:(Math.random()-.5)*12,life:1.5+Math.random()*2});
+        }
+        // ענן אבק קריסה
+        for(let i=0;i<6;i++){
+          const dust=_pfxGet(0x8a7a6a);dust.material=dust.material.clone();dust.material.opacity=0.6;
+          dust.scale.setScalar(3+Math.random()*4);
+          dust.position.set(BX+(Math.random()-.5)*20,0.5+Math.random()*3,BZ+(Math.random()-.5)*16);
+          scene.add(dust);
+          G.particles.push({mesh:dust,vx:(Math.random()-.5)*6,vy:0.5+Math.random()*2,vz:(Math.random()-.5)*6,life:4+Math.random()*3});
+        }
+      }
+    }
+
+    // ── סוף — cutscene ──
+    if(_t>=10.5&&!_done){
+      _done=true;clearInterval(fireInterval);
+      fireLights.forEach(l=>scene.remove(l));scene.remove(smokeL);
+      G.paused=true;
+      setTimeout(()=>showCut('ch6_fire',()=>{
+        setTimeout(()=>showCut('ch6_ending',()=>{
+          G.paused=false;showN('🏁 פרק ו׳ הסתיים!');
+        }),1500);
+      }),600);
+    }
+  },80);
+}
+
 function updCh6(dt){
   const _hudIP=document.getElementById('ip');
   if(G.mission<25||G.mission>32)return;
@@ -7124,62 +7309,9 @@ function updCh6(dt){
         G.keys['KeyE']=false;G._fireKeyMob=false;
         G._ch6FireDone=true;
         if(G._labDoorInd)G._labDoorInd.visible=false;
-        // ── אנימציית אש משודרגת ──
-        const BX=25,BZ=-125;
-        // אור אש ראשי — מהבהב
-        const fireLight=new THREE.PointLight(0xff4400,0,50);
-        fireLight.position.set(BX,6,BZ);scene.add(fireLight);
-        // כדור זוהר כתום על הבניין
-        const fireBall=new THREE.Mesh(
-          new THREE.SphereGeometry(5,12,8),
-          new THREE.MeshBasicMaterial({color:0xff3300,transparent:true,opacity:0.0,depthWrite:false})
-        );
-        fireBall.position.set(BX,5,BZ);scene.add(fireBall);
-        let _fireT=0;
-        const _fireInterval=setInterval(()=>{
-          _fireT+=0.08;
-          // עדכן אור ואש
-          fireLight.intensity=6+Math.random()*10;
-          fireBall.material.opacity=Math.min(0.22,_fireT*0.04+Math.random()*0.08);
-          fireBall.scale.setScalar(1+_fireT*0.08);
-          // גזרי אש
-          for(let i=0;i<12;i++){
-            const col=[0xff8800,0xff4400,0xffcc00,0xff2200][Math.floor(Math.random()*4)];
-            const m=_pfxGet(col);
-            m.position.set(BX+(Math.random()-.5)*14,0.5+Math.random()*3,BZ+(Math.random()-.5)*10);
-            scene.add(m);
-            G.particles.push({mesh:m,vx:(Math.random()-.5)*2.5,vy:4+Math.random()*8,vz:(Math.random()-.5)*2,life:1+Math.random()*1.8});
-          }
-          // עשן
-          for(let i=0;i<4;i++){
-            const sm=_pfxGet(0x1a1a1a);
-            sm.material=sm.material.clone();sm.material.opacity=0.35+Math.random()*0.3;
-            sm.scale.setScalar(1.2+Math.random()*0.8);
-            sm.position.set(BX+(Math.random()-.5)*10,5+Math.random()*4,BZ+(Math.random()-.5)*8);
-            scene.add(sm);
-            G.particles.push({mesh:sm,vx:(Math.random()-.5)*1.5,vy:1.5+Math.random()*3,vz:(Math.random()-.5)*1.5,life:2.5+Math.random()*2});
-          }
-          // ניצוצות
-          if(Math.random()<0.4){
-            for(let i=0;i<5;i++){
-              const sp=_pfxGet(0xffee00);sp.scale.setScalar(0.4);
-              const ang=Math.random()*Math.PI*2;
-              sp.position.set(BX+(Math.random()-.5)*8,2+Math.random()*6,BZ+(Math.random()-.5)*6);
-              scene.add(sp);
-              G.particles.push({mesh:sp,vx:Math.cos(ang)*4,vy:3+Math.random()*5,vz:Math.sin(ang)*4,life:0.4+Math.random()*0.5});
-            }
-          }
-          if(_fireT>3.5){
-            clearInterval(_fireInterval);
-            G.paused=true;
-            setTimeout(()=>showCut('ch6_fire',()=>{
-              setTimeout(()=>showCut('ch6_ending',()=>{
-                G.paused=false;
-                showN('🏁 פרק ו׳ הסתיים!');
-              }),1500);
-            }),400);
-          }
-        },80);
+        if(_hudIP){_hudIP.textContent='';_hudIP.style.display='none';}
+        G._fireNearActive=false;
+        _startBigFire();
       }
     } else {
       G._fireNearActive=false;
