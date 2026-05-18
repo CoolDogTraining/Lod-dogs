@@ -2087,16 +2087,32 @@ function updTitan(dt){
       spawnPfx(b.x,2,b.z,0xf5c518,32);
       spawnPfx(b.x,2,b.z,0xff4400,24);
       showN('🏆 טיטאן הובס!');
-      // ── רקס: התקף לב — קריסה ויזואלית ומעבר ישיר ──
-      G._reksCollapsing=true;
-      G._reksCollapseT=0;
+      // ── רקס: התקף לב — קריסה לאחר כמה שניות דרמטיות ──
+      G._reksCollapsing=false; // לא קורס עדיין
+      // שלב א׳: 3 שניות של שתיקה ואווירה אחרי הניצחון
+      setTimeout(()=>{
+        showN('רקס עומד בשקט. מסתכל על לוד מלמטה...');
+      },2000);
+      // שלב ב׳: 5 שניות — רקס מתחיל לקרוס
+      setTimeout(()=>{
+        // אפקט מסך — הבהוב אדום
+        const flash=document.createElement('div');
+        flash.style.cssText='position:fixed;inset:0;background:rgba(180,0,0,0.35);z-index:9999;pointer-events:none;transition:opacity 1.8s;';
+        document.body.appendChild(flash);
+        setTimeout(()=>flash.style.opacity='0',200);
+        setTimeout(()=>flash.remove(),2200);
+        showN('💔 רקס: "אני... לא..."');
+        G._reksCollapsing=true;
+        G._reksCollapseT=0;
+      },5000);
+      // שלב ג׳: 9 שניות — cutscene
       setTimeout(()=>{
         showCut('rex_heart_attack',()=>{
           G.mission=24;
           if(MISSIONS[24])MISSIONS[24].unlock();
           updateMissionHUD();updateNavArrow();saveGame();
         });
-      },2200);
+      },9000);
     }
   }
 }

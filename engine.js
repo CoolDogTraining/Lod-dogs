@@ -3116,10 +3116,10 @@ function updCityGuards(dt){
       if(l<1.4){g.wpIdx=(g.wpIdx+1)%g.waypoints.length;g.waitT=.6+Math.random()*.5;}
       else{g.mesh.position.x+=dx/l*g.spd*dt;g.mesh.position.z+=dz/l*g.spd*dt;g.mesh.rotation.y+=(Math.atan2(dx,dz)-g.mesh.rotation.y)*.1;}
     }
-    // פגיעה בשומר — cooldown נפרד לכל שומר, לא G.atkCD
+    // פגיעה בשומר — רק כשלוחצים attack
     if(!g._atkCD)g._atkCD=0;
     g._atkCD=Math.max(0,g._atkCD-dt);
-    if(dd<4.5&&G.atkCD<=0&&g._hitT<=0&&g._atkCD<=0){
+    if(dd<4.5&&G._atkFrame&&g._hitT<=0&&g._atkCD<=0){
       const dmg=Math.round(G.dogs[G.dog].pow*9);g.hp-=dmg;haptic(18);
       if(g.mesh.children[0])flash(g.mesh.children[0]);
       g._hitT=0.5;g._atkCD=0.5;
@@ -3820,11 +3820,12 @@ function updVilla(dt){
 
   // יציאה דרך השער דרום — רק אם הדלת לא נעולה
   if(VILLA.playerZ>45){
-    if(G.mission===9&&!G.momoFreed)showN('זיפו: "אני לא יכול לעזוב בלי מומו!"');
+    if(G.mission===9&&!G.momoFreed){if(!G._zippoExitWarned){G._zippoExitWarned=true;showN('זיפו: "אני לא יכול לעזוב בלי מומו!"');}}
     else if(mosqueDoorLocked)showN('🔒 הדלת נעולה! הבס את ברונו כדי לפתוח!');
     else exitMosque(G.momoFreed);
     return;
   }
+  G._zippoExitWarned=false;
   // שחרור מומו
   if(G.mission===9&&!G.momoFreed&&G.cagePos){
     if(d2(VILLA.playerX,VILLA.playerZ,G.cagePos.x,G.cagePos.z)<4){
@@ -4373,6 +4374,7 @@ function _ragdoll(grp){
   },33);
 }
 function doAtk(){
+  G._atkFrame=true;setTimeout(()=>G._atkFrame=false,150);
   sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
   const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
   spawnPfx(px,1,pz,0xf5c518,4);
@@ -7698,12 +7700,13 @@ function shopBuy(type){
   const cost=costs[type];
   if(G.coins<cost){haptic([20,10,20]);showN('💰 אין מספיק מטבעות!');return;}
   G.coins-=cost;haptic([20,10,30]);
+  const allDogs=Object.values(G.dogs);
   if(type==='hp'){dog.hp=Math.min(dog.mhp,dog.hp+40);showN('🍖 +40 בריאות!');}
   else if(type==='hp_big'){dog.hp=dog.mhp;showN('💊 בריאות מלאה!');}
   else if(type==='stam'){dog.stam=Math.min(100,dog.stam+100);showN('⚡ +100 סטמינה!');}
-  else if(type==='pow'){dog.pow+=3;showN('🦷 +3 כוח!');}
-  else if(type==='spd'){dog.spd+=.5;showN('🏃 +0.5 מהירות!');}
-  else if(type==='mhp'){dog.mhp+=20;dog.hp=Math.min(dog.hp+20,dog.mhp);showN('🛡️ +20 HP מקסימלי!');}
+  else if(type==='pow'){allDogs.forEach(d=>d.pow+=3);showN('🦷 +3 כוח לכל הכלבים!');}
+  else if(type==='spd'){allDogs.forEach(d=>d.spd+=.5);showN('🏃 +0.5 מהירות לכל הכלבים!');}
+  else if(type==='mhp'){allDogs.forEach(d=>{d.mhp+=20;d.hp=Math.min(d.hp+20,d.mhp);});showN('🛡️ +20 HP מקסימלי לכל הכלבים!');}
   updCoins();sPickup();
   document.getElementById('sh-coin-val').textContent=G.coins;
   saveGame();
