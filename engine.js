@@ -4162,7 +4162,7 @@ function updateNavDirection(){
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
   // כיוון בעולם → זווית על המסך
   const worldAngle=Math.atan2(dx,dz);
-  const camAngle=worldAngle-G.yaw;
+  const camAngle=worldAngle-G.yaw+Math.PI; // +PI כי המצלמה מסתכלת בכיוון הפוך ל-yaw
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
   const margin=52;
@@ -7156,22 +7156,16 @@ function _buildZippoLighter(){
 function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
-  const bm=dogModel&&dogModel._bipedalMode;
-  if(bm&&dogLegs&&dogLegs[0]){
-    // צמוד לכף הרגל הקדמית — קצה הרגל (paw)
-    const legWorld=new THREE.Vector3();
-    dogLegs[0].node.getWorldPosition(legWorld);
-    // קצה הרגל (paw) נמצא -0.56 מה-node, ממוקם קצת קדימה
-    legWorld.y+=0.35;  // ↑ מעל קצה הרגל — ברמת "כף היד"
-    legWorld.z+=0.22;  // קדימה קצת
-    legWorld.x+=0.05;
-    _zippoLighterMesh.position.copy(legWorld);
-  } else {
-    // מצב עמידה רגיל — לא אמור לקרות (bipedal mode תמיד פעיל עם מצית)
-    const off=new THREE.Vector3(.38,.82,.55);
-    off.applyQuaternion(PB.quaternion);
-    _zippoLighterMesh.position.copy(PB.position).add(off);
-  }
+  // מצמידים את המצית לכף היד: offset קבוע ביחס ל-PB בקואורדינטות עולם
+  // כשהכלב עומד על רגליים אחוריות, הרגל הקדמית מופנית קדימה ולמעלה
+  // כף היד נמצאת בערך: קדימה 0.6, ימינה 0.35, גובה 1.1 ביחס לבסיס PB
+  const off=new THREE.Vector3(0.35, 1.1, 0.6);
+  off.applyEuler(new THREE.Euler(0, PB.rotation.y, 0));
+  _zippoLighterMesh.position.set(
+    PB.position.x + off.x,
+    PB.position.y + off.y,
+    PB.position.z + off.z
+  );
   _zippoLighterMesh.rotation.y=PB.rotation.y;
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
