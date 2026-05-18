@@ -2141,7 +2141,7 @@ function addLegs(uM,lM,s){
     const kG=new THREE.Group();kG.position.y=-.32*s;lg.add(kG);
     const lo=new THREE.Mesh(new THREE.BoxGeometry(.11*s,.3*s,.11*s),lM);lo.position.y=-.15*s;lo.castShadow=true;kG.add(lo);
     const pw=new THREE.Mesh(new THREE.BoxGeometry(.15*s,.08*s,.19*s),lM);pw.position.set(0,-.31*s,.03*s);pw.castShadow=true;kG.add(pw);
-    dogLegs.push({node:lg,ph:d.ph});
+    dogLegs.push({node:lg,ph:d.ph,paw:pw});
   });
 }
 function buildColin(){
@@ -4162,18 +4162,16 @@ function updateNavDirection(){
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
   // כיוון בעולם → זווית על המסך
   const worldAngle=Math.atan2(dx,dz);
-  const camAngle=worldAngle-G.yaw+Math.PI; // +PI כי המצלמה מסתכלת בכיוון הפוך ל-yaw
+  const camAngle=worldAngle-G.yaw;
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
-  const margin=52;
-  // מרכז ויזואלי: למעלה ה-HUD תופס ~160px, למטה ~200px (ג'ויסטיק+כפתורים)
-  const cx=W/2, cy=H*0.45;
-  const halfW=cx-margin, halfH=cy-margin;
-  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים (ry שלילי = למעלה)
+  const margin=36;
+  const cx=W/2,cy=H/2;
+  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים
   // מוצאים את נקודת החיתוך עם שפת המסך
   const scale=Math.min(
-    Math.abs(rx)>0?halfW/Math.abs(rx):Infinity,
-    Math.abs(ry)>0?halfH/Math.abs(ry):Infinity
+    Math.abs(rx)>0?(cx-margin)/Math.abs(rx):Infinity,
+    Math.abs(ry)>0?(cy-margin)/Math.abs(ry):Infinity
   );
   const ex=Math.round(cx+rx*scale);
   const ey=Math.round(cy+ry*scale);
@@ -7156,16 +7154,22 @@ function _buildZippoLighter(){
 function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
-  // מצמידים את המצית לכף היד: offset קבוע ביחס ל-PB בקואורדינטות עולם
-  // כשהכלב עומד על רגליים אחוריות, הרגל הקדמית מופנית קדימה ולמעלה
-  // כף היד נמצאת בערך: קדימה 0.6, ימינה 0.35, גובה 1.1 ביחס לבסיס PB
-  const off=new THREE.Vector3(0.35, 1.1, 0.6);
-  off.applyEuler(new THREE.Euler(0, PB.rotation.y, 0));
-  _zippoLighterMesh.position.set(
-    PB.position.x + off.x,
-    PB.position.y + off.y,
-    PB.position.z + off.z
-  );
+  const bm=dogModel&&dogModel._bipedalMode;
+  if(bm&&dogLegs&&dogLegs[0]){
+    const pawWorld=new THREE.Vector3();
+    if(dogLegs[0].paw){
+      dogLegs[0].paw.getWorldPosition(pawWorld);
+    } else {
+      dogLegs[0].node.getWorldPosition(pawWorld);
+      pawWorld.y-=0.3;
+      pawWorld.z+=0.15;
+    }
+    _zippoLighterMesh.position.copy(pawWorld);
+  } else {
+    const off=new THREE.Vector3(.38,.58,.45);
+    off.applyQuaternion(PB.quaternion);
+    _zippoLighterMesh.position.copy(PB.position).add(off);
+  }
   _zippoLighterMesh.rotation.y=PB.rotation.y;
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
