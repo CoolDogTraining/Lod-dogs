@@ -4162,7 +4162,7 @@ function updateNavDirection(){
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
   // כיוון בעולם → זווית על המסך
   const worldAngle=Math.atan2(dx,dz);
-  const camAngle=worldAngle-G.yaw+Math.PI; // הפוך 180°
+  const camAngle=worldAngle+G.yaw;
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
   const margin=36;
@@ -7177,21 +7177,32 @@ function _updateZippoLighter(){
 function _showZippoLighter(){
   if(!_zippoLighterMesh)_buildZippoLighter();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
-  if(dogModel&&G.dog==='zippo'&&dogLegs.length>=4){
+  if(dogModel&&G.dog==='zippo'&&!dogModel._bipedalMode){
     dogModel._bipedalMode=true;
-    // ── הגוף שכוב על Z, ראש ב+Z. סיבוב +90° על X: ראש→למעלה, רגליים קדמיות→למעלה, אחוריות→למטה
-    dogModel.rotation.x=Math.PI/2;
-    // גוף אורך 1.1 על Z → אחרי סיבוב גובה 1.1. מרכז גוף ב-y=0.5 → הרגליים התחתונות
-    // מגיעות לy≈0.5-0.55-0.32-0.31 ≈ -0.68 ממרכז הגוף.
-    // צריך PB.y כך שהרגליים יגעו ב-0: PB.y = 0.68+0.5 = ~1.15 מעל הקרקע
-    dogModel._bipedalYOffset=0.85;
-    PB.position.y+=dogModel._bipedalYOffset;
-    // רגליים קדמיות [0,1] (z=+0.36 → עכשיו y=+גבוה) — מורידים קדימה כידיים
-    dogLegs[0].node.rotation.x=1.1;
-    dogLegs[1].node.rotation.x=1.1;
-    // רגליים אחוריות [2,3] (z=-0.34 → עכשיו y=מטה) — ישרות
-    dogLegs[2].node.rotation.x=0;
-    dogLegs[3].node.rotation.x=0;
+    // יוצרים wrapper פנימי שמסובב את כל תוכן הכלב
+    // dogModel.rotation.y=Math.PI כבר קיים ונשאר — לא נוגעים בו
+    // מעבירים את כל הילדים ל-wrapper
+    const wrap=new THREE.Group();
+    // הגוף שכוב: ראש ב-z=+0.5,y=1.08 → רוצים ראש למעלה
+    // סיבוב -π/2 על X: (x,y,z)→(x,z,-y)
+    // ראש (0,1.08,0.5)→(0,0.5,-1.08) — לא טוב
+    // סיבוב +π/2 על X: (x,y,z)→(x,-z,y)  
+    // ראש (0,1.08,0.5)→(0,-0.5,1.08) — לא טוב
+    // הבעיה: הראש גבוה ב-Y (1.08) ורחוק ב-Z (0.5)
+    // רוצים: ראש → גבוה ב-Y. כלומר הציר Y הגבוה ישאר Y.
+    // הפתרון: לא לסובב — אלא **לבנות תנוחה ידנית**:
+    // נזיז את הגוף ואת כל החלקים ב-offset כדי שהרגליים האחוריות יהיו בתחתית
+    // הכלב גבוה ~1.6 (מרגליים עד ראש ב-Z). נרים את PB ב-0.5 ונסובב רק את הרגליים הקדמיות
+    dogModel._bipedalMode=true;
+    // הרמת PB
+    dogModel._bipedalYOffset=0.5;
+    PB.position.y+=0.5;
+    // רגליים קדמיות [0,1] — מורימות קדימה/למעלה (סיבוב -1.2 = כלפי הפנים)
+    if(dogLegs[0])dogLegs[0].node.rotation.x=-1.3;
+    if(dogLegs[1])dogLegs[1].node.rotation.x=-1.3;
+    // אין צורך לשנות אחוריות — הן כבר למטה
+    // מרימים גם את הגוף קצת כדי שיישב יותר זקוף
+    dogModel.rotation.x=0.6; // לא סיבוב מלא — רק 0.6 ראד ≈ 34°, מספיק להרגשת עמידה
   }
 }
 function _hideZippoLighter(){
@@ -7199,9 +7210,10 @@ function _hideZippoLighter(){
   if(dogModel&&dogModel._bipedalMode){
     dogModel._bipedalMode=false;
     dogModel.rotation.x=0;
-    PB.position.y=Math.max(0,PB.position.y-(dogModel._bipedalYOffset||0.85));
+    PB.position.y=Math.max(0,PB.position.y-(dogModel._bipedalYOffset||0.5));
     dogModel._bipedalYOffset=0;
-    dogLegs.forEach(lg=>{lg.node.rotation.x=0;});
+    if(dogLegs[0])dogLegs[0].node.rotation.x=0;
+    if(dogLegs[1])dogLegs[1].node.rotation.x=0;
   }
 }
 
