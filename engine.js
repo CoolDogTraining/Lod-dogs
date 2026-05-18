@@ -4125,7 +4125,7 @@ function updateNavArrow(){
   const el=document.getElementById('nav-edge-arrow');
   if(!el)return;
   const m=MISSIONS[G.mission];
-  const hide=!m||!m.hint||(G.mission>=23&&(G.mission<25||G.mission>32))||G.mission===7;
+  const hide=!m||!m.hint||m.hint===''||(G.mission>=23&&(G.mission<25||G.mission>32))||G.mission===7;
   if(hide){el.style.display='none';return;}
   el.style.display='flex';
 }
@@ -4165,15 +4165,15 @@ function updateNavDirection(){
   const camAngle=worldAngle-G.yaw;
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
-  const margin=36;
-  const cx=W/2,cy=H/2;
-  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים
+  const margin=52;
+  // מרכז ויזואלי: למעלה ה-HUD תופס ~160px, למטה ~200px (ג'ויסטיק+כפתורים)
+  const cx=W/2, cy=H*0.45;
+  const halfW=cx-margin, halfH=cy-margin;
+  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים (ry שלילי = למעלה)
   // מוצאים את נקודת החיתוך עם שפת המסך
-  const scaleX=(rx===0)?Infinity:(rx>0?(cx-margin):(cx-margin))/Math.abs(rx);
-  const scaleY=(ry===0)?Infinity:(ry>0?(cy-margin):(cy-margin))/Math.abs(ry);
   const scale=Math.min(
-    Math.abs(rx)>0?(cx-margin)/Math.abs(rx):Infinity,
-    Math.abs(ry)>0?(cy-margin)/Math.abs(ry):Infinity
+    Math.abs(rx)>0?halfW/Math.abs(rx):Infinity,
+    Math.abs(ry)>0?halfH/Math.abs(ry):Infinity
   );
   const ex=Math.round(cx+rx*scale);
   const ey=Math.round(cy+ry*scale);
@@ -7158,15 +7158,17 @@ function _updateZippoLighter(){
   const t=Date.now()*.001;
   const bm=dogModel&&dogModel._bipedalMode;
   if(bm&&dogLegs&&dogLegs[0]){
-    // צמוד לקצה הרגל הקדמית — מיקום עולמי של הרגל
+    // צמוד לכף הרגל הקדמית — קצה הרגל (paw)
     const legWorld=new THREE.Vector3();
     dogLegs[0].node.getWorldPosition(legWorld);
-    // הורדה קצת לכיוון קצה הרגל (ה-paw נמצא -0.56 מה-node)
-    legWorld.y-=0.3;
-    legWorld.z+=0.15;
+    // קצה הרגל (paw) נמצא -0.56 מה-node, ממוקם קצת קדימה
+    legWorld.y+=0.35;  // ↑ מעל קצה הרגל — ברמת "כף היד"
+    legWorld.z+=0.22;  // קדימה קצת
+    legWorld.x+=0.05;
     _zippoLighterMesh.position.copy(legWorld);
   } else {
-    const off=new THREE.Vector3(.38,.58,.45);
+    // מצב עמידה רגיל — לא אמור לקרות (bipedal mode תמיד פעיל עם מצית)
+    const off=new THREE.Vector3(.38,.82,.55);
     off.applyQuaternion(PB.quaternion);
     _zippoLighterMesh.position.copy(PB.position).add(off);
   }
