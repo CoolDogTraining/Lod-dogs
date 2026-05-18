@@ -4166,7 +4166,7 @@ function updateNavDirection(){
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
   const margin=36;
-  const cx=W/2,cy=H/2;
+  const cx=W/2,cy=H/2+60; // מרכז מורד 60px כדי שהחץ העליון יהיה מתחת לכותרת
   const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים
   // מוצאים את נקודת החיתוך עם שפת המסך
   const scale=Math.min(
@@ -7155,15 +7155,15 @@ function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
   const bm=dogModel&&dogModel._bipedalMode;
-  if(bm&&dogLegs&&dogLegs[0]){
+  if(bm&&dogLegs&&dogLegs[2]){
     const pawWorld=new THREE.Vector3();
-    if(dogLegs[0].paw){
-      dogLegs[0].paw.getWorldPosition(pawWorld);
-    } else {
-      dogLegs[0].node.getWorldPosition(pawWorld);
-      pawWorld.y-=0.3;
-      pawWorld.z+=0.15;
-    }
+    dogLegs[2].paw
+      ? dogLegs[2].paw.getWorldPosition(pawWorld)
+      : dogLegs[2].node.getWorldPosition(pawWorld);
+    // הוספת offset קטן לפנים ולמעלה (בכיוון הכלב)
+    const fwd=new THREE.Vector3(-Math.sin(PB.rotation.y),0,-Math.cos(PB.rotation.y));
+    pawWorld.addScaledVector(fwd,0.1);
+    pawWorld.y+=0.05;
     _zippoLighterMesh.position.copy(pawWorld);
   } else {
     const off=new THREE.Vector3(.38,.58,.45);
@@ -7206,12 +7206,11 @@ function _showZippoLighter(){
     // הרמת PB
     dogModel._bipedalYOffset=0.5;
     PB.position.y+=0.5;
-    // רגליים קדמיות [0,1] — מורימות קדימה/למעלה (סיבוב -1.2 = כלפי הפנים)
-    if(dogLegs[0])dogLegs[0].node.rotation.x=-1.3;
-    if(dogLegs[1])dogLegs[1].node.rotation.x=-1.3;
-    // אין צורך לשנות אחוריות — הן כבר למטה
-    // מרימים גם את הגוף קצת כדי שיישב יותר זקוף
-    dogModel.rotation.x=0.6; // לא סיבוב מלא — רק 0.6 ראד ≈ 34°, מספיק להרגשת עמידה
+    // רגליים קדמיות האמיתיות אחרי rotation.y=PI הן [2] ו-[3] (z=-0.34 local)
+    if(dogLegs[2])dogLegs[2].node.rotation.x=-1.3;
+    if(dogLegs[3])dogLegs[3].node.rotation.x=-1.3;
+    // אחוריות [0,1] נשארות למטה
+    dogModel.rotation.x=0.6;
   }
 }
 function _hideZippoLighter(){
@@ -7221,8 +7220,8 @@ function _hideZippoLighter(){
     dogModel.rotation.x=0;
     PB.position.y=Math.max(0,PB.position.y-(dogModel._bipedalYOffset||0.5));
     dogModel._bipedalYOffset=0;
-    if(dogLegs[0])dogLegs[0].node.rotation.x=0;
-    if(dogLegs[1])dogLegs[1].node.rotation.x=0;
+    if(dogLegs[2])dogLegs[2].node.rotation.x=0;
+    if(dogLegs[3])dogLegs[3].node.rotation.x=0;
   }
 }
 
