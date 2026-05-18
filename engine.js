@@ -4162,7 +4162,7 @@ function updateNavDirection(){
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
   // כיוון בעולם → זווית על המסך
   const worldAngle=Math.atan2(dx,dz);
-  const camAngle=worldAngle-G.yaw;
+  const camAngle=worldAngle-(G.yaw+Math.PI);
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
   const margin=36;
