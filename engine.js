@@ -4167,7 +4167,7 @@ function updateNavDirection(){
   const W=window.innerWidth,H=window.innerHeight;
   const margin=36;
   const cx=W/2,cy=H/2;
-  const rx=Math.sin(camAngle),ry=-Math.cos(camAngle); // כיוון בפיקסלים
+  const rx=-Math.sin(camAngle),ry=-Math.cos(camAngle);
   // מוצאים את נקודת החיתוך עם שפת המסך
   const scale=Math.min(
     Math.abs(rx)>0?(cx-margin)/Math.abs(rx):Infinity,
