@@ -4162,7 +4162,7 @@ function updateNavDirection(){
   const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
   // כיוון בעולם → זווית על המסך
   const worldAngle=Math.atan2(dx,dz);
-  const camAngle=worldAngle+G.yaw;
+  const camAngle=worldAngle-G.yaw;
   // מיקום החץ על שפת המסך
   const W=window.innerWidth,H=window.innerHeight;
   const margin=36;
@@ -7156,11 +7156,20 @@ function _buildZippoLighter(){
 function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
-  // מצית בידיים הקדמיות — קדימה ולמעלה יותר בתנוחת עמידה
   const bm=dogModel&&dogModel._bipedalMode;
-  const off=bm?new THREE.Vector3(0,1.55,.7):new THREE.Vector3(.38,.58,.45);
-  off.applyQuaternion(PB.quaternion);
-  _zippoLighterMesh.position.copy(PB.position).add(off);
+  if(bm&&dogLegs&&dogLegs[0]){
+    // צמוד לקצה הרגל הקדמית — מיקום עולמי של הרגל
+    const legWorld=new THREE.Vector3();
+    dogLegs[0].node.getWorldPosition(legWorld);
+    // הורדה קצת לכיוון קצה הרגל (ה-paw נמצא -0.56 מה-node)
+    legWorld.y-=0.3;
+    legWorld.z+=0.15;
+    _zippoLighterMesh.position.copy(legWorld);
+  } else {
+    const off=new THREE.Vector3(.38,.58,.45);
+    off.applyQuaternion(PB.quaternion);
+    _zippoLighterMesh.position.copy(PB.position).add(off);
+  }
   _zippoLighterMesh.rotation.y=PB.rotation.y;
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
