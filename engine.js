@@ -4170,8 +4170,8 @@ function updateNavDirection(){
   const rx=-Math.sin(camAngle),ry=-Math.cos(camAngle);
   // מוצאים את נקודת החיתוך עם שפת המסך
   const scale=Math.min(
-    Math.abs(rx)>0?(cx-margin)/Math.abs(rx):Infinity,
-    Math.abs(ry)>0?(cy-margin)/Math.abs(ry):Infinity
+    Math.abs(rx)>0?(cx*0.55)/Math.abs(rx):Infinity,
+    Math.abs(ry)>0?(cy*0.55)/Math.abs(ry):Infinity
   );
   const ex=Math.round(cx+rx*scale);
   const ey=Math.round(cy+ry*scale);
@@ -7656,10 +7656,9 @@ function showDmgVilla(dmg){
 // COINS HUD
 // ════════════════════════════════════════════════
 function updCoins(){
-  G.coins=99999; // DEV — אינסוף מטבעות (הוצא לפני שחרור)
   const v=document.getElementById('coin-val');
   const h=document.getElementById('coin-hud');
-  if(v)v.textContent='∞';
+  if(v)v.textContent=G.coins||0;
   if(h)h.style.display=G.hud?'block':'none';
 }
 
