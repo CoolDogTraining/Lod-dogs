@@ -2333,6 +2333,7 @@ function saveGame(){
       foodEaten:G.foodEaten,enemiesKilled:G.enemiesKilled,
       recruitsDone:G.recruitsDone,totalKills:G.totalKills,
       sideQ:JSON.parse(JSON.stringify(G.sideQ)),
+      daily:G.daily?JSON.parse(JSON.stringify(G.daily)):null,
       fishkaCaught:G._fishkaEnemy?.caught||false,
       guardsDone:G.guardDogs.filter(g=>g.hp<=0).length,
       // ── פרק ב׳ ──
@@ -2401,11 +2402,14 @@ function loadGame(){
     // שחזר gateMarker אם היינו בפרק ב׳
     if(G.ch2Active&&G.mission>=8&&G.mission<=10)G.gateMarker={x:-51,z:-100};
     if(s.sideQ)G.sideQ=s.sideQ;
+    if(s.daily)G.daily=s.daily;
     if(s.dogs){Object.keys(s.dogs).forEach(k=>{if(G.dogs[k])Object.assign(G.dogs[k],s.dogs[k]);});}
     document.getElementById('hdn').textContent=G.dogs[G.dog].name;
     if(isMob)document.getElementById('mob').style.display='block';
     G.hud=true;document.getElementById('coin-hud').style.display='block';
     if(isMob){document.getElementById('sq-btn-mob').classList.add('has-done');}else{document.getElementById('sq-btn').style.display='flex';}
+  const db=document.getElementById('daily-btn');if(db)db.style.display='block';
+  _daily_init();
     init();
     // אחרי init — שחזר מיקום (init מאפס ל-0,0,60)
     if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}

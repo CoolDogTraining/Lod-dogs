@@ -4276,7 +4276,7 @@ function loop(){
       else setMusicMode('explore');
     })();updTerrs(dt);updNPCs(dt);updPfx(dt);
     updateNavDirection();
-    updSQPanel();
+    updSQPanel();updOWE(dt);_daily_trackDistance();
     updReputationHUD();
     if(G.mission>=12)updCh3Entities(dt);
     // פיצ'רים חדשים — throttle על מובייל לחסוך CPU
@@ -4449,6 +4449,7 @@ function doAtk(){
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
+          if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
           const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
           _ragdoll(e.mesh);
           updateMissionHUD();
@@ -4628,6 +4629,7 @@ function doInteract(){
   if(o.type==='bone'){
     // side quest bone
     o.done=true;scene.remove(o.mesh);sPickup();haptic([20,10,20]);G.sideQ.bones.n++;G.coins+=5;updCoins();
+    if(G.daily){G.daily.bones=(G.daily.bones||0)+1;G.daily.coins=(G.daily.coins||0)+5;_daily_check();}
     showN(`🦴 עצם! (${G.sideQ.bones.n}/5 למשימת צד)`);
     updSQPanel();
     if(G.sideQ.bones.n>=5&&!G.sideQ.bones.done){G.sideQ.bones.done=true;addXP(40);G.coins+=50;updCoins();haptic([60,30,60]);showN('🏆 משימת צד: עצמות ברחוב — הושלמה!\n+40 XP + 50 💰');}
@@ -7808,6 +7810,276 @@ function closeSQPopup(){
 }
 
 
+}
+
+
+// ════════════════════════════════════════════════
+// 🌍 OPEN WORLD EVENTS — אירועי עולם פתוח
+// ════════════════════════════════════════════════
+const OWE={
+  active:null,       // האירוע הפעיל כרגע
+  cooldown:0,        // שניות עד האירוע הבא
+  mesh:null,         // mesh של ה-NPC/אירוע
+  ind:null,          // אינדיקטור '!'
+  _timer:0,          // טיימר לסיום אירוע
+};
+
+const OWE_TYPES=[
+  {
+    id:'lost_dog',
+    emoji:'🐕',
+    title:'כלב אבוד!',
+    desc:'כלב קטן מסתובב ומחפש בעלים. עזור לו!',
+    action:'E — החזר את הכלב',
+    reward:()=>({coins:40,xp:30,msg:'🐕 כלב הוחזר! +40💰 +30XP'}),
+    color:0xffaa00,
+    minMission:1,
+  },
+  {
+    id:'street_fight',
+    emoji:'⚔️',
+    title:'קטטה ברחוב!',
+    desc:'שני כלבים ריבים ליד הכביש. עצור את זה!',
+    action:'E — הפרד את הקטטה',
+    reward:()=>({coins:60,xp:40,msg:'✊ קטטה הופסקה! +60💰 +40XP'}),
+    color:0xff4400,
+    minMission:2,
+  },
+  {
+    id:'robbery',
+    emoji:'🏪',
+    title:'שוד בחנות!',
+    desc:'כלב חשוד בורח עם אוכל. תפוס אותו!',
+    action:'E — עצור את הגנב',
+    reward:()=>({coins:80,xp:50,msg:'🏪 גנב נעצר! +80💰 +50XP'}),
+    color:0xff0066,
+    minMission:3,
+  },
+  {
+    id:'injured_dog',
+    emoji:'🩹',
+    title:'כלב פצוע!',
+    desc:'כלב שכב בצד הדרך — פצוע ובצרה.',
+    action:'E — עזור לכלב',
+    reward:()=>({coins:30,xp:25,hp:20,msg:'🩹 כלב טופל! +30💰 +25XP +20HP'}),
+    color:0x00ccff,
+    minMission:1,
+  },
+  {
+    id:'cat_chase',
+    emoji:'🐈',
+    title:'חתול על הגג!',
+    desc:'חתול בורח ומפיל זבל. תרדוף!',
+    action:'E — בתר את החתול',
+    reward:()=>({coins:50,xp:35,msg:'🐈 חתול הוכנע! +50💰 +35XP'}),
+    color:0xaa44ff,
+    minMission:2,
+  },
+];
+
+// נקודות spawn אפשריות לאירועים — על המדרכה, לא בתוך בניין
+const OWE_SPOTS=[
+  [20,30],[40,-10],[-30,20],[0,-40],[50,40],[-50,10],
+  [10,60],[60,-30],[-20,-30],[30,-60],[70,20],[-10,50],
+];
+
+function _owe_spawn(){
+  if(OWE.active||G.mission<1||G.paused||G.dlgOpen||G.cutOpen)return;
+  // בחר סוג אקראי מתאים
+  const valid=OWE_TYPES.filter(t=>t.minMission<=G.mission);
+  if(!valid.length)return;
+  const type=valid[Math.floor(Math.random()*valid.length)];
+  // בחר מיקום רחוק מהשחקן (לפחות 25 יחידות, לא יותר מ-90)
+  const px=PB?PB.position.x:0,pz=PB?PB.position.z:0;
+  const spot=OWE_SPOTS.filter(([x,z])=>{
+    const d=Math.sqrt((x-px)**2+(z-pz)**2);
+    return d>20&&d<80&&!isInBuilding(x,z,2);
+  });
+  if(!spot.length)return;
+  const [sx,sz]=spot[Math.floor(Math.random()*spot.length)];
+  // בנה mesh ויזואלי — כדור מהבהב
+  const geo=new THREE.SphereGeometry(0.5,8,6);
+  const mat=new THREE.MeshLambertMaterial({color:type.color,emissive:new THREE.Color(type.color).multiplyScalar(0.4)});
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.position.set(sx,1.5,sz);
+  scene.add(mesh);
+  // אינדיקטור '!'
+  const ind=document.createElement('div');
+  ind.className='owe-indicator';
+  ind.innerHTML=`${type.emoji}<span>${type.title}</span>`;
+  ind.style.cssText=`position:fixed;background:rgba(0,0,0,.85);color:#fff;border:2px solid #${type.color.toString(16).padStart(6,'0')};border-radius:10px;padding:4px 10px;font-size:13px;font-weight:bold;display:none;pointer-events:none;z-index:30;gap:6px;align-items:center;`;
+  document.body.appendChild(ind);
+  OWE.active={type,x:sx,z:sz,done:false};
+  OWE.mesh=mesh;
+  OWE.ind=ind;
+  OWE._timer=90; // 90 שניות לפני שהאירוע מסתיים לבד
+  showN(`${type.emoji} ${type.title} — ${type.desc}`);
+}
+
+function updOWE(dt){
+  if(VILLA.inVilla||CITY.inCity||LAB.inLab)return;
+  // cooldown בין אירועים
+  if(!OWE.active){
+    OWE.cooldown=Math.max(0,(OWE.cooldown||120)-dt);
+    if(OWE.cooldown<=0){
+      OWE.cooldown=90+Math.random()*60; // 90-150 שניות עד אירוע הבא
+      if(Math.random()<0.7)_owe_spawn(); // 70% סיכוי
+    }
+    return;
+  }
+  const ev=OWE.active;
+  // עדכן טיימר
+  OWE._timer-=dt;
+  if(OWE._timer<=0){_owe_clear(false);return;} // פג תוקף
+  // אנימציה
+  if(OWE.mesh){
+    OWE.mesh.position.y=1.5+Math.sin(Date.now()*.003)*0.3;
+    OWE.mesh.rotation.y+=dt*1.5;
+    OWE.mesh.material.emissive=new THREE.Color(ev.type.color).multiplyScalar(0.3+Math.sin(Date.now()*.004)*.2);
+  }
+  // מיקום אינדיקטור
+  if(OWE.ind&&OWE.mesh){
+    const pos=OWE.mesh.position.clone().project(camera);
+    const near=d2(ev.x,ev.z,PB.position.x,PB.position.z)<8;
+    if(pos.z<1&&pos.z>-1&&!near){
+      OWE.ind.style.display='flex';
+      OWE.ind.style.left=`${(pos.x*.5+.5)*window.innerWidth}px`;
+      OWE.ind.style.top=`${(-.5*pos.y+.5)*window.innerHeight-40}px`;
+    } else {OWE.ind.style.display='none';}
+    // כשקרובים — הצג prompt
+    if(near){
+      // אם E נלחץ
+      if(G._atkFrame||G._eKeyFrame){
+        _owe_complete(ev);
+      }
+    }
+  }
+}
+
+function _owe_complete(ev){
+  const r=ev.type.reward();
+  G.coins+=r.coins||0;
+  if(r.xp)addXP(r.xp);
+  if(r.hp){const d=G.dogs[G.dog];d.hp=Math.min(d.mhp,d.hp+(r.hp||0));}
+  showN(r.msg);
+  haptic([40,20,60]);
+  updCoins();
+  // אתגר יומי — ספור אירועי עולם פתוח
+  if(G.daily){G.daily.worldEvents=(G.daily.worldEvents||0)+1;_daily_check();}
+  saveGame();
+  _owe_clear(true);
+}
+
+function _owe_clear(success){
+  if(OWE.mesh){scene.remove(OWE.mesh);OWE.mesh=null;}
+  if(OWE.ind){OWE.ind.remove();OWE.ind=null;}
+  OWE.active=null;
+  OWE.cooldown=success?60:30; // הצלחה → המתן יותר
+}
+
+// ────────────────────────────────────────────
+// הוסף E-key frame detection
+// ────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.code==='KeyE'){G._eKeyFrame=true;setTimeout(()=>G._eKeyFrame=false,200);}
+});
+
+
+// ════════════════════════════════════════════════
+// 📅 DAILY CHALLENGES — אתגרים יומיים
+// ════════════════════════════════════════════════
+const DAILY_CHALLENGES=[
+  {id:'kills',    icon:'⚔️', heb:'הכנע {n} אויבים',   ns:[3,5,8],    reward:[50,80,120]},
+  {id:'bones',    icon:'🦴', heb:'אסוף {n} עצמות',     ns:[3,5,8],    reward:[40,70,100]},
+  {id:'distance', icon:'🏃', heb:'רוץ {n} מטר',         ns:[200,400,700],reward:[30,60,100]},
+  {id:'coins',    icon:'💰', heb:'אסוף {n} מטבעות',    ns:[100,200,350],reward:[0,0,0]}, // תגמול בXP
+  {id:'worldEvents',icon:'🌍',heb:'השלם {n} אירועי עולם',ns:[1,2,3],  reward:[60,100,150]},
+  {id:'terrs',    icon:'🏳️', heb:'כבוש {n} שטחים',     ns:[1,2,3],    reward:[70,110,160]},
+];
+
+function _daily_todayKey(){
+  const d=new Date();
+  return `daily_${d.getFullYear()}_${d.getMonth()}_${d.getDate()}`;
+}
+
+function _daily_init(){
+  const key=_daily_todayKey();
+  const saved=localStorage.getItem(key);
+  if(saved){
+    G.daily=JSON.parse(saved);
+    return;
+  }
+  // יום חדש — בחר 3 אתגרים אקראיים
+  const shuffled=[...DAILY_CHALLENGES].sort(()=>Math.random()-.5).slice(0,3);
+  const diff=Math.min(2,Math.floor((G.totalKills||0)/15)); // קושי לפי ניסיון
+  G.daily={
+    key,
+    challenges:shuffled.map(c=>({
+      id:c.id, icon:c.icon, heb:c.heb,
+      target:c.ns[diff], reward:c.reward[diff],
+      progress:0, done:false,
+    })),
+    kills:0, bones:0, distance:0, coins:0, worldEvents:0, terrs:0,
+    claimed:[false,false,false],
+  };
+  _daily_save();
+}
+
+function _daily_save(){
+  if(!G.daily)return;
+  try{localStorage.setItem(G.daily.key,JSON.stringify(G.daily));}catch(_){}
+}
+
+function _daily_check(){
+  if(!G.daily)return;
+  G.daily.challenges.forEach((c,i)=>{
+    if(c.done)return;
+    const prog=G.daily[c.id]||0;
+    c.progress=prog;
+    if(prog>=c.target){
+      c.done=true;
+      if(c.reward>0){G.coins+=c.reward;updCoins();}
+      addXP(50);
+      haptic([60,30,60]);
+      showN(`📅 אתגר יומי: ${c.icon} הושלם! +${c.reward}💰 +50XP`);
+      _daily_save();
+      saveGame();
+      updDailyUI();
+    }
+  });
+}
+
+// ─── hook אתגרים לאירועים קיימים ───────────────────────
+const _origAddXP=window.addXP;
+// track distance
+let _dailyLastX=null,_dailyLastZ=null;
+function _daily_trackDistance(){
+  if(!G.daily||!PB)return;
+  const x=PB.position.x,z=PB.position.z;
+  if(_dailyLastX!==null){
+    const d=Math.sqrt((x-_dailyLastX)**2+(z-_dailyLastZ)**2);
+    if(d<5){G.daily.distance=(G.daily.distance||0)+d;_daily_check();}
+  }
+  _dailyLastX=x;_dailyLastZ=z;
+}
+
+function updDailyUI(){
+  const el=document.getElementById('daily-panel-inner');
+  if(!el||!G.daily)return;
+  let html='<div style="color:#f5c518;font-weight:bold;font-size:12px;margin-bottom:6px;text-align:center;">📅 אתגרים יומיים</div>';
+  G.daily.challenges.forEach(c=>{
+    const pct=Math.min(100,Math.round((c.progress/c.target)*100));
+    const label=c.heb.replace('{n}',c.target);
+    html+=`<div class="sq-card${c.done?' done':''}">
+      <div class="sq-title">${c.done?'✅':c.icon} ${label}</div>
+      <div class="sq-prog">${c.done?`הושלם! +${c.reward}💰`:`${c.progress}/${c.target} (${pct}%)`}</div>
+      ${!c.done?`<div style="background:#333;border-radius:4px;height:4px;margin-top:4px;"><div style="background:#f5c518;height:4px;border-radius:4px;width:${pct}%"></div></div>`:''}
+    </div>`;
+  });
+  el.innerHTML=html;
+}
+
+
 // ── הוסף rep-hud לDOM ──
 document.addEventListener('DOMContentLoaded',()=>{
   const rh=document.createElement('div');
@@ -7819,4 +8091,24 @@ document.addEventListener('DOMContentLoaded',()=>{
   cs.id='cos-shop';
   cs.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(10,15,10,.97);border:2px solid #f5c518;border-radius:14px;padding:16px;width:min(320px,85vw);display:none;color:#fff;';
   document.body.appendChild(cs);
+  // daily panel
+  const dp=document.createElement('div');
+  dp.id='daily-panel';
+  dp.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:60;background:rgba(10,10,20,.97);border:2px solid #4af;border-radius:14px;padding:16px;width:min(300px,82vw);display:none;';
+  dp.innerHTML='<div id="daily-panel-inner"></div><button onclick="document.getElementById(\'daily-panel\').style.display=\'none\'" style="width:100%;margin-top:10px;background:#222;color:#aaa;border:none;border-radius:8px;padding:8px;font-size:14px;cursor:pointer;">X סגור</button>';
+  document.body.appendChild(dp);
+  // daily button
+  const db=document.createElement('button');
+  db.id='daily-btn';
+  db.style.cssText='position:fixed;top:50%;right:10px;transform:translateY(-50%);z-index:26;background:rgba(0,30,60,.9);border:2px solid #4af;border-radius:10px;color:#4af;font-size:20px;width:42px;height:42px;display:none;cursor:pointer;';
+  db.innerHTML='📅';
+  db.title='אתגרים יומיים';
+  db.onclick=()=>{
+    const p=document.getElementById('daily-panel');
+    updDailyUI();
+    p.style.display=p.style.display==='none'?'block':'none';
+  };
+  document.body.appendChild(db);
+  // init daily on load
+  setTimeout(()=>{if(typeof _daily_init==='function')_daily_init();},500);
 });
