@@ -4015,11 +4015,11 @@ function buildNPCs(){
       {ico:'🏃',name:'שמן מנועים',desc:'+0.5 מהירות קבוע',cost:60,fn:()=>shopBuy('spd')},
       {ico:'🛡️',name:'שריון פרוות',desc:'+20 HP מקס׳',cost:100,fn:()=>shopBuy('mhp')},
     ]},
-    {x:-55.2,z:51,name:'👗 חנות אופנה',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
-      {ico:'🦷',name:'עניבת ספייק',desc:'מדבקת כוח (קוסמטי)',cost:50,fn:()=>buyCos('spike')},
-      {ico:'🕶️',name:'משקפי שמש',desc:'מגניב (קוסמטי)',cost:40,fn:()=>buyCos('glasses')},
-      {ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי',cost:35,fn:()=>buyCos('bandana')},
-      {ico:'🦸',name:'גלימת גיבור',desc:'רק לגיבור האמיתי',cost:120,fn:()=>buyCos('cape')},
+    {x:-55.2,z:51,name:'👗 חנות עיצוב',type:'shop',av:'🏪',buildFn:()=>mkLola(.7),shopItems:[
+      {ico:'⚡',name:'צוארון ספייק',desc:'מתכת כבדה. לא לכולם.',cost:50,fn:()=>buyCos('spike')},
+      {ico:'🕶️',name:'משקפי שמש',desc:'נינג׳ה. אל תשאל.',cost:40,fn:()=>buyCos('glasses')},
+      {ico:'🎀',name:'בנדנה אדומה',desc:'כלי לחימה פסיכולוגי.',cost:35,fn:()=>buyCos('bandana')},
+      {ico:'🦸',name:'גלימת גיבור',desc:'רק לגיבור האמיתי.',cost:120,fn:()=>buyCos('cape')},
     ]},
   ];
   npcDefs.forEach(n=>{
@@ -4126,7 +4126,8 @@ function updateNavArrow(){
   const el=document.getElementById('nav-edge-arrow');
   if(!el)return;
   const m=MISSIONS[G.mission];
-  const hide=!m||!m.hint||m.hint===''||(G.mission>=23&&(G.mission<25||G.mission>32))||G.mission===7;
+  const _exploreMode=G.mission===23||G.mission===24;
+  const hide=!m||(!_exploreMode&&(!m.hint||m.hint===''))||G.mission===7||G.mission===19;
   if(hide){el.style.display='none';return;}
   el.style.display='flex';
 }
@@ -4147,13 +4148,50 @@ function updateNavDirection(){
   else if(G.mission===5){const t=nearestOf(G.terrs.filter(t=>!t.cap),o=>({x:o.x,z:o.z}));if(!t)return;tx=t.x;tz=t.z;}
   else if(G.mission===11||G.mission===12){tx=-60;tz=60;}
   else if(G.mission===13){tx=G._fishkaEnemy?G._fishkaEnemy.x:35;tz=G._fishkaEnemy?G._fishkaEnemy.z:35;}
-  else if(G.mission>=14&&G.mission<=19){tx=80;tz=-80;}
+  else if(G.mission>=14&&G.mission<=15){tx=80;tz=-80;} // דלת עירייה
+  else if(G.mission===16){
+    // כספת — אם בעירייה הוביל לכספת, אחרת לדלת
+    if(CITY.inCity&&G._citySafePos){tx=G._citySafePos.x;tz=G._citySafePos.z;}
+    else{tx=80;tz=-80;}
+  }
+  else if(G.mission===17){
+    // פלטו — שומר חי קרוב, או פלטו עצמו
+    if(CITY.inCity){
+      if(cityPalto&&!cityPalto.dead){tx=cityPalto.mesh.position.x;tz=cityPalto.mesh.position.z;}
+      else{const g=nearestOf(cityGuards.filter(g=>g.hp>0),o=>({x:o.mesh.position.x,z:o.mesh.position.z}));if(g){tx=g.mesh.position.x;tz=g.mesh.position.z;}else{tx=0;tz=-25;}}
+    }else{tx=80;tz=-80;}
+  }
+  else if(G.mission===18){
+    if(CITY.inCity&&G._cityBroadcastPos){tx=G._cityBroadcastPos.x;tz=G._cityBroadcastPos.z;}
+    else{tx=80;tz=-80;}
+  }
+  else if(G.mission===19){tx=80;tz=-80;} // יציאה מעירייה
   else if(G.mission===25){tx=105;tz=25;}
   else if(G.mission===26){tx=-60;tz=60;}
   else if(G.mission===27){tx=25;tz=-125;}
   else if(G.mission>=28&&G.mission<=32){
-    tx=25;tz=-125;
-    if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;}
+    tx=25;tz=-125; // כניסה למעבדה
+    if(LAB.inLab){
+      // בתוך מעבדה — הוביל לאויב חי קרוב
+      const labEnemies=(G._labGuards||[]).filter(e=>!e.dead);
+      if(G.mission===30&&G._shadowEnemy&&!G._shadowEnemy.dead){tx=G._shadowEnemy.x;tz=G._shadowEnemy.z;}
+      else if(labEnemies.length>0){
+        const le=nearestOf(labEnemies,o=>({x:o.x,z:o.z}));
+        if(le){tx=le.x;tz=le.z;}
+      }
+    }
+  }
+  else if(G.mission===23||G.mission===24){
+    // חקירת עולם — הוביל לנקודת עניין קרובה שלא ביקרנו
+    const poi=[{x:-120,z:130,n:'בריכת הנחת'},{x:0,z:-68,n:'צפון העיר'},{x:40,z:0,n:'כיכר הכדורים'},{x:-80,z:51,n:'שוק לוד'},{x:-51,z:-100,n:'המסגד'}];
+    const unvisited=poi.filter(p=>!G[`_visited_${p.n}`]);
+    if(unvisited.length>0){
+      const nearest=nearestOf(unvisited,o=>o);
+      if(nearest){tx=nearest.x;tz=nearest.z;
+        // סמן כנבקר כשקרובים מספיק
+        if(d2(px,pz,nearest.x,nearest.z)<15)G[`_visited_${nearest.n}`]=true;
+      }
+    }else{tx=0;tz=0;} // מרכז העיר
   } else {
     const tgt=m.targetFn();if(!tgt)return;
     tx=(tgt.mesh?tgt.mesh.position.x:tgt.x)||0;
@@ -7712,8 +7750,18 @@ function shopBuy(type){
   saveGame();
 }
 
-// ════════════════════════════════════════════════
-// SIDE QUESTS
+function buyCos(type){
+  const costs={spike:50,glasses:40,bandana:35,cape:120};
+  const cost=costs[type]||50;
+  if(G.coins<cost){haptic([20,10,20]);showN('💰 אין מספיק מטבעות!');return;}
+  if(G.cosmetics&&G.cosmetics[type]){showN('✅ כבר יש לך פריט זה!');return;}
+  G.coins-=cost;
+  if(!G.cosmetics)G.cosmetics={};
+  G.cosmetics[type]=true;
+  const names={spike:'צוארון ספייק',glasses:'משקפי שמש',bandana:'בנדנה אדומה',cape:'גלימת גיבור'};
+  showN(`✅ ${names[type]} — נרכש!`);
+  haptic([20,10,30]);updCoins();saveGame();
+}
 // ════════════════════════════════════════════════
 function updSQPanel(){
   const btn=document.getElementById(isMob?'sq-btn-mob':'sq-btn');
