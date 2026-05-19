@@ -4243,6 +4243,7 @@ function loop(){
   if(VILLA.inVilla){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updVilla(dt);
     updPfx(dt);
+    updateNavDirection();
     if(mosqueCamera)renderer.render(mosqueScene,mosqueCamera);
     updHUD();
     return;
@@ -4250,12 +4251,14 @@ function loop(){
   if(LAB.inLab){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updLab(dt);
     updPfx(dt);
+    updateNavDirection();
     if(labCamera)renderer.render(labScene,labCamera);
     updHUD();
     return;
   }
   if(CITY.inCity){
     updCityHall(dt);updPfx(dt);
+    updateNavDirection();
     if(cityCamera)renderer.render(cityScene,cityCamera);
     updHUD();
     return;
