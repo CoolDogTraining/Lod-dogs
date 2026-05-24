@@ -2511,14 +2511,13 @@ const _CH6_MISSION_NAMES={
   31:'המפעל',32:'שריפה',
 };
 
-// שמירה אוטומטית כל 60 שניות
-setInterval(()=>{if(PB&&G.mission>0)saveGame();},60000);
+// שמירה אוטומטית כל 60 שניות — רק כשלא paused
+setInterval(()=>{if(PB&&G.mission>0&&!G.paused)saveGame();},60000);
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&typeof PB!=='undefined'&&PB&&G.mission>0)saveGame();
 });
 
 // הערה: setMission ב-engine.js כבר קורא saveGame() בפנים — אין צורך ב-wrapper נוסף.
-// הwrapper הישן גרם לשמירה כפולה בכל מעבר משימה.
 function _devJump(n){
   document.getElementById('devPanel').style.display='none';
   if(typeof G!=='undefined'){
@@ -2554,10 +2553,10 @@ function csStartChapter(n){
   }
 }
 document.addEventListener('keydown',function(e){
-  // Escape — פתח/סגור dev panel
+  // Escape — סגור dev panel (לא toggle — מניעת גישה לא מכוונת)
   if(e.key==='Escape'){
     const p=document.getElementById('devPanel');
-    p.style.display=p.style.display==='none'?'block':'none';
+    if(p)p.style.display='none';
   }
   // P — השהה / המשך
   if(e.key==='p'||e.key==='P'){
@@ -2578,4 +2577,177 @@ document.addEventListener('DOMContentLoaded',()=>{
       };
     }
   },500);
+
+  // ════════════════════════════════════════════════
+  // 🔊 VOLUME CONTROL
+  // ════════════════════════════════════════════════
+  const volBtn=document.createElement('button');
+  volBtn.id='vol-btn';volBtn.textContent='🔊';volBtn.title='עוצמת קול';
+  volBtn.style.cssText='position:fixed;bottom:clamp(80px,15vh,120px);left:10px;z-index:26;background:rgba(0,0,0,.82);border:1.5px solid rgba(245,197,24,.5);color:#f5c518;border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer;display:none;pointer-events:all;backdrop-filter:blur(3px);';
+  volBtn.onclick=()=>{const p=document.getElementById('vol-panel');if(p)p.style.display=p.style.display==='none'?'block':'none';};
+  document.body.appendChild(volBtn);
+
+  const volPanel=document.createElement('div');volPanel.id='vol-panel';
+  volPanel.style.cssText='position:fixed;bottom:clamp(130px,20vh,175px);left:10px;z-index:60;background:rgba(0,0,0,.95);border:1.5px solid rgba(245,197,24,.6);border-radius:12px;padding:12px 14px;display:none;min-width:165px;font-family:Arial Hebrew,Arial,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.5);';
+  volPanel.innerHTML=`
+    <div style="color:#f5c518;font-size:11px;font-weight:bold;margin-bottom:8px;letter-spacing:1px;">🔊 עוצמת קול</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="color:#aaa;font-size:10px;width:40px;">מוזיקה</span>
+      <input id="vol-music" type="range" min="0" max="100" value="65" style="flex:1;accent-color:#f5c518;cursor:pointer;" oninput="window._setMusicVol(this.value)">
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <button id="vol-mute-btn" onclick="window._toggleMute()" style="flex:1;background:rgba(231,76,60,.2);border:1px solid #e74c3c;color:#e74c3c;border-radius:6px;padding:4px;font-size:11px;cursor:pointer;">🔇 השתק</button>
+      <button onclick="document.getElementById('vol-panel').style.display='none'" style="flex:1;background:rgba(255,255,255,.05);border:1px solid #555;color:#aaa;border-radius:6px;padding:4px;font-size:11px;cursor:pointer;">✕ סגור</button>
+    </div>`;
+  document.body.appendChild(volPanel);
+
+  window._isMuted=false;
+  window._setMusicVol=function(val){
+    const v=val/100;
+    if(typeof _musicGain!=='undefined'&&_musicGain){try{_musicGain.gain.setTargetAtTime(v*0.22,_musicCtx.currentTime,0.3);}catch(e){}}
+    try{localStorage.setItem('klb_musicVol',val);}catch(e){}
+  };
+  window._toggleMute=function(){
+    window._isMuted=!window._isMuted;
+    const btn=document.getElementById('vol-mute-btn');
+    if(window._isMuted){window._setMusicVol(0);if(btn)btn.textContent='🔊 בטל השתק';}
+    else{const mv=document.getElementById('vol-music')?.value||65;window._setMusicVol(mv);if(btn)btn.textContent='🔇 השתק';}
+  };
+  // שחזר עוצמה שמורה
+  setTimeout(()=>{try{const mv=localStorage.getItem('klb_musicVol');if(mv){const el=document.getElementById('vol-music');if(el){el.value=mv;window._setMusicVol(mv);}}}catch(e){}},1500);
+
+  // הצג כפתור volume אחרי בחירת כלב
+  const _volCheck=setInterval(()=>{if(typeof G!=='undefined'&&G.hud){volBtn.style.display='block';clearInterval(_volCheck);}},500);
+
+  // ════════════════════════════════════════════════
+  // 🎮 כפתור כישור מיוחד (מובייל)
+  // ════════════════════════════════════════════════
+  setTimeout(()=>{
+    const abs=document.getElementById('abs');
+    if(!abs)return;
+    const skillBtn=document.createElement('div');
+    skillBtn.className='ab';skillBtn.id='skill-btn';
+    skillBtn.style.cssText='background:rgba(155,89,182,.85);border-color:#9b59b6;font-size:clamp(16px,4vw,22px);';
+    skillBtn.textContent='💜';skillBtn.title='כישור מיוחד (Q)';
+    skillBtn.addEventListener('touchstart',e=>{e.preventDefault();if(typeof _useSpecialSkill==='function')_useSpecialSkill();});
+    skillBtn.addEventListener('click',()=>{if(typeof _useSpecialSkill==='function')_useSpecialSkill();});
+    abs.appendChild(skillBtn);
+  },800);
+
+  // ════════════════════════════════════════════════
+  // 🎬 כותרת פרק — Title Card
+  // ════════════════════════════════════════════════
+  const CHAPTER_TITLES={
+    0:{num:'פרק א׳',sub:'לוד שלנו',color:'#8f8'},
+    8:{num:'פרק ב׳',sub:'המסגד הגדול',color:'#8af'},
+    12:{num:'פרק ג׳',sub:'השיבה',color:'#f88'},
+    15:{num:'פרק ד׳',sub:'העירייה',color:'#ff8'},
+    20:{num:'פרק ה׳',sub:'גיסות טיטאן',color:'#f8f'},
+    25:{num:'פרק ו׳',sub:'הצל',color:'#8ff'},
+  };
+  const _chapterMissions=[0,8,12,15,20,25];
+  let _lastChapterShown=-1;
+
+  // CSS לכותרת פרק
+  const chStyle=document.createElement('style');chStyle.textContent=`
+    @keyframes chapterIn{0%{opacity:0;transform:translate(-50%,-50%) scale(1.18)}18%{opacity:1;transform:translate(-50%,-50%) scale(1)}70%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0.92)}}
+    #chapter-title-ov{animation:chapterIn 3.2s cubic-bezier(.22,1,.36,1) forwards;pointer-events:none;}
+  `;document.head.appendChild(chStyle);
+
+  const chEl=document.createElement('div');chEl.id='chapter-title-ov';
+  chEl.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;text-align:center;font-family:Arial Hebrew,Arial,sans-serif;display:none;pointer-events:none;';
+  document.body.appendChild(chEl);
+
+  window._showChapterTitle=function(missionNum){
+    const ch=CHAPTER_TITLES[missionNum];if(!ch)return;
+    if(typeof G!=='undefined'&&(G.paused||G.dlgOpen))return;
+    chEl.innerHTML=`<div style="background:rgba(0,0,0,0.82);border:2px solid ${ch.color};border-radius:16px;padding:clamp(14px,4vw,28px) clamp(28px,8vw,60px);box-shadow:0 0 60px rgba(0,0,0,.8),0 0 30px ${ch.color}44;"><div style="color:${ch.color};font-size:clamp(11px,2.5vw,14px);letter-spacing:4px;margin-bottom:8px;text-shadow:0 0 12px ${ch.color};">🐕 כלבי לוד</div><div style="color:#fff;font-size:clamp(26px,7vw,52px);font-weight:bold;letter-spacing:3px;margin-bottom:6px;">${ch.num}</div><div style="color:${ch.color};font-size:clamp(14px,3.5vw,22px);letter-spacing:2px;font-style:italic;text-shadow:0 0 16px ${ch.color};">"${ch.sub}"</div></div>`;
+    chEl.style.display='block';chEl.style.animation='none';void chEl.offsetWidth;
+    chEl.style.animation='chapterIn 3.2s cubic-bezier(.22,1,.36,1) forwards';
+    setTimeout(()=>chEl.style.display='none',3300);
+  };
+
+  // hook לsetMission — זיהוי מעבר פרק
+  const _origSM=window.setMission;
+  if(typeof _origSM==='function'){
+    window.setMission=function(n){
+      _origSM(n);
+      // stats screen
+      if(typeof _missionStartStats!=='undefined'&&_missionStartStats&&n>_missionStartStats.mission){
+        setTimeout(()=>_showMissionStats(n,_missionStartStats),200);
+      }
+      _missionStartStats={kills:G.enemiesKilled||0,terrs:G.terrCnt||0,score:G.score||0,coins:G.coins||0,time:Date.now(),mission:G.mission||0};
+      // chapter title
+      const ch=_chapterMissions.find(m=>m===n);
+      if(ch!==undefined&&ch!==_lastChapterShown){_lastChapterShown=ch;setTimeout(()=>window._showChapterTitle(ch),800);}
+    };
+  }
+
+  // ════════════════════════════════════════════════
+  // 📊 STATS SCREEN בין משימות
+  // ════════════════════════════════════════════════
+  const statsEl=document.createElement('div');statsEl.id='mission-stats-ov';
+  statsEl.style.cssText='position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:180;pointer-events:all;background:rgba(0,0,0,0.88);font-family:Arial Hebrew,Arial,sans-serif;';
+  document.body.appendChild(statsEl);
+
+  window._showMissionStats=function(newM,startStats){
+    if(!startStats||!G)return;
+    if(G.paused||G.cutOpen)return;
+    const kills=(G.enemiesKilled||0)-startStats.kills;
+    const terrs=(G.terrCnt||0)-startStats.terrs;
+    const score=(G.score||0)-startStats.score;
+    const coins=(G.coins||0)-startStats.coins;
+    if(kills===0&&terrs===0&&score===0)return;
+    const timeSec=Math.round((Date.now()-startStats.time)/1000);
+    const timeStr=timeSec>60?`${Math.floor(timeSec/60)}:${String(timeSec%60).padStart(2,'0')}`:`${timeSec}s`;
+    const dog=G.dogs[G.dog];
+    const card=(icon,label,val)=>`<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:8px 6px;border:1px solid rgba(255,255,255,0.08);"><div style="font-size:1.4em">${icon}</div><div style="color:#f5c518;font-weight:bold;font-size:clamp(13px,3.5vw,18px);">${val}</div><div style="color:#888;font-size:clamp(9px,2vw,11px);margin-top:2px;">${label}</div></div>`;
+    statsEl.innerHTML=`<div style="background:linear-gradient(160deg,rgba(10,20,10,0.98),rgba(0,0,0,0.99));border:2px solid #f5c518;border-radius:18px;padding:clamp(14px,4vw,28px) clamp(18px,6vw,40px);text-align:center;max-width:min(360px,90vw);box-shadow:0 0 40px rgba(245,197,24,0.2);"><div style="font-size:clamp(13px,3vw,16px);color:#f5c518;letter-spacing:3px;margin-bottom:6px;">✅ משימה הושלמה!</div><div style="font-size:clamp(18px,5vw,28px);font-weight:bold;color:#fff;margin-bottom:18px;">📊 סיכום</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;">${card('⚔️','אויבים',kills)}${card('🏴','שטחים',terrs)}${card('⭐','ניקוד','+'+score)}${card('💰','מטבעות','+'+coins)}${card('⏱️','זמן',timeStr)}${card('🐾','רמה',dog.lv)}</div><button onclick="document.getElementById('mission-stats-ov').style.display='none'" style="background:linear-gradient(135deg,#f5c518,#d4a017);color:#000;border:none;border-radius:12px;padding:clamp(9px,2.5vw,13px) clamp(28px,8vw,50px);font-size:clamp(14px,3.5vw,18px);font-weight:bold;cursor:pointer;width:100%;">המשך ▶</button></div>`;
+    statsEl.style.display='flex';
+    setTimeout(()=>{if(statsEl.style.display!=='none')statsEl.style.display='none';},8000);
+  };
+
+  // ════════════════════════════════════════════════
+  // 🎓 TUTORIAL TOOLTIPS
+  // ════════════════════════════════════════════════
+  const tutStyle=document.createElement('style');tutStyle.textContent=`
+    @keyframes tutIn{from{opacity:0;transform:translateX(-50%) translateY(14px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    @keyframes tutOut{from{opacity:1}to{opacity:0}}
+  `;document.head.appendChild(tutStyle);
+
+  const tutEl=document.createElement('div');tutEl.id='tutorial-toast';
+  tutEl.style.cssText='position:fixed;bottom:clamp(170px,28vh,220px);left:50%;transform:translateX(-50%);background:rgba(0,20,40,0.95);border:1.5px solid #3498db;border-radius:10px;padding:8px 16px;color:#fff;font-size:clamp(11px,2.8vw,14px);z-index:55;display:none;pointer-events:none;text-align:center;max-width:80vw;font-family:Arial Hebrew,Arial,sans-serif;box-shadow:0 0 16px rgba(52,152,219,0.3);';
+  document.body.appendChild(tutEl);
+
+  let _shownTuts={};try{_shownTuts=JSON.parse(localStorage.getItem('klb_tutorials')||'{}');}catch(e){}
+  const _TUTS=[
+    {id:'move',delay:2500,text:'🕹️ W/A/S/D לתנועה, עכבר/גרירה לסיבוב מצלמה',mission:0},
+    {id:'interact',delay:6000,text:'🟢 לחץ E ליד NPC לשוחח, ליד אוכל לאסוף',mission:0},
+    {id:'attack',delay:4000,text:'⚔️ לחץ F לתקיפה — Q לכישור מיוחד',mission:3},
+    {id:'combo',delay:3000,text:'💥 קולין: 4 מכות רצופות = מתקפת STUN!',mission:3,dog:'colin'},
+    {id:'dash',delay:3000,text:'⚡ זיפו: Q = Dash Attack לקדימה',mission:3,dog:'zippo'},
+    {id:'charm',delay:3000,text:'💜 מומו: Q = קסם אויב לצדנו ל-8 שניות',mission:3,dog:'momo'},
+    {id:'map',delay:8000,text:'🗺️ לחץ על המיניmap לפתיחת מפה מלאה',mission:1},
+    {id:'territory',delay:4000,text:'🏴 עמוד על הדגל כדי לכבוש שטח',mission:2},
+  ];
+
+  window._showTutorialToast=function(text){
+    if(typeof G!=='undefined'&&(G.paused||G.dlgOpen||G.cutOpen)){setTimeout(()=>window._showTutorialToast(text),2000);return;}
+    tutEl.textContent=text;tutEl.style.display='block';tutEl.style.animation='none';void tutEl.offsetWidth;
+    tutEl.style.animation='tutIn 0.4s ease-out forwards';
+    setTimeout(()=>{tutEl.style.animation='tutOut 0.5s ease-in forwards';setTimeout(()=>tutEl.style.display='none',500);},3500);
+  };
+
+  setInterval(()=>{
+    if(typeof G==='undefined'||!G.hud)return;
+    _TUTS.forEach(t=>{
+      if(_shownTuts[t.id])return;
+      if(G.mission<t.mission)return;
+      if(t.dog&&G.dog!==t.dog)return;
+      _shownTuts[t.id]=true;
+      try{localStorage.setItem('klb_tutorials',JSON.stringify(_shownTuts));}catch(e){}
+      setTimeout(()=>window._showTutorialToast(t.text),t.delay);
+    });
+  },3000);
+
 });

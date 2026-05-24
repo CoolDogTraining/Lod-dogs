@@ -61,6 +61,20 @@ const G={
 let scene,camera,renderer,clock,mmCtx;
 let PB,dogModel,dogTail,dogLegs=[];
 const blds=[];
+
+// ════════════════════════════════════════════════
+// SKILLS STATE — כישורים ייחודיים לכל כלב
+// ════════════════════════════════════════════════
+let _comboCount=0, _comboTimer=0;
+const _COMBO_WINDOW=1.4;
+let _charmedEnemy=null, _charmedTimer=0;
+const _CHARM_DUR=8;
+let _dashCooldown=0, _dashActive=false, _dashTimer=0;
+let _dashVX=0, _dashVZ=0;
+const _DASH_DUR=0.22, _DASH_SPEED=28, _DASH_CD=2.5;
+let _stunCooldown=0;
+const _STUN_CD=4;
+let _missionStartStats=null; // לסטטיסטיקות בין משימות
 // ── רפרנסים לאורות — לשימוש במחזור יום/לילה ──
 let _ambLight=null,_sunLight=null,_fillLight=null,_hemiLight=null;
 let _rainPoints=null,_rainGeo=null;
@@ -4373,9 +4387,29 @@ function updPlayer(dt){
   if(!blkZ)PB.position.z=nz; else G.vz*=.1;
   if(G.atkCD>0)G.atkCD-=dt;
   G._frameCount=(G._frameCount||0)+1; // עבור AI throttling
+  // ── עדכון skills state ──
+  if(_comboTimer>0){_comboTimer-=dt;if(_comboTimer<=0)_comboCount=0;}
+  if(_stunCooldown>0)_stunCooldown-=dt;
+  if(_dashCooldown>0)_dashCooldown-=dt;
+  if(_charmedTimer>0){_charmedTimer-=dt;if(_charmedTimer<=0){_releaseCharm();showN('💜 הקסם פג.');}}
+  // ── Dash movement (זיפו) ──
+  if(_dashActive){
+    PB.position.x+=_dashVX*dt;PB.position.z+=_dashVZ*dt;
+    _dashVX*=0.78;_dashVZ*=0.78;_dashTimer-=dt;
+    if(_dashTimer<=0)_dashActive=false;
+  }
+  // ── Charmed enemy attacks foes ──
+  if(_charmedEnemy&&_charmedEnemy.hp>0&&_charmedEnemy.mesh.visible){
+    let nearestFoe=null,bd2=999;
+    G.enemies.forEach(f=>{if(f===_charmedEnemy||f._charmed||f.hp<=0)return;const dd=(f.mesh.position.x-_charmedEnemy.mesh.position.x)**2+(f.mesh.position.z-_charmedEnemy.mesh.position.z)**2;if(dd<bd2){bd2=dd;nearestFoe=f;}});
+    if(nearestFoe&&bd2<36){nearestFoe.hp=Math.max(0,nearestFoe.hp-6*dt*20);if(nearestFoe.hp<=0){nearestFoe.mesh.visible=false;sEDie();addXP(15);}}
+  }
+  // ── Stunned enemies freeze ──
+  G.enemies.forEach(e=>{if(e._stunned){e._stunnedT-=dt;e.state='patrol';if(e._stunnedT<=0){e._stunned=false;delete e._stunnedT;}}});
   // זיפו: מהירות תקיפה כפולה
   const _atkCooldown=G.dog==='zippo'?0.28:0.5;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
+  if(G.keys['KeyQ']){G.keys['KeyQ']=false;_useSpecialSkill();}
   if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
@@ -4419,6 +4453,19 @@ function doAtk(){
   sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
   const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
   spawnPfx(px,1,pz,0xf5c518,4);
+
+  // ── כישורים ייחודיים לפי כלב ──
+  if(dog&&G.dog==='colin'){
+    _comboCount++;_comboTimer=_COMBO_WINDOW;
+    _showComboHit(_comboCount);
+    if(_comboCount>=4){_comboCount=0;if(_stunCooldown<=0){_colinStunAttack();_stunCooldown=_STUN_CD;}}
+  }
+  if(dog&&G.dog==='zippo'&&_dashCooldown<=0&&!_dashActive){
+    const fwdX=-Math.sin(G.yaw),fwdZ=-Math.cos(G.yaw);
+    _dashVX=fwdX*_DASH_SPEED;_dashVZ=fwdZ*_DASH_SPEED;
+    _dashActive=true;_dashTimer=_DASH_DUR;_dashCooldown=_DASH_CD;
+    spawnPfx(px,0.5,pz,0x3498db,6);
+  }
 
       if(G.mission<3){showN('⚠️ עדיין לא הגיע הזמן לקרב!\nקודם השלם את המשימה הנוכחית.');return;}
 
@@ -4529,35 +4576,106 @@ function doAtk(){
 }
 function flash(m){if(!m?.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
 
-// ── מסך מוות ──
+// ════════════════════════════════════════════════
+// SKILL FUNCTIONS — כישורים ייחודיים
+// ════════════════════════════════════════════════
+function _showComboHit(n){
+  if(n<=1)return;
+  const labels={2:'2x Combo!',3:'3x Combo!! 🔥',4:'⚡ STUN INCOMING!'};
+  const txt=labels[n];if(!txt)return;
+  let el=document.getElementById('combo-pop');
+  if(!el){el=document.createElement('div');el.id='combo-pop';
+    el.style.cssText='position:fixed;top:38%;left:50%;transform:translate(-50%,-50%);font-size:clamp(18px,5vw,28px);font-weight:bold;color:#f5c518;text-shadow:0 0 16px #f5c518,0 2px 4px #000;pointer-events:none;z-index:60;display:none;font-family:Arial Hebrew,Arial,sans-serif;';
+    document.body.appendChild(el);}
+  el.textContent=txt;el.style.display='block';el.style.animation='none';void el.offsetWidth;
+  el.style.animation='floatUp 0.9s ease-out forwards';setTimeout(()=>el.style.display='none',900);
+}
+function _colinStunAttack(){
+  if(!PB)return;
+  const px=PB.position.x,pz=PB.position.z;
+  const dog=G.dogs['colin'];
+  const dmg=dog.pow*25*(1+dog.lv*0.12);
+  let stunned=0;
+  G.enemies.forEach(e=>{
+    if(e.hp<=0||!e.mesh.visible)return;
+    const dist=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
+    if(dist<5.5){
+      e.hp=Math.max(0,e.hp-dmg);e._stunned=true;e._stunnedT=2.5;
+      spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0xf5c518,10);
+      if(e.bar)e.bar.material.color.setHex(0xffff00);stunned++;
+    }
+  });
+  if(stunned>0){showN(`💥 STUN! קולין השתיק ${stunned} אויבים!`);haptic([100,40,100]);sCapture();}
+  for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;spawnPfx(px+Math.cos(a)*2.5,0.3,pz+Math.sin(a)*2.5,0xe67e22,3);}
+}
+function _momoCharm(){
+  if(!PB)return;
+  if(_charmedEnemy){_releaseCharm();return;}
+  const px=PB.position.x,pz=PB.position.z;
+  let closest=null,bestDist=12;
+  G.enemies.forEach(e=>{if(e.hp<=0||!e.mesh.visible)return;const dist=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);if(dist<bestDist){bestDist=dist;closest=e;}});
+  if(!closest){showN('💜 אין אויב קרוב לקסום!');return;}
+  _charmedEnemy=closest;_charmedTimer=_CHARM_DUR;closest._charmed=true;
+  closest.mesh.traverse(c=>{if(c.isMesh&&c.material){c._origColor=c.material.color.getHex();c.material=c.material.clone();c.material.color.setHex(0xff69b4);c.material.emissive=new THREE.Color(0x550033);}});
+  const aura=new THREE.Mesh(new THREE.SphereGeometry(0.8,7,7),new THREE.MeshBasicMaterial({color:0xff69b4,transparent:true,opacity:0.22,depthWrite:false}));
+  aura.name='_charmAura';closest.mesh.add(aura);
+  spawnPfx(closest.mesh.position.x,1.5,closest.mesh.position.z,0xff69b4,12);
+  showN(`💜 קסם! האויב עובד לצדנו ל-${_CHARM_DUR} שניות!`);haptic([30,15,50]);
+}
+function _releaseCharm(){
+  if(!_charmedEnemy)return;
+  const e=_charmedEnemy;e._charmed=false;
+  e.mesh.traverse(c=>{if(c.isMesh&&c.material&&c._origColor!==undefined){c.material.color.setHex(c._origColor);c.material.emissive=new THREE.Color(0x000000);delete c._origColor;}});
+  const aura=e.mesh.getObjectByName('_charmAura');if(aura)e.mesh.remove(aura);
+  _charmedEnemy=null;_charmedTimer=0;
+}
+function _useSpecialSkill(){
+  if(!G||!G.dog)return;
+  if(G.dog==='colin'){_colinStunAttack();_stunCooldown=_STUN_CD;}
+  else if(G.dog==='zippo'){_dashCooldown=0;doAtk();}
+  else if(G.dog==='momo'){_momoCharm();}
+}
+
+// ── מסך מוות משופר ──
 let _dyingLock=false;
 function playerDeath(){
   if(_dyingLock)return;
   _dyingLock=true;
   G.paused=true;
-  // עונש ניקוד
   const penalty=Math.min(G.score,Math.floor(G.score*.1));
   G.score=Math.max(0,G.score-penalty);
+  // CSS אנימציות אם לא קיים
+  if(!document.getElementById('death-style')){
+    const s=document.createElement('style');s.id='death-style';
+    s.textContent=`
+      @keyframes deathFadeIn{from{opacity:0}to{opacity:1}}
+      @keyframes deathPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+      #death-ov{animation:deathFadeIn 0.6s ease-out forwards;}
+      #death-btn{transition:transform 0.15s;}
+      #death-btn:active{transform:scale(0.93);}
+    `;document.head.appendChild(s);
+  }
   // fade לאדום
   const hf=document.getElementById('hf');
-  hf.style.transition='background .4s';
-  hf.style.background='rgba(180,0,0,.85)';
-  // הצג מסך
+  hf.style.transition='background .4s';hf.style.background='rgba(180,0,0,.85)';
+  const dog=G.dogs[G.dog];
+  const tips=['טיפ: לחץ Q לכישור מיוחד','טיפ: מומו מקסמת אויבים עם Q','טיפ: זיפו עושה Dash עם Q','טיפ: קולין STUN אחרי 4 מכות','טיפ: אסוף אוכל 🍖 לחידוש בריאות','טיפ: כנס לחנות לרכישת שדרוגים'];
+  const tip=tips[Math.floor(Math.random()*tips.length)];
   let overlay=document.getElementById('death-ov');
   if(!overlay){
-    overlay=document.createElement('div');
-    overlay.id='death-ov';
-    overlay.style.cssText='position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:250;pointer-events:all;';
-    overlay.innerHTML=`
-      <div style="font-size:clamp(32px,8vw,60px);margin-bottom:8px;">💀</div>
-      <div style="color:#ff4444;font-size:clamp(20px,5vw,36px);font-weight:bold;text-shadow:0 0 20px #ff0000;margin-bottom:6px;">נפלת!</div>
-      <div id="death-pen" style="color:#aaa;font-size:clamp(12px,3vw,16px);margin-bottom:22px;"></div>
-      <button id="death-btn" style="background:#f5c518;color:#000;border:none;border-radius:10px;padding:10px 28px;font-size:16px;font-weight:bold;cursor:pointer;">קום והמשך ▶</button>`;
+    overlay=document.createElement('div');overlay.id='death-ov';
+    overlay.style.cssText='position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:250;pointer-events:all;background:radial-gradient(ellipse at center,rgba(80,0,0,0.97),rgba(0,0,0,0.98));';
     document.body.appendChild(overlay);
-    document.getElementById('death-btn').addEventListener('click',playerRespawn);
   }
   overlay.style.display='flex';
-  document.getElementById('death-pen').textContent=penalty>0?`-${penalty} ניקוד`:'';
+  overlay.innerHTML=`
+    <div style="font-size:clamp(52px,14vw,88px);margin-bottom:10px;animation:deathPulse 0.5s ease 0.3s">💀</div>
+    <div style="color:#ff3333;font-size:clamp(22px,6vw,44px);font-weight:bold;text-shadow:0 0 30px #ff0000,0 0 60px #880000;margin-bottom:8px;letter-spacing:3px;">נפלת!</div>
+    <div style="color:#888;font-size:clamp(11px,3vw,15px);margin-bottom:6px;">${penalty>0?`-${penalty} ניקוד`:''}</div>
+    <div style="color:#555;font-size:clamp(10px,2.5vw,13px);margin-bottom:28px;font-style:italic;">${tip}</div>
+    <button id="death-btn" onclick="playerRespawn()" style="background:linear-gradient(135deg,#f5c518,#d4a017);color:#000;border:none;border-radius:14px;padding:clamp(10px,3vw,14px) clamp(28px,8vw,48px);font-size:clamp(14px,4vw,20px);font-weight:bold;cursor:pointer;box-shadow:0 0 24px rgba(245,197,24,0.55);letter-spacing:2px;">קום והמשך ▶</button>
+    <div style="color:#555;font-size:clamp(10px,2.2vw,12px);margin-top:16px;">❤️ ${Math.round(dog.mhp*0.35)}/${dog.mhp} HP • ⭐ רמה ${dog.lv} • 💰 ${G.coins}</div>
+  `;
   sHit();setTimeout(()=>sHit(),300);
 }
 function playerRespawn(){
@@ -4580,11 +4698,13 @@ function playerRespawn(){
 }
 function dmgPlayer(dmg){
   const dog=G.dogs[G.dog];
-  // קולין: שריון מפחית נזק
   const _armor=dog._armor||0;
   const _actual=Math.max(1,Math.round(dmg-_armor));
   dog.hp=Math.max(0,dog.hp-_actual);
-  sHit();haptic(_actual>=20?[60,20,40]:30);
+  sHit();
+  if(_actual>=20)haptic([80,30,60]);
+  else if(_actual>=10)haptic([50,20,40]);
+  else haptic(25);
   const hf=document.getElementById('hf');
   hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);
   if(dog.hp<=0)playerDeath();
