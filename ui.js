@@ -2620,18 +2620,35 @@ document.addEventListener('DOMContentLoaded',()=>{
   const _volCheck=setInterval(()=>{if(typeof G!=='undefined'&&G.hud){volBtn.style.display='block';clearInterval(_volCheck);}},500);
 
   // ════════════════════════════════════════════════
-  // 🎮 כפתור כישור מיוחד (מובייל)
+  // 🎮 כישור מיוחד — לחיצה ארוכה על כפתור ⚔️
+  // (במקום כפתור נפרד שמוסיף עומס)
   // ════════════════════════════════════════════════
   setTimeout(()=>{
-    const abs=document.getElementById('abs');
-    if(!abs)return;
-    const skillBtn=document.createElement('div');
-    skillBtn.className='ab';skillBtn.id='skill-btn';
-    skillBtn.style.cssText='background:rgba(155,89,182,.85);border-color:#9b59b6;font-size:clamp(16px,4vw,22px);';
-    skillBtn.textContent='💜';skillBtn.title='כישור מיוחד (Q)';
-    skillBtn.addEventListener('touchstart',e=>{e.preventDefault();if(typeof _useSpecialSkill==='function')_useSpecialSkill();});
-    skillBtn.addEventListener('click',()=>{if(typeof _useSpecialSkill==='function')_useSpecialSkill();});
-    abs.appendChild(skillBtn);
+    const atkBtn=document.getElementById('ba');
+    if(!atkBtn)return;
+    let _holdTimer=null;
+    let _didSkill=false;
+    atkBtn.addEventListener('touchstart',e=>{
+      _didSkill=false;
+      _holdTimer=setTimeout(()=>{
+        _didSkill=true;
+        if(typeof _useSpecialSkill==='function')_useSpecialSkill();
+        atkBtn.style.background='rgba(155,89,182,.9)';
+        setTimeout(()=>atkBtn.style.background='rgba(231,76,60,.78)',400);
+      },400);
+    },{passive:true});
+    atkBtn.addEventListener('touchend',()=>{
+      clearTimeout(_holdTimer);
+    },{passive:true});
+    atkBtn.addEventListener('touchmove',()=>{
+      clearTimeout(_holdTimer);
+    },{passive:true});
+    // רמז: הוסף תווית קטנה
+    const hint=document.createElement('div');
+    hint.style.cssText='position:absolute;bottom:-2px;right:-2px;font-size:8px;background:rgba(155,89,182,.9);border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+    hint.textContent='Q';
+    atkBtn.style.position='relative';
+    atkBtn.appendChild(hint);
   },800);
 
   // ════════════════════════════════════════════════
