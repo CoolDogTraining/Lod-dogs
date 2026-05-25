@@ -2616,8 +2616,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   // שחזר עוצמה שמורה
   setTimeout(()=>{try{const mv=localStorage.getItem('klb_musicVol');if(mv){const el=document.getElementById('vol-music');if(el){el.value=mv;window._setMusicVol(mv);}}}catch(e){}},1500);
 
-  // הצג כפתור volume אחרי בחירת כלב
-  const _volCheck=setInterval(()=>{if(typeof G!=='undefined'&&G.hud){volBtn.style.display='block';clearInterval(_volCheck);}},500);
+  // הצג כפתורי עזר אחרי בחירת כלב
+  const _volCheck=setInterval(()=>{if(typeof G!=='undefined'&&G.hud){
+    volBtn.style.display='block';
+    // ── כפתור עץ כישורים ──
+    const skBtn=document.createElement('button');
+    skBtn.id='sk-open-btn';skBtn.textContent='🌟';skBtn.title='עץ כישורים';
+    skBtn.style.cssText='position:fixed;bottom:clamp(130px,22vh,170px);left:10px;z-index:26;background:rgba(0,0,0,.82);border:1.5px solid rgba(52,152,219,.5);color:#3498db;border-radius:50%;width:42px;height:42px;font-size:18px;cursor:pointer;pointer-events:all;backdrop-filter:blur(3px);';
+    skBtn.onclick=()=>{if(typeof openSkillTree==='function')openSkillTree();};
+    document.body.appendChild(skBtn);
+    clearInterval(_volCheck);
+  }},500);
 
   // ════════════════════════════════════════════════
   // 🎮 כישור מיוחד — לחיצה ארוכה על כפתור ⚔️

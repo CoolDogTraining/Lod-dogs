@@ -4315,7 +4315,7 @@ function loop(){
       if(d2(px,pz,80,-68)<5)enterCityHall();
     }
   }
-  updCamera();updHUD();drawMM();renderer.render(scene,camera);
+  updCamera();updHUD();drawMM();_updLOD();renderer.render(scene,camera);
 }
 
 // ════════════════════════════════════════════════
@@ -4398,6 +4398,9 @@ function updPlayer(dt){
     _dashVX*=0.78;_dashVZ*=0.78;_dashTimer-=dt;
     if(_dashTimer<=0)_dashActive=false;
   }
+  // ── זיהוי שכונה כל ~2 שניות ──
+  G._zoneCheckT=(G._zoneCheckT||0)+dt;
+  if(G._zoneCheckT>2){G._zoneCheckT=0;_checkZone(PB.position.x,PB.position.z);}
   // ── Charmed enemy attacks foes ──
   if(_charmedEnemy&&_charmedEnemy.hp>0&&_charmedEnemy.mesh.visible){
     let nearestFoe=null,bd2=999;
@@ -4574,7 +4577,75 @@ function doAtk(){
     return;
   }
 }
-function flash(m){if(!m?.material)return;const o=m.material.color.getHex();m.material.color.setHex(0xff2222);setTimeout(()=>{if(m.material)m.material.color.setHex(o);},200);}
+
+// ════════════════════════════════════════════════
+// LOD — Level of Detail: ביצועים טובים יותר
+// ════════════════════════════════════════════════
+let _lodFrame=0;
+function _updLOD(){
+  _lodFrame++;
+  if(_lodFrame%45!==0||!PB)return; // כל ~45 frames (~0.75s)
+  const px=PB.position.x,pz=PB.position.z;
+  // Shadow culling: כבה צללים על אובייקטים רחוקים
+  scene.traverse(obj=>{
+    if(!obj.isMesh)return;
+    const d=Math.sqrt((obj.position.x-px)**2+(obj.position.z-pz)**2);
+    const near=d<55;
+    obj.castShadow=near&&obj._canShadow!==false;
+    obj.receiveShadow=d<75;
+  });
+  // AI LOD: אויבים רחוקים מדלגים על חישובים
+  G.enemies.forEach(e=>{
+    if(!e.mesh||!e.mesh.visible)return;
+    const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
+    e._lodTick=0;
+    e._lodSkip=d>55?5:d>35?3:1;
+  });
+}
+
+// ── ZONE DEFINITIONS — שמות שכונות לפי מיקום ──
+const _ZONES=[
+  {x:0,   z:0,   r:30, name:'רחוב הרצל'},
+  {x:40,  z:0,   r:22, name:'כיכר הכדורים'},
+  {x:0,   z:-50, r:25, name:'רחוב בן גוריון'},
+  {x:0,   z:50,  r:25, name:'רחוב וייצמן'},
+  {x:-40, z:0,   r:20, name:'רחוב הגפן'},
+  {x:40,  z:0,   r:20, name:'רחוב הדקל'},
+  {x:72,  z:96,  r:28, name:'קרית בית הכנסת'},
+  {x:-51, z:-100,r:35, name:'שכונת המסגד'},
+  {x:-60, z:55,  r:30, name:'שוק לוד'},
+  {x:50,  z:90,  r:28, name:'רמת אשכול'},
+  {x:-50, z:-100,r:28, name:'שכונת הגשר'},
+  {x:80,  z:-80, r:22, name:'כיכר העירייה'},
+];
+let _lastZone='',_zoneToastTimer=null;
+
+function _checkZone(px,pz){
+  let found='';
+  let bestR=999;
+  _ZONES.forEach(z=>{
+    const d=Math.sqrt((px-z.x)**2+(pz-z.z)**2);
+    if(d<z.r&&z.r<bestR){bestR=z.r;found=z.name;}
+  });
+  if(found&&found!==_lastZone){
+    _lastZone=found;
+    _showZoneToast(found);
+  }
+}
+
+function _showZoneToast(name){
+  const el=document.getElementById('zone-toast');
+  if(!el)return;
+  el.textContent='📍 '+name;
+  el.style.display='block';
+  el.style.animation='none';void el.offsetWidth;
+  el.style.animation='zoneIn 0.35s ease-out forwards';
+  clearTimeout(_zoneToastTimer);
+  _zoneToastTimer=setTimeout(()=>{
+    el.style.animation='zoneOut 0.5s ease-in forwards';
+    setTimeout(()=>el.style.display='none',500);
+  },2800);
+}
 
 // ════════════════════════════════════════════════
 // SKILL FUNCTIONS — כישורים ייחודיים
@@ -4635,6 +4706,108 @@ function _useSpecialSkill(){
   else if(G.dog==='zippo'){_dashCooldown=0;doAtk();}
   else if(G.dog==='momo'){_momoCharm();}
 }
+
+// ════════════════════════════════════════════════
+// SKILL TREE — עץ כישורים לכל כלב
+// ════════════════════════════════════════════════
+const SKILL_DEFS={
+  colin:[
+    {id:'armor',    ico:'🛡️', name:'שריון כבד',    desc:'מפחית נזק נכנס ב-3 לכל מכה',       cost:[1,2,3], maxLv:3, apply:(dog,lv)=>{dog._armor=(dog._armor||0)+3;}},
+    {id:'stun_dur', ico:'⚡', name:'STUN ממושך',   desc:'מאריך זמן הstun ב-1 שנייה',         cost:[2,3],   maxLv:2, apply:(dog,lv)=>{window._STUN_BASE=(window._STUN_BASE||2.5)+1;}},
+    {id:'aoe',      ico:'💥', name:'פיצוץ רחב',    desc:'רדיוס STUN גדול יותר (+1.5)',       cost:[3],     maxLv:1, apply:(dog,lv)=>{}},
+  ],
+  zippo:[
+    {id:'dash_cd',  ico:'⚡', name:'Dash מהיר',    desc:'מפחית cooldown Dash ב-0.5 שניות',   cost:[1,2],   maxLv:2, apply:(dog,lv)=>{window._DASH_CD=Math.max(1,(_DASH_CD||2.5)-0.5);}},
+    {id:'crit',     ico:'🎯', name:'קריטי משופר',  desc:'+8% סיכוי קריטי',                   cost:[2,3,3], maxLv:3, apply:(dog,lv)=>{dog._critChance=(dog._critChance||0.15)+0.08;}},
+    {id:'dash_dmg', ico:'🔥', name:'Dash מסוכן',   desc:'Dash מוסיף נזק לאויבים בנתיב',     cost:[3],     maxLv:1, apply:(dog,lv)=>{dog._dashDmg=true;}},
+  ],
+  momo:[
+    {id:'charm_dur',ico:'💜', name:'קסם ממושך',    desc:'+3 שניות לזמן הקסם',                cost:[1,2],   maxLv:2, apply:(dog,lv)=>{window._CHARM_DUR=(_CHARM_DUR||8)+3;}},
+    {id:'charm_r',  ico:'🌀', name:'קסם מרחוק',    desc:'טווח קסם גדל ב-4',                  cost:[2,3],   maxLv:2, apply:(dog,lv)=>{}},
+    {id:'aura',     ico:'✨', name:'הילת ריפוי',   desc:'מומו מחלימה 2HP לשנייה כשHP<50%',   cost:[3],     maxLv:1, apply:(dog,lv)=>{dog._healAura=true;}},
+  ],
+};
+
+// מידע על רמות כישורים שנרכשו — נשמר לpersist
+// נשמר ב-G.skillLevels = { colin:{armor:1, stun_dur:0...}, ... }
+
+function openSkillTree(){
+  if(!G||!G.dog)return;
+  G.paused=true;
+  const dog=G.dogs[G.dog];
+  const skills=SKILL_DEFS[G.dog]||[];
+  if(!G.skillLevels)G.skillLevels={};
+  if(!G.skillLevels[G.dog])G.skillLevels[G.dog]={};
+  if(!G.skillPoints)G.skillPoints={colin:0,zippo:0,momo:0};
+  const pts=G.skillPoints[G.dog]||0;
+
+  document.getElementById('sk-dog-name').textContent=dog.name;
+  document.getElementById('sk-points').textContent=pts;
+
+  const container=document.getElementById('sk-nodes');
+  container.innerHTML=skills.map(sk=>{
+    const curLv=G.skillLevels[G.dog][sk.id]||0;
+    const isMax=curLv>=sk.maxLv;
+    const cost=sk.cost[curLv]||99;
+    const canAfford=pts>=cost&&!isMax;
+    const cls=isMax?'maxed':canAfford?'unlocked':curLv>0?'unlocked':'locked';
+    const lvBar=Array.from({length:sk.maxLv},(_,i)=>
+      `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 1px;background:${i<curLv?'#f5c518':'rgba(255,255,255,0.15)'}"></span>`
+    ).join('');
+    return `<div class="sk-node ${cls}" onclick="buySkill('${sk.id}')">
+      <div class="sk-ico">${sk.ico}</div>
+      <div class="sk-info">
+        <div class="sk-name">${sk.name}</div>
+        <div class="sk-desc">${sk.desc}</div>
+        <div class="sk-cost">${isMax?'✅ מקסימום':canAfford?`💠 עלות: ${cost} נקודות`:`🔒 עלות: ${cost} נקודות`}</div>
+      </div>
+      <div class="sk-lvl">${lvBar}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('skill-tree-ov').classList.add('open');
+}
+
+window.openSkillTree=openSkillTree;
+
+window.buySkill=function(id){
+  if(!G.skillLevels||!G.skillLevels[G.dog])return;
+  if(!G.skillPoints)G.skillPoints={colin:0,zippo:0,momo:0};
+  const curLv=G.skillLevels[G.dog][id]||0;
+  const sk=SKILL_DEFS[G.dog]?.find(s=>s.id===id);
+  if(!sk||curLv>=sk.maxLv)return;
+  const cost=sk.cost[curLv]||99;
+  if((G.skillPoints[G.dog]||0)<cost){showN('❌ אין מספיק נקודות כישור!');return;}
+  G.skillPoints[G.dog]-=cost;
+  G.skillLevels[G.dog][id]=curLv+1;
+  sk.apply(G.dogs[G.dog],curLv+1);
+  haptic([30,10,50]);
+  showN(`✅ ${sk.name} שודרג לרמה ${curLv+1}!`);
+  openSkillTree(); // רענן תצוגה
+};
+
+window.closeSkillTree=function(){
+  document.getElementById('skill-tree-ov').classList.remove('open');
+  G.paused=false;
+};
+
+// כישור point מתקבלת בכל level up
+const _origAddXP=window.addXP;
+// נוסיף skillPoints ב-addXP כשעולים רמה — patch בתוך engine
+function _grantSkillPoint(dogId){
+  if(!G.skillPoints)G.skillPoints={colin:0,zippo:0,momo:0};
+  G.skillPoints[dogId]=(G.skillPoints[dogId]||0)+1;
+  showN(`🌟 נקודת כישור חדשה! סה"כ: ${G.skillPoints[dogId]} — פתח עץ כישורים`);
+}
+
+// heal aura passive — מומו
+setInterval(()=>{
+  if(!G||!PB)return;
+  const dog=G.dogs[G.dog];
+  if(G.dog==='momo'&&dog._healAura&&dog.hp/dog.mhp<0.5&&!G.paused){
+    dog.hp=Math.min(dog.mhp,dog.hp+2);
+  }
+},1000);
 
 // ── מסך מוות משופר ──
 let _dyingLock=false;
@@ -4701,13 +4874,40 @@ function dmgPlayer(dmg){
   const _armor=dog._armor||0;
   const _actual=Math.max(1,Math.round(dmg-_armor));
   dog.hp=Math.max(0,dog.hp-_actual);
+  // ── lag bar: הורד מיד ──
+  _lagHPTarget=dog.hp/dog.mhp*100;
   sHit();
   if(_actual>=20)haptic([80,30,60]);
   else if(_actual>=10)haptic([50,20,40]);
   else haptic(25);
   const hf=document.getElementById('hf');
   hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);
+  // ── כיוון הנזק ──
+  _showDmgDir();
   if(dog.hp<=0)playerDeath();
+}
+
+// מציא את כיוון הנזק לפי האויב הקרוב ביותר
+function _showDmgDir(){
+  if(!PB)return;
+  let closestEnemy=null,minDist=999;
+  G.enemies.forEach(e=>{if(e.hp<=0||!e.mesh.visible)return;const d=Math.sqrt((e.mesh.position.x-PB.position.x)**2+(e.mesh.position.z-PB.position.z)**2);if(d<minDist){minDist=d;closestEnemy=e;}});
+  if(!closestEnemy||minDist>20)return;
+  // זווית בין הכלב לאויב ביחס לכיוון מבט
+  const dx=closestEnemy.mesh.position.x-PB.position.x;
+  const dz=closestEnemy.mesh.position.z-PB.position.z;
+  const angle=Math.atan2(dx,dz)-G.yaw; // relative angle
+  const deg=((angle*180/Math.PI)%360+360)%360;
+  let dir;
+  if(deg<45||deg>=315)dir='north';
+  else if(deg<135)dir='east';
+  else if(deg<225)dir='south';
+  else dir='west';
+  const el=document.getElementById('dmg-'+dir);
+  if(!el)return;
+  el.style.opacity='1';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.opacity='0',350);
 }
 
 // ════════════════════════════════════════════════
@@ -4884,6 +5084,8 @@ function updEnemies(dt){
   if(G.mission>=3&&!VILLA.inVilla){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
+      // ── LOD: אויבים רחוקים מדלגים על חישוב AI ──
+      if(e._lodSkip>1){e._lodTick=(e._lodTick||0)+1;if(e._lodTick<e._lodSkip)return;e._lodTick=0;}
       const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
       const sees=canSeePlayer(e,px,pz);
       // מעברי state
@@ -5047,6 +5249,7 @@ function addXP(amt){
       showLU(dog,['+12 HP','+1 כוח','+0.5 מהירות','+0.5 התחדשות סטמינה']);
     }
     sLvlUp();haptic([50,30,50,30,80]);
+    _grantSkillPoint(G.dog); // נקודת כישור חדשה!
   }
   if(_hudXP){
     const pct=Math.min(100,dog.xp/Math.max(1,XP_TO_LVL[Math.min(dog.lv,XP_TO_LVL.length-1)])*100);
@@ -5073,9 +5276,11 @@ function closeLU(){document.getElementById('lu').style.display='none';G.paused=f
 // CAMERA
 // ════════════════════════════════════════════════
 // ── cache רפרנסים לאלמנטי HUD — פעם אחת בלבד ──
-let _hudHP,_hudST,_hudXP,_hudSCV,_hudIP;
+let _hudHP,_hudHPLag,_hudST,_hudXP,_hudSCV,_hudIP;
+let _lagHPTarget=100; // lag bar — מתעדכן לאט אחרי נזק
 function cacheHUD(){
   _hudHP=document.getElementById('hpf');
+  _hudHPLag=document.getElementById('hplag');
   _hudST=document.getElementById('stf');
   _hudXP=document.getElementById('xpf');
   _hudSCV=document.getElementById('scv');
@@ -5102,6 +5307,12 @@ function updHUD(){
   // HP — תמיד (קריטי לחוויה)
   const hpPct=dog.hp/dog.mhp*100;
   _hudHP.style.width=hpPct+'%';
+  // ── LAG BAR — כתום, מתפוגג לאחר נזק ──
+  if(_hudHPLag){
+    if(hpPct<_lagHPTarget) _lagHPTarget=hpPct; // ירידה מיידית
+    else _lagHPTarget=Math.min(100,_lagHPTarget+0.4); // עלייה איטית
+    _hudHPLag.style.width=_lagHPTarget+'%';
+  }
   // שדרוג: צבע HP דינמי — אדום/כתום/ירוק לפי כמה בריאות נשאר
   const hpColor = hpPct < 25
     ? 'linear-gradient(90deg,#c0392b,#e74c3c)' // קריטי — אדום כהה
@@ -8167,7 +8378,7 @@ function _daily_check(){
 }
 
 // ─── hook אתגרים לאירועים קיימים ───────────────────────
-const _origAddXP=window.addXP;
+
 // track distance
 let _dailyLastX=null,_dailyLastZ=null;
 function _daily_trackDistance(){
