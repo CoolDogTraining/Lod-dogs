@@ -4522,7 +4522,7 @@ function doAtk(){
           }
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
-          if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+          if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
         }
       }
     });
@@ -4678,7 +4678,9 @@ function _colinStunAttack(){
         addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
         if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
         updateMissionHUD();
-        if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+        if(G.mission===3&&G.enemiesKilled>=3){showN('✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!');setTimeout(()=>setMission(4),1200);}
+        else if(G.mission===3)showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
+        if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
       } else {
         e._stunned=true;e._stunnedT=2.5;
         if(e.bar)e.bar.material.color.setHex(0xffff00);
