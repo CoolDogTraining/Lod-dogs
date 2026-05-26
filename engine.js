@@ -4408,7 +4408,7 @@ function updPlayer(dt){
     if(nearestFoe&&bd2<36){nearestFoe.hp=Math.max(0,nearestFoe.hp-6*dt*20);if(nearestFoe.hp<=0){nearestFoe.mesh.visible=false;sEDie();addXP(15);}}
   }
   // ── Stunned enemies freeze ──
-  G.enemies.forEach(e=>{if(e._stunned){e._stunnedT-=dt;e.state='patrol';if(e._stunnedT<=0){e._stunned=false;delete e._stunnedT;}}});
+  G.enemies.forEach(e=>{if(e._stunned){if(e.hp<=0){e._stunned=false;delete e._stunnedT;e.mesh.visible=false;return;}e._stunnedT-=dt;e.state='patrol';if(e._stunnedT<=0){e._stunned=false;delete e._stunnedT;}}});
   // זיפו: מהירות תקיפה כפולה
   const _atkCooldown=G.dog==='zippo'?0.28:0.5;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
@@ -4671,9 +4671,17 @@ function _colinStunAttack(){
     if(e.hp<=0||!e.mesh.visible)return;
     const dist=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
     if(dist<5.5){
-      e.hp=Math.max(0,e.hp-dmg);e._stunned=true;e._stunnedT=2.5;
+      e.hp=Math.max(0,e.hp-dmg);
       spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0xf5c518,10);
-      if(e.bar)e.bar.material.color.setHex(0xffff00);stunned++;
+      if(e.hp<=0){
+        e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);
+        addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
+        if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
+      } else {
+        e._stunned=true;e._stunnedT=2.5;
+        if(e.bar)e.bar.material.color.setHex(0xffff00);
+      }
+      stunned++;
     }
   });
   if(stunned>0){showN(`💥 STUN! קולין השתיק ${stunned} אויבים!`);haptic([100,40,100]);sCapture();}
