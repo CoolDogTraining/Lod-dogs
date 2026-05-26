@@ -2941,7 +2941,7 @@ function enterCityHall(){
     cityGuards.forEach(g=>{g.state='patrol';g.alertT=0;g.waitT=0;g.hp=g.mhp;g.atkT=0;g._hitT=0;if(g.bar)g.bar.scale.x=1;});
     scene.remove(PB);cityScene.add(PB);
     PB.position.set(CITY.playerX,0,CITY.playerZ);
-    document.getElementById('tb').textContent='🏛️ עיריית לוד — לובי';
+    
     showN('🏛️ נכנסתם לעיריית לוד.\nהכספת בקומה ג׳. שמרו על עצמכם.');
     G.paused=false;fadeIn();
   });
@@ -2953,7 +2953,7 @@ function exitCityHall(){
     CITY.inCity=false;
     cityScene.remove(PB);scene.add(PB);
     PB.position.set(80,0,-68);
-    document.getElementById('tb').textContent='🐕 כלבי לוד — לוד';
+    
     cityObjects.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
     cityObjects.length=0;cityGuards.length=0;
     cityScene=null;cityCamera=null;cityAlerted=false;
@@ -3041,7 +3041,7 @@ function updCityHall(dt){
   cityCamera.position.lerp(_vCamTarget,.1);
   cityCamera.lookAt(CITY.playerX,1.2,CITY.playerZ);
   // שם
-  document.getElementById('tb').textContent='🏛️ עיריית לוד';
+  
   // יציאה דרום
   if(CITY.playerZ>12){exitCityHall();return;}
   // mission 15 — בתוך הבניין, מתקדמים מיד ל-16
@@ -3721,7 +3721,7 @@ function enterMosque(){
     scene.remove(PB);
     mosqueScene.add(PB);
     PB.position.set(VILLA.playerX,0,VILLA.playerZ);
-    document.getElementById('tb').textContent='🕌 המסגד הגדול — לוד';
+    
     showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."');
     G.paused=false;
     fadeIn();
@@ -3735,7 +3735,7 @@ function exitMosque(won){
     mosqueScene.remove(PB);
     scene.add(PB);
     PB.position.set(0,0,-55);
-    document.getElementById('tb').textContent='🐕 כלבי לוד — לוד';
+    
     // dispose כל objects של המסגד כדי לפנות זיכרון GPU
     mosqueObjects.forEach(o=>{
       if(o.geometry)o.geometry.dispose();
@@ -4677,6 +4677,8 @@ function _colinStunAttack(){
         e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);
         addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
         if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
+        updateMissionHUD();
+        if(!e._titan)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
       } else {
         e._stunned=true;e._stunnedT=2.5;
         if(e.bar)e.bar.material.color.setHex(0xffff00);
@@ -6931,7 +6933,7 @@ function enterLab(){
     scene.remove(PB);
     labScene.add(PB);
     PB.position.set(LAB.playerX,0,LAB.playerZ);
-    document.getElementById('tb').textContent='🔬 מעבדה נטושה — לוד';
+    
     if(G.mission===30&&!G._shadowBossDead){
       showN('⚠️ משהו מסתובב כאן...');
       setTimeout(_spawnShadowInLab,800);
@@ -6950,7 +6952,7 @@ function exitLab(){
     if(labScene)labScene.remove(PB);
     scene.add(PB);
     PB.position.set(25,0,-118);
-    document.getElementById('tb').textContent='🐕 כלבי לוד — לוד';
+    
     // dispose
     labObjects.forEach(o=>{
       if(o.geometry)o.geometry.dispose();
