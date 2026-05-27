@@ -4597,7 +4597,6 @@ function _updLOD(){
   G.enemies.forEach(e=>{
     if(!e.mesh||!e.mesh.visible)return;
     const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
-    e._lodTick=0;
     e._lodSkip=d>55?5:d>35?3:1;
   });
 }
