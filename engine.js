@@ -4494,7 +4494,7 @@ function doAtk(){
         // זיפו: קריטי-היט
         const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
         const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
-        e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=6;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
@@ -5100,9 +5100,11 @@ function updEnemies(dt){
       // מעברי state
       if(sees){
         if(e.state!=='chase'){alertNearby(e,px,pz);if(e.state==='patrol')showN('👁️ גילו אותך!');}
-        e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=4;
+        e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=6;
       } else if(e.state==='chase'){
-        e.state='search';e.searchT=4;
+        // אם searchT עדיין פעיל (אויב הוכה לאחרונה) — ממשיך לרדוף
+        if(e.searchT>0){e.searchT-=dt;/* keep chasing */}
+        else{e.state='search';e.searchT=4;}
       }
       if(e.state==='chase'||e.state==='search'){
         const tx=e.state==='chase'?px:e.lastSeenX;
