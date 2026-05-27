@@ -4456,18 +4456,7 @@ function doAtk(){
   const dog=G.dogs[G.dog],px=PB.position.x,pz=PB.position.z;
   spawnPfx(px,1,pz,0xf5c518,4);
 
-  // ── כישורים ייחודיים לפי כלב ──
-  if(dog&&G.dog==='colin'){
-    _comboCount++;_comboTimer=_COMBO_WINDOW;
-    _showComboHit(_comboCount);
-    if(_comboCount>=4){_comboCount=0;if(_stunCooldown<=0){_colinStunAttack();_stunCooldown=_STUN_CD;}}
-  }
-  if(dog&&G.dog==='zippo'&&_dashCooldown<=0&&!_dashActive){
-    const fwdX=-Math.sin(G.yaw),fwdZ=-Math.cos(G.yaw);
-    _dashVX=fwdX*_DASH_SPEED;_dashVZ=fwdZ*_DASH_SPEED;
-    _dashActive=true;_dashTimer=_DASH_DUR;_dashCooldown=_DASH_CD;
-    spawnPfx(px,0.5,pz,0x3498db,6);
-  }
+  // כישורים הוסרו
 
       if(G.mission<3){showN('⚠️ עדיין לא הגיע הזמן לקרב!\nקודם השלם את המשימה הנוכחית.');return;}
 
@@ -4494,7 +4483,7 @@ function doAtk(){
         // זיפו: קריטי-היט
         const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
         const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
-        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=6;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=8;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
@@ -4597,7 +4586,7 @@ function _updLOD(){
   G.enemies.forEach(e=>{
     if(!e.mesh||!e.mesh.visible)return;
     const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
-    e._lodSkip=d>55?5:d>35?3:1;
+    e._lodSkip=1;
   });
 }
 
@@ -5093,18 +5082,16 @@ function updEnemies(dt){
   if(G.mission>=3&&!VILLA.inVilla){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
-      // ── LOD: אויבים רחוקים מדלגים על חישוב AI ──
-      if(e._lodSkip>1){e._lodTick=(e._lodTick||0)+1;if(e._lodTick<e._lodSkip)return;e._lodTick=0;}
+      // LOD disabled
       const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
-      const sees=canSeePlayer(e,px,pz);
+      const sees=canSeePlayer(e,px,pz)||dd<6;
       // מעברי state
       if(sees){
         if(e.state!=='chase'){alertNearby(e,px,pz);if(e.state==='patrol')showN('👁️ גילו אותך!');}
         e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=6;
       } else if(e.state==='chase'){
-        // אם searchT עדיין פעיל (אויב הוכה לאחרונה) — ממשיך לרדוף
-        if(e.searchT>0){e.searchT-=dt;/* keep chasing */}
-        else{e.state='search';e.searchT=4;}
+        e.searchT-=dt;
+        if(e.searchT<=0){e.state='search';e.searchT=4;}
       }
       if(e.state==='chase'||e.state==='search'){
         const tx=e.state==='chase'?px:e.lastSeenX;
