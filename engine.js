@@ -4495,7 +4495,8 @@ function doAtk(){
         // זיפו: קריטי-היט
         const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
         const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
-        e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=4;
+        sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
@@ -4676,7 +4677,7 @@ function _colinStunAttack(){
       if(e.hp<=0){
         e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);
         addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
-        if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
+        if(G.daily){G.daily.kills=(G.daily.kicks||0)+1;_daily_check();}
         updateMissionHUD();
         if(G.mission===3&&G.enemiesKilled>=3){showN('✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!');setTimeout(()=>setMission(4),1200);}
         else if(G.mission===3)showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);

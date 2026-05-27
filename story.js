@@ -245,7 +245,7 @@ const MISSIONS=[
   {txt:'4️⃣ הכנע 3 אויבי כנופיית "כלבי הגשר" ⚔️  (הובסו: 0/3)',
    hint:'אויבים ברחוב',
    targetFn:()=>G.enemies.find(e=>e.hp>0&&e.mesh.visible)||{x:0,z:0},
-   unlock:()=>{G.enemiesKilled=0;G.enemies.forEach(e=>{e.mesh.visible=true;e.hp=e.mhp;e._stunned=false;delete e._stunnedT;});}},
+   unlock:()=>{G.enemiesKilled=0;G.enemies.forEach(e=>{e.mesh.visible=true;e.hp=e.mhp;e._stunned=false;delete e._stunnedT;e.state='patrol';});}},
   // 4
   {txt:'5️⃣ גייס 2 כלבים — החלף/י למומו ודבר איתם 🐾  (גויסו: 0/2)',
    hint:'מחכה לגיוס',
