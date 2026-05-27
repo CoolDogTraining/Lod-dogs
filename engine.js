@@ -4407,8 +4407,7 @@ function updPlayer(dt){
     G.enemies.forEach(f=>{if(f===_charmedEnemy||f._charmed||f.hp<=0)return;const dd=(f.mesh.position.x-_charmedEnemy.mesh.position.x)**2+(f.mesh.position.z-_charmedEnemy.mesh.position.z)**2;if(dd<bd2){bd2=dd;nearestFoe=f;}});
     if(nearestFoe&&bd2<36){nearestFoe.hp=Math.max(0,nearestFoe.hp-6*dt*20);if(nearestFoe.hp<=0){nearestFoe.mesh.visible=false;sEDie();addXP(15);}}
   }
-  // ── Stunned enemies freeze ──
-  G.enemies.forEach(e=>{if(e._stunned){if(e.hp<=0){e._stunned=false;delete e._stunnedT;e.mesh.visible=false;return;}e._stunnedT-=dt;e.state='patrol';if(e._stunnedT<=0){e._stunned=false;delete e._stunnedT;}}});
+  // ── Stunned enemies — just take damage, no freeze ──
   // זיפו: מהירות תקיפה כפולה
   const _atkCooldown=G.dog==='zippo'?0.28:0.5;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
@@ -4495,8 +4494,7 @@ function doAtk(){
         // זיפו: קריטי-היט
         const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
         const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
-        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=4;
-        sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        e.hp-=dmg;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
         if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
@@ -4674,19 +4672,18 @@ function _colinStunAttack(){
     if(dist<5.5){
       e.hp=Math.max(0,e.hp-dmg);
       spawnPfx(e.mesh.position.x,1,e.mesh.position.z,0xf5c518,10);
+      stunned++;
       if(e.hp<=0){
         e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);
         addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
-        if(G.daily){G.daily.kills=(G.daily.kicks||0)+1;_daily_check();}
+        if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
         updateMissionHUD();
-        if(G.mission===3&&G.enemiesKilled>=3){showN('✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!');setTimeout(()=>setMission(4),1200);}
-        else if(G.mission===3)showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
+        if(G.mission===3&&G.enemiesKilled>=3){showN('\u2705 \u05d4\u05db\u05e0\u05e2\u05ea 3/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd! \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05dc\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0!');setTimeout(()=>setMission(4),1200);}
+        else if(G.mission===3)showN(`\u26d4 \u05d4\u05db\u05e0\u05e2\u05ea ${G.enemiesKilled}/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd`);
         if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
       } else {
-        e._stunned=true;e._stunnedT=2.5;
         if(e.bar)e.bar.material.color.setHex(0xffff00);
       }
-      stunned++;
     }
   });
   if(stunned>0){showN(`💥 STUN! קולין השתיק ${stunned} אויבים!`);haptic([100,40,100]);sCapture();}
