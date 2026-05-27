@@ -3139,7 +3139,7 @@ function updCityGuards(dt){
       g._hitT=0.5;g._atkCD=0.5;
       if(g.bar)g.bar.scale.x=Math.max(0,g.hp/g.mhp);
       if(g.hp<=0){g.hp=0;g.mesh.visible=false;haptic([40,20,40]);addXP(15);G.coins+=10;updCoins();showN('✅ שומר הוכנע!');}
-      else g.state='chase';
+      else{g.state='chase';g.alertT=0;}
     }
   });
 }
@@ -4278,7 +4278,9 @@ function loop(){
     return;
   }
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
-    updPlayer(dt);updEnemies(dt);updPickups(dt);
+    try{updPlayer(dt);}catch(e){console.error('updPlayer error:',e);}
+    try{updEnemies(dt);}catch(e){console.error('updEnemies error:',e);}
+    try{updPickups(dt);}catch(e){}
     // מוד מוזיקה דינמי
     (()=>{
       const anyClose=G.enemies.some(e=>e.hp>0&&e.mesh.visible&&d2(e.mesh.position.x,e.mesh.position.z,PB.position.x,PB.position.z)<18);
@@ -7969,6 +7971,21 @@ function updReputationHUD(){
   el.textContent='⭐'.repeat(rep)+' '+_REP_NAMES[rep];
   el.style.color=rep===3?'#f5c518':rep===2?'#e74c3c':'#aaa';
 }
+// ════════════════════════════════════════════════
+// HIT FLASH — מהבהב לבן/אדום בעת פגיעה
+// ════════════════════════════════════════════════
+function flash(mesh){
+  if(!mesh||!mesh.material)return;
+  const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  mats.forEach(m=>{
+    if(!m._origEmissive){m._origEmissive=m.emissive?m.emissive.getHex():0x000000;}
+    if(m.emissive)m.emissive.setHex(0xff4444);
+  });
+  setTimeout(()=>{
+    mats.forEach(m=>{if(m.emissive&&m._origEmissive!==undefined)m.emissive.setHex(m._origEmissive);});
+  },120);
+}
+
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
