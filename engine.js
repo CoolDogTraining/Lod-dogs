@@ -3139,7 +3139,7 @@ function updCityGuards(dt){
       g._hitT=0.5;g._atkCD=0.5;
       if(g.bar)g.bar.scale.x=Math.max(0,g.hp/g.mhp);
       if(g.hp<=0){g.hp=0;g.mesh.visible=false;haptic([40,20,40]);addXP(15);G.coins+=10;updCoins();showN('✅ שומר הוכנע!');}
-      else g.state='chase';
+      else{g.state='chase';g.alertT=0;}
     }
   });
 }
@@ -4093,6 +4093,8 @@ function mAtk(){
   } else {doAtk();}
 }function mE(){
   if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
+  // פרק ז׳ — אינטראקציה עם חפצים
+  if(G.mission>=33&&G.mission<=38){G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);return;}
   if(G.near)doInteract();
 }function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
@@ -4278,7 +4280,9 @@ function loop(){
     return;
   }
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
-    updPlayer(dt);updEnemies(dt);updPickups(dt);
+    try{updPlayer(dt);}catch(e){console.error('updPlayer:',e);}
+    try{updEnemies(dt);}catch(e){console.error('updEnemies:',e);}
+    try{updPickups(dt);}catch(e){}
     // מוד מוזיקה דינמי
     (()=>{
       const anyClose=G.enemies.some(e=>e.hp>0&&e.mesh.visible&&d2(e.mesh.position.x,e.mesh.position.z,PB.position.x,PB.position.z)<18);
@@ -7972,6 +7976,21 @@ function updReputationHUD(){
   el.style.color=rep===3?'#f5c518':rep===2?'#e74c3c':'#aaa';
 }
 // ════════════════════════════════════════════════
+// HIT FLASH — מהבהב אדום בעת פגיעה
+// ════════════════════════════════════════════════
+function flash(mesh){
+  if(!mesh||!mesh.material)return;
+  const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  mats.forEach(m=>{
+    if(!m._origEmissive){m._origEmissive=m.emissive?m.emissive.getHex():0x000000;}
+    if(m.emissive)m.emissive.setHex(0xff4444);
+  });
+  setTimeout(()=>{
+    mats.forEach(m=>{if(m.emissive&&m._origEmissive!==undefined)m.emissive.setHex(m._origEmissive);});
+  },120);
+}
+
+// ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
 function spawnBlood(x,y,z,n=10){
@@ -8822,21 +8841,24 @@ let _ch7DebrisItems=[], _ch7TagFound=false, _ch7FilesFound=false;
 
 function _spawnCh7DebrisItems(){
   if(_ch7DebrisItems.length>0)return;
-  // תג מתכת
-  const tagGeo=new THREE.BoxGeometry(0.3,0.04,0.2);
-  const tagM=new THREE.MeshLambertMaterial({color:0x888888,emissive:0x333333});
+  // תג מתכת — גדול יותר וזוהר לבן כדי שיהיה קל למצוא
+  const tagGeo=new THREE.BoxGeometry(0.5,0.12,0.35);
+  const tagM=new THREE.MeshLambertMaterial({color:0xaaaaaa,emissive:0x666666});
   const tagMesh=new THREE.Mesh(tagGeo,tagM);
-  tagMesh.position.set(27,-0.3,-123);
+  tagMesh.position.set(27,0.4,-123);
   scene.add(tagMesh);
-  _ch7DebrisItems.push({mesh:tagMesh,type:'tag',collected:false});
+  // אור קטן מעל התג
+  const tagLight=new THREE.PointLight(0xffffff,1.2,5);tagLight.position.set(27,1.5,-123);scene.add(tagLight);
+  _ch7DebrisItems.push({mesh:tagMesh,type:'tag',collected:false,light:tagLight});
 
-  // קבצים שרופים
-  const fileGeo=new THREE.BoxGeometry(0.35,0.02,0.28);
-  const fileM=new THREE.MeshLambertMaterial({color:0x2a1a08,emissive:0x0a0500});
+  // קבצים שרופים — עם זוהר כתום
+  const fileGeo=new THREE.BoxGeometry(0.5,0.08,0.4);
+  const fileM=new THREE.MeshLambertMaterial({color:0x4a2a08,emissive:0x2a0f00});
   const fileMesh=new THREE.Mesh(fileGeo,fileM);
-  fileMesh.position.set(23,-0.3,-126);
+  fileMesh.position.set(23,0.4,-126);
   scene.add(fileMesh);
-  _ch7DebrisItems.push({mesh:fileMesh,type:'files',collected:false});
+  const fileLight=new THREE.PointLight(0xff6600,0.8,4);fileLight.position.set(23,1.5,-126);scene.add(fileLight);
+  _ch7DebrisItems.push({mesh:fileMesh,type:'files',collected:false,light:fileLight});
 }
 
 function updCh7(dt){
@@ -8845,6 +8867,11 @@ function updCh7(dt){
 
   // ── Mission 33: ספון שרידים ──
   if(G.mission===33){
+    if(!G._ch7Started){
+      G._ch7Started=true;
+      forceDog('colin','קולין מוביל את הסריקה');
+      setTimeout(()=>showCut('ch7_open',()=>{}),600);
+    }
     _spawnCh7DebrisItems();
     // הנחיה לאינטראקציה
     const ip=document.getElementById('ip');
@@ -8855,7 +8882,7 @@ function updCh7(dt){
         if(ip){ip.textContent='🔍 E — בדוק';ip.style.display='block';}
         if(G.keys['KeyE']||G._eKeyFrame){
           G.keys['KeyE']=false;G._eKeyFrame=false;
-          item.collected=true;item.mesh.visible=false;
+          item.collected=true;item.mesh.visible=false;if(item.light)item.light.intensity=0;
           if(item.type==='tag'){
             _ch7TagFound=true;
             showCut('ch7_tag_found',()=>{});
@@ -8875,7 +8902,8 @@ function updCh7(dt){
         if(ip&&ip.textContent.includes('בדוק'))ip.style.display='none';
       }
       // אנימציית מרחף
-      item.mesh.position.y=-0.3+Math.sin(Date.now()*0.002+item.mesh.position.x)*0.06;
+      const _by=0.4;item.mesh.position.y=_by+Math.sin(Date.now()*0.002+item.mesh.position.x)*0.12;
+      if(item.light)item.light.position.y=item.mesh.position.y+1.1;
     });
   }
 
