@@ -3139,7 +3139,7 @@ function updCityGuards(dt){
       g._hitT=0.5;g._atkCD=0.5;
       if(g.bar)g.bar.scale.x=Math.max(0,g.hp/g.mhp);
       if(g.hp<=0){g.hp=0;g.mesh.visible=false;haptic([40,20,40]);addXP(15);G.coins+=10;updCoins();showN('✅ שומר הוכנע!');}
-      else{g.state='chase';g.alertT=0;}
+      else g.state='chase';
     }
   });
 }
@@ -4278,9 +4278,7 @@ function loop(){
     return;
   }
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
-    try{updPlayer(dt);}catch(e){console.error('updPlayer error:',e);}
-    try{updEnemies(dt);}catch(e){console.error('updEnemies error:',e);}
-    try{updPickups(dt);}catch(e){}
+    updPlayer(dt);updEnemies(dt);updPickups(dt);
     // מוד מוזיקה דינמי
     (()=>{
       const anyClose=G.enemies.some(e=>e.hp>0&&e.mesh.visible&&d2(e.mesh.position.x,e.mesh.position.z,PB.position.x,PB.position.z)<18);
@@ -4306,6 +4304,7 @@ function loop(){
     updBldCapture(dt);
     updCh5(dt); // פרק ה׳
     updCh6(dt); // פרק ו׳
+    updCh7(dt); // פרק ז׳
     // כניסה למסגד — שחקן הגיע לדלת במשימה 8
     if(G.mission===8&&G.gateMarker){
       const px=PB.position.x,pz=PB.position.z;
@@ -7831,10 +7830,11 @@ function _startBigFire(){
       setTimeout(()=>showCut('ch6_fire',()=>{
         setTimeout(()=>showCut('ch6_ending',()=>{
           G.paused=false;
-          G._gameComplete=true;
-          const mp=document.getElementById('mp');if(mp)mp.style.display='none';
-          const nav=document.getElementById('nav');if(nav)nav.style.display='none';
-          showN('🏁 פרק ו׳ הסתיים!');
+          G._gameComplete=false;
+          const mp=document.getElementById('mp');if(mp)mp.style.display='block';
+          const nav=document.getElementById('nav');if(nav)nav.style.display='block';
+          showN('🏁 פרק ו׳ הסתיים! פרק ז׳ מתחיל...');
+          setTimeout(()=>setMission(33),2000);
         }),1500);
       }),600);
     }
@@ -7971,21 +7971,6 @@ function updReputationHUD(){
   el.textContent='⭐'.repeat(rep)+' '+_REP_NAMES[rep];
   el.style.color=rep===3?'#f5c518':rep===2?'#e74c3c':'#aaa';
 }
-// ════════════════════════════════════════════════
-// HIT FLASH — מהבהב לבן/אדום בעת פגיעה
-// ════════════════════════════════════════════════
-function flash(mesh){
-  if(!mesh||!mesh.material)return;
-  const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
-  mats.forEach(m=>{
-    if(!m._origEmissive){m._origEmissive=m.emissive?m.emissive.getHex():0x000000;}
-    if(m.emissive)m.emissive.setHex(0xff4444);
-  });
-  setTimeout(()=>{
-    mats.forEach(m=>{if(m.emissive&&m._origEmissive!==undefined)m.emissive.setHex(m._origEmissive);});
-  },120);
-}
-
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
@@ -8455,3 +8440,484 @@ document.addEventListener('DOMContentLoaded',()=>{
   // init daily on load
   setTimeout(()=>{if(typeof _daily_init==='function')_daily_init();},500);
 });
+
+
+// ════════════════════════════════════════════════
+// פרק ז׳ — "מקור"
+// חיילי על, שפיה, קרב Z-07
+// ════════════════════════════════════════════════
+
+// ── מבנה שפיה (בית חולים נטוש) ──
+const SHAFIYA={
+  entered:false,playerX:0,playerZ:0,playerYaw:0,
+  doorLocked:false,alerted:false
+};
+let _shafiyaObjects=[],_shafiyaGuards=[],_shafiyaCamera=null,_shafiyaScene=null;
+let _z07Enemy=null,_z07Phase=1,_z07PhaseDone=false;
+let _superSoldiers=[];  // חיילי העל בעולם הפתוח (missions 35+)
+
+// ── קבועים ──
+const SUPER_HP=320, SUPER_SPD=5.2, SUPER_ATK=3.4;
+const Z07_HP=700, Z07_SPD=4.8;
+const SHAFIYA_X=-20, SHAFIYA_Z=-200;
+
+// ────────────────────────────────────────────────
+// בניית חייל-על (Super Soldier)
+// ────────────────────────────────────────────────
+function mkSuperSoldier(col){
+  const g=new THREE.Group();
+  // גוף — גדול ושריר (פי 1.6 מאויב רגיל)
+  const body=new THREE.Mesh(
+    new THREE.BoxGeometry(1.1,1.5,0.9),
+    new THREE.MeshLambertMaterial({color:col||0x1a1a2e,emissive:0x050510})
+  );
+  body.position.y=1.1; g.add(body);
+  // ראש
+  const head=new THREE.Mesh(
+    new THREE.BoxGeometry(0.8,0.75,0.75),
+    new THREE.MeshLambertMaterial({color:col||0x1a1a2e,emissive:0x050510})
+  );
+  head.position.y=2.1; g.add(head);
+  // עיניים אדומות
+  const eyeM=new THREE.MeshBasicMaterial({color:0xff0000});
+  const eyeGeo=new THREE.BoxGeometry(0.12,0.1,0.05);
+  const eL=new THREE.Mesh(eyeGeo,eyeM); eL.position.set(-0.18,2.15,0.38); g.add(eL);
+  const eR=new THREE.Mesh(eyeGeo,eyeM); eR.position.set(0.18,2.15,0.38); g.add(eR);
+  g._eyeL=eL; g._eyeR=eR;
+  // כתפיים רחבות
+  const sM=new THREE.MeshLambertMaterial({color:0x2a2a3e});
+  const sGeo=new THREE.BoxGeometry(0.45,0.35,0.6);
+  const shL=new THREE.Mesh(sGeo,sM); shL.position.set(-0.75,1.6,0); g.add(shL);
+  const shR=new THREE.Mesh(sGeo,sM); shR.position.set(0.75,1.6,0); g.add(shR);
+  // צלקות/קווים מעבדה — פרט ויזואלי
+  const scM=new THREE.MeshBasicMaterial({color:0x440011});
+  const scGeo=new THREE.BoxGeometry(0.05,0.6,0.05);
+  const sc=new THREE.Mesh(scGeo,scM); sc.position.set(0.25,1.3,0.46); g.add(sc);
+  g.castShadow=true;
+  return g;
+}
+
+// ────────────────────────────────────────────────
+// ספון חיילי על לעולם הפתוח (mission 35)
+// ────────────────────────────────────────────────
+function _spawnSuperSoldiers(){
+  if(_superSoldiers.length>0)return;
+  // 2 חיילים על הדרך לשפיה
+  const positions=[[-10,-155],[8,-162]];
+  positions.forEach(([x,z])=>{
+    const mesh=mkSuperSoldier(0x1a1a2e);
+    mesh.position.set(x,0,z);
+    scene.add(mesh);
+    const bar=hpBar(mesh,1.8,2.8);
+    _superSoldiers.push({
+      mesh,bar,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
+      atk:SUPER_ATK,atkT:0,state:'patrol',
+      homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2,
+      lastSeenX:0,lastSeenZ:0,searchT:0,
+      _chargeT:0,_chargeReady:false,_chargeActive:false,
+      _cvx:0,_cvz:0,_slamT:0,_howlT:0,
+      _hitFlash:0,_isSuperSoldier:true
+    });
+  });
+}
+
+// ────────────────────────────────────────────────
+// עדכון חיילי על — AI + מכות מיוחדות
+// ────────────────────────────────────────────────
+function updSuperSoldiers(dt){
+  if(!_superSoldiers.length||G.mission<35)return;
+  const px=PB.position.x,pz=PB.position.z;
+  const dog=G.dogs[G.dog];
+
+  _superSoldiers.forEach(e=>{
+    if(e.hp<=0||!e.mesh.visible)return;
+    const ex=e.mesh.position.x,ez=e.mesh.position.z;
+    const dd=d2(ex,ez,px,pz);
+
+    // ── Timers ──
+    e.atkT=Math.max(0,e.atkT-dt);
+    e._chargeT=Math.max(0,e._chargeT-dt);
+    e._slamT=Math.max(0,e._slamT-dt);
+    e._howlT=Math.max(0,e._howlT-dt);
+    if(e._hitFlash>0){e._hitFlash-=dt;if(e._hitFlash<=0)_resetSuperColor(e);}
+
+    // ── State transitions ──
+    if(dd<18){
+      if(e.state==='patrol')showN('💀 חייל על גילה אותך!');
+      e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=10;
+    } else if(e.state==='chase'){
+      e.searchT-=dt;
+      if(e.searchT<=0){e.state='patrol';}
+    }
+
+    if(e.state!=='chase')return;
+
+    // ── Charge attack — טעינה ודהירה ──
+    if(!e._chargeActive&&e._chargeT<=0&&dd>5&&dd<16){
+      // התחלת טעינה — הצג אינדיקטור
+      e._chargeT=3.5;
+      e._chargeReady=true;
+      spawnPfx(ex,0.5,ez,0xff2200,6);
+      showN('⚡ חייל על טוען מתקפה!');
+      setTimeout(()=>{
+        if(e.hp<=0)return;
+        // ביצוע ריצה
+        e._chargeReady=false;
+        e._chargeActive=true;
+        const dx2=e.lastSeenX-e.mesh.position.x,dz2=e.lastSeenZ-e.mesh.position.z;
+        const l=Math.sqrt(dx2*dx2+dz2*dz2)||1;
+        e._cvx=dx2/l*18; e._cvz=dz2/l*18;
+        setTimeout(()=>{e._chargeActive=false;e._cvx=0;e._cvz=0;},600);
+      },900);
+    }
+
+    // ── Charge movement ──
+    if(e._chargeActive){
+      e.mesh.position.x+=e._cvx*dt;
+      e.mesh.position.z+=e._cvz*dt;
+      // פגיעה במהלך ריצה
+      if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<2.8){
+        dmgPlayer(22);e._chargeActive=false;e._cvx=0;e._cvz=0;
+        haptic([60,20,60]);showN('💥 ריסוק!');
+      }
+    } else {
+      // ── תנועה רגילה ──
+      const dx=px-ex,dz=pz-ez,l=Math.sqrt(dx*dx+dz*dz)||1;
+      e.mesh.position.x+=dx/l*e.spd*dt;
+      e.mesh.position.z+=dz/l*e.spd*dt;
+      e.mesh.rotation.y=Math.atan2(dx,dz);
+
+      // ── Slam — קפיצה ומחיצה ──
+      if(e._slamT<=0&&dd<3.5){
+        e._slamT=4.0;
+        spawnBlood(ex,0.5,ez,12);spawnPfx(ex,0.2,ez,0xff4400,8);
+        haptic([80,30,80]);dmgPlayer(28);showN('🔨 מחיצה!');
+        // רעידת מצלמה
+        camera.position.y+=1.2;setTimeout(()=>{camera.position.y-=1.2;},80);
+      }
+
+      // ── Howl — קריאה לעזרה ──
+      if(e._howlT<=0&&dd<10&&Math.random()<0.008){
+        e._howlT=15;
+        showN('🐺 יללה! חיזוקים מגיעים!');
+        spawnPfx(ex,2,ez,0x880000,10);
+        // מגרה אויבים רגילים קרובים
+        G.enemies.forEach(reg=>{
+          if(reg.hp>0&&reg.mesh.visible&&d2(reg.mesh.position.x,reg.mesh.position.z,ex,ez)<25){
+            reg.state='chase';reg.lastSeenX=px;reg.lastSeenZ=pz;reg.searchT=8;
+          }
+        });
+      }
+
+      // ── תקיפה רגילה ──
+      if(dd<e.atk&&e.atkT<=0){e.atkT=1.4;dmgPlayer(16);haptic(35);}
+    }
+
+    // ── פגיעת שחקן ──
+    if(dd<4.5&&G._atkFrame&&e.hp>0){
+      const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
+      e.hp-=dmg;flash(e.mesh.children[0]);
+      spawnBlood(ex,1,ez,10);showDmg(ex,1,ez,Math.round(dmg));
+      haptic(25);e._hitFlash=0.15;
+      _flashSuperRed(e);
+      if(e.hp<=0){
+        e.hp=0;e.mesh.visible=false;sEDie();
+        haptic([70,25,50]);addXP(50);G.score+=150;G.coins+=25;updCoins();
+        _ragdoll(e.mesh);
+        showN('✅ חייל על הוכנע!');
+        // בדוק אם כולם מוכנעים → mission 35 done
+        const alive=_superSoldiers.filter(s=>s.hp>0&&s.mesh.visible).length;
+        if(alive===0&&G.mission===35){
+          showN('✅ המארב הוכנע! המשיכו לשפיה.');
+          setTimeout(()=>setMission(36),1800);
+        }
+      }
+    }
+
+    if(e.bar){
+      e.bar.scale.x=Math.max(0,e.hp/e.mhp);
+      e.bar.material.color.setHex(e.state==='chase'?0xff0000:0xe74c3c);
+    }
+  });
+}
+
+function _flashSuperRed(e){
+  e.mesh.traverse(c=>{
+    if(c.isMesh&&c.material&&c!==e.mesh._eyeL&&c!==e.mesh._eyeR){
+      if(!c._origCol)c._origCol=c.material.color.getHex();
+      c.material.color.setHex(0xff2200);
+    }
+  });
+}
+function _resetSuperColor(e){
+  e.mesh.traverse(c=>{
+    if(c.isMesh&&c.material&&c._origCol!==undefined){
+      c.material.color.setHex(c._origCol);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════
+// Z-07 — בוס פרק ז׳
+// ════════════════════════════════════════════════
+function _buildZ07(){
+  if(_z07Enemy)return;
+  const mesh=mkSuperSoldier(0x0a0a16);
+  // Z-07 גדול יותר
+  mesh.scale.setScalar(1.35);
+  // צלקות ניסוי נוספות
+  mesh.traverse(c=>{
+    if(c.isMesh&&c.material&&!(c===mesh._eyeL||c===mesh._eyeR)){
+      c.material=c.material.clone();
+      if(c.material.emissive)c.material.emissive.setHex(0x1a0022);
+    }
+  });
+  // אורת הילה אדומה
+  const aura=new THREE.PointLight(0xff0000,2.5,8);
+  aura.position.set(0,1.5,0);mesh.add(aura);mesh._aura=aura;
+
+  mesh.position.set(SHAFIYA_X,0,SHAFIYA_Z-12);
+  scene.add(mesh);
+  const bar=hpBar(mesh,2.5,3.5);
+  bar.material.color.setHex(0xff0000);
+
+  _z07Enemy={
+    mesh,bar,x:SHAFIYA_X,z:SHAFIYA_Z-12,
+    hp:Z07_HP,mhp:Z07_HP,spd:Z07_SPD,
+    atk:3.8,atkT:0,dead:false,
+    _phase:1,_chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
+    _slamT:0,_howlT:0,_hitT:0,_hitCD:0,
+    _ctrlOff:false  // עיניים כבות — פאזה 3
+  };
+  G._z07Enemy=_z07Enemy;
+}
+
+function updZ07(dt){
+  if(!_z07Enemy||_z07Enemy.dead||G.mission!==38)return;
+  const b=_z07Enemy;
+  const px=PB.position.x,pz=PB.position.z;
+  b.x=b.mesh.position.x;b.z=b.mesh.position.z;
+  const dd=d2(b.x,b.z,px,pz);
+  const dog=G.dogs[G.dog];
+
+  b.atkT=Math.max(0,b.atkT-dt);
+  b._chargeT=Math.max(0,b._chargeT-dt);
+  b._slamT=Math.max(0,b._slamT-dt);
+  b._howlT=Math.max(0,b._howlT-dt);
+  b._hitT=Math.max(0,b._hitT-dt);
+  b._hitCD=Math.max(0,b._hitCD-dt);
+
+  const hpPct=b.hp/b.mhp;
+
+  // ── פאזה 2: Howl + חיילים נוספים (50% HP) ──
+  if(hpPct<=0.5&&b._phase===1&&!_z07PhaseDone){
+    b._phase=2;_z07PhaseDone=true;
+    spawnPfx(b.x,2,b.z,0xff0000,20);
+    haptic([100,40,100]);
+    setTimeout(()=>showCut('ch7_z07_phase2',()=>{}),300);
+    // ספון 2 חיילים רגילים כתגבורת
+    [[-5,-208],[5,-212]].forEach(([sx,sz])=>{
+      const reg=mkEnemy(0x2a1a2e,1);reg.position.set(sx,0,sz);scene.add(reg);
+      const regBar=hpBar(reg,1.4,2.3);
+      G.enemies.push({mesh:reg,hp:80,mhp:80,spd:4,alert:18,atk:2.6,atkT:0,bar:regBar,
+        homeX:sx,homeZ:sz,patAng:0,patT:0,state:'chase',
+        lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'שפיה'});
+    });
+    // Z-07 מאט קצת — מדמם
+    b.spd*=0.8;
+    if(b.mesh._aura)b.mesh._aura.color.setHex(0xaa0000);
+  }
+
+  // ── פאזה 3: עיניים כבות, בלגן (25% HP) ──
+  if(hpPct<=0.25&&b._phase===2){
+    b._phase=3;
+    // כיבוי עיניים
+    b.mesh.traverse(c=>{if(c.isMesh&&c.material&&c.material.color){
+      if(c.material.color.getHex()===0xff0000)c.material.color.setHex(0x220000);
+    }});
+    if(b.mesh._aura)b.mesh._aura.intensity=0.4;
+    b._ctrlOff=true;
+    showCut('ch7_z07_phase3',()=>{});
+    b.spd*=0.65;
+  }
+
+  // ── תנועה ──
+  if(!b._chargeActive){
+    const dx=px-b.x,dz=pz-b.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+    const spd=b._ctrlOff?b.spd*0.7:b.spd;
+    b.mesh.position.x+=dx/l*spd*dt;
+    b.mesh.position.z+=dz/l*spd*dt;
+    b.mesh.rotation.y=Math.atan2(dx,dz);
+
+    // ── Charge attack ──
+    if(b._chargeT<=0&&dd>6&&dd<20&&!b._ctrlOff){
+      b._chargeT=5.0;
+      spawnPfx(b.x,0.5,b.z,0xff4400,8);
+      showN('⚡ Z-07 טוען...');
+      setTimeout(()=>{
+        if(b.dead)return;
+        b._chargeActive=true;
+        const dx2=px-b.x,dz2=pz-b.z,l2=Math.sqrt(dx2*dx2+dz2*dz2)||1;
+        b._cvx=dx2/l2*22;b._cvz=dz2/l2*22;
+        setTimeout(()=>{b._chargeActive=false;b._cvx=0;b._cvz=0;},700);
+      },1000);
+    }
+
+    // ── Slam ──
+    if(b._slamT<=0&&dd<4){
+      b._slamT=3.5;
+      spawnBlood(b.x,0.5,b.z,18);haptic([100,30,100]);
+      dmgPlayer(35);showN('🔨 מחיצת Z-07!');
+      camera.position.y+=1.8;setTimeout(()=>{camera.position.y-=1.8;},100);
+    }
+
+    // ── תקיפה רגילה ──
+    if(dd<b.atk&&b.atkT<=0){b.atkT=1.2;dmgPlayer(20);haptic(45);}
+  } else {
+    // charge בתנועה
+    b.mesh.position.x+=b._cvx*dt;
+    b.mesh.position.z+=b._cvz*dt;
+    if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<3.5){
+      dmgPlayer(32);b._chargeActive=false;haptic([80,25,80]);showN('💥 ריסוק! Z-07 תפס אותך!');
+    }
+  }
+
+  // ── פגיעת שחקן ──
+  if(dd<5.5&&G.atkCD<=0&&b._hitT<=0&&b._hitCD<=0){
+    const dmg=Math.round(dog.pow*13*(1+dog.lv*.12));
+    b.hp-=dmg;sHit();haptic(30);
+    flash(b.mesh.children[0]);
+    spawnBlood(b.x,1.5,b.z,16);showDmg(b.x,2,b.z,Math.round(dmg));
+    b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.55;
+    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+
+    if(b.hp<=0){
+      b.dead=true;b.mesh.visible=false;
+      if(b.mesh._aura)b.mesh._aura.intensity=0;
+      sCapture();haptic([120,50,100,30,120]);
+      addXP(300);G.score+=2000;G.coins+=150;updCoins();
+      spawnBlood(b.x,2,b.z,30);
+      for(let i=0;i<15;i++)spawnPfx(
+        b.x+(Math.random()-.5)*4,1+Math.random()*2,b.z+(Math.random()-.5)*4,
+        0xff2200,3
+      );
+      G.paused=true;
+      setTimeout(()=>showCut('ch7_ending',()=>{
+        G.paused=false;
+        setMission(39); // mission 39 = "מוצאים את כ"ץ" (עתידי)
+        showN('🔜 פרק ז׳ הסתיים. כ"ץ עדיין בחוץ.');
+      }),800);
+    }
+  }
+
+  if(b.bar){b.bar.scale.x=Math.max(0,b.hp/b.mhp);}
+}
+
+// ════════════════════════════════════════════════
+// לוגיקת משימות 33-38
+// ════════════════════════════════════════════════
+
+// שרידי המעבדה — אובייקטים לאינטראקציה
+let _ch7DebrisItems=[], _ch7TagFound=false, _ch7FilesFound=false;
+
+function _spawnCh7DebrisItems(){
+  if(_ch7DebrisItems.length>0)return;
+  // תג מתכת
+  const tagGeo=new THREE.BoxGeometry(0.3,0.04,0.2);
+  const tagM=new THREE.MeshLambertMaterial({color:0x888888,emissive:0x333333});
+  const tagMesh=new THREE.Mesh(tagGeo,tagM);
+  tagMesh.position.set(27,-0.3,-123);
+  scene.add(tagMesh);
+  _ch7DebrisItems.push({mesh:tagMesh,type:'tag',collected:false});
+
+  // קבצים שרופים
+  const fileGeo=new THREE.BoxGeometry(0.35,0.02,0.28);
+  const fileM=new THREE.MeshLambertMaterial({color:0x2a1a08,emissive:0x0a0500});
+  const fileMesh=new THREE.Mesh(fileGeo,fileM);
+  fileMesh.position.set(23,-0.3,-126);
+  scene.add(fileMesh);
+  _ch7DebrisItems.push({mesh:fileMesh,type:'files',collected:false});
+}
+
+function updCh7(dt){
+  if(G.mission<33||G.mission>38)return;
+  const px=PB.position.x,pz=PB.position.z;
+
+  // ── Mission 33: ספון שרידים ──
+  if(G.mission===33){
+    _spawnCh7DebrisItems();
+    // הנחיה לאינטראקציה
+    const ip=document.getElementById('ip');
+    _ch7DebrisItems.forEach(item=>{
+      if(item.collected)return;
+      const dd=d2(item.mesh.position.x,item.mesh.position.z,px,pz);
+      if(dd<2.5){
+        if(ip){ip.textContent='🔍 E — בדוק';ip.style.display='block';}
+        if(G.keys['KeyE']||G._eKeyFrame){
+          G.keys['KeyE']=false;G._eKeyFrame=false;
+          item.collected=true;item.mesh.visible=false;
+          if(item.type==='tag'){
+            _ch7TagFound=true;
+            showCut('ch7_tag_found',()=>{});
+            showN('🏷️ נמצא תג: Z-01 — SUBJECT: ZIPPO');
+          } else {
+            _ch7FilesFound=true;
+            showN('📄 קבצים חרוכים — כ"ץ ניסה לשרוף ראיות.');
+          }
+          if(_ch7TagFound&&_ch7FilesFound){
+            setTimeout(()=>{
+              showCut('ch7_zippo_crisis',()=>{});
+              setTimeout(()=>setMission(34),3000);
+            },1500);
+          }
+        }
+      } else {
+        if(ip&&ip.textContent.includes('בדוק'))ip.style.display='none';
+      }
+      // אנימציית מרחף
+      item.mesh.position.y=-0.3+Math.sin(Date.now()*0.002+item.mesh.position.x)*0.06;
+    });
+  }
+
+  // ── Mission 34 → 35: ספון חיילי על כשמתקרבים לשפיה ──
+  if(G.mission===34){
+    const distToShafiya=d2(px,pz,SHAFIYA_X,SHAFIYA_Z);
+    if(distToShafiya<60){
+      setMission(35);
+      _spawnSuperSoldiers();
+    }
+  }
+
+  // ── Mission 35: עדכון חיילי על ──
+  if(G.mission===35){
+    updSuperSoldiers(dt);
+  }
+
+  // ── Mission 36: כניסה לשפיה ──
+  if(G.mission===36){
+    const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z);
+    if(distToHosp<8){
+      setMission(37);
+      setTimeout(()=>showCut('ch7_katz_intercom',()=>{}),800);
+      showN('🏚️ נכנסתם לשפיה. כ"ץ מדבר.');
+    }
+  }
+
+  // ── Mission 37: בריחה מנעילה — מגיעים לתחתית ──
+  if(G.mission===37){
+    const distToBottom=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-12);
+    if(distToBottom<6){
+      setMission(38);
+      _buildZ07();
+      setTimeout(()=>showCut('ch7_z07_intro',()=>{}),600);
+    }
+    // חיילים ששומרים את המסדרון
+    updSuperSoldiers(dt);
+  }
+
+  // ── Mission 38: קרב Z-07 ──
+  if(G.mission===38){
+    updZ07(dt);
+  }
+}
+
