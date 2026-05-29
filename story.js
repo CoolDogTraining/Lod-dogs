@@ -555,9 +555,9 @@ const MISSIONS=[
    }},
 
   // 35 — על הדרך לשפיה: מארב חיילי העל
-  {txt:'3️⃣5️⃣ התקדמו למרכז גהה — לוד ⚕️',
+  {txt:'3️⃣5️⃣ מצאו את מרכז גהה — הגיעו לכניסה 🏥',
    hint:'מרכז גהה — צפון לוד',
-   targetFn:()=>({x:-15,z:-148}),
+   targetFn:()=>({x:62,z:-118}),
    unlock:()=>{
      forceDog('zippo','זיפו מוביל — הוא מכיר את המקום');
      setTimeout(()=>showCut('ch7_ambush',()=>{}),1200);
@@ -566,13 +566,13 @@ const MISSIONS=[
   // 36 — חדירה לשפיה + מפגש כ"ץ ברמקול
   {txt:'3️⃣6️⃣ היכנסו למרכז גהה 🏥',
    hint:'מרכז גהה — לוד',
-   targetFn:()=>({x:-15,z:-148}),
+   targetFn:()=>({x:62,z:-118}),
    unlock:()=>showN('🏚️ בית החולים לחולי נפש. נטוש 20 שנה.\nמשהו עדיין חי פה.')},
 
   // 37 — בריחה מהנעילה דרך הקומות
   {txt:'3️⃣7️⃣ ברחו מהנעילה — רדו לתחתית 🔒',
    hint:'מרכז גהה — קומה תחתית',
-   targetFn:()=>({x:-15,z:-148}),
+   targetFn:()=>({x:62,z:-118}),
    unlock:()=>{
      setTimeout(()=>showCut('ch7_lockdown',()=>{}),600);
    }},
@@ -580,7 +580,7 @@ const MISSIONS=[
   // 38 — קרב Z-07 (בוס)
   {txt:'3️⃣8️⃣ הכנעו את Z-07 💀',
    hint:'חדר המרתף — בית החולים',
-   targetFn:()=>G._z07Enemy&&!G._z07Enemy.dead?{x:G._z07Enemy.x,z:G._z07Enemy.z}:{x:-15,z:-155},
+   targetFn:()=>G._z07Enemy&&!G._z07Enemy.dead?{x:G._z07Enemy.x,z:G._z07Enemy.z}:{x:62,z:-126},
    unlock:()=>{
      setTimeout(()=>showCut('ch7_z07_intro',()=>{}),800);
    }},

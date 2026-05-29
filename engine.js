@@ -2692,8 +2692,8 @@ const _SPAWN_POOL=[
   [-55,68],[-48,58],[-62,55],
   // תחנת רכבת — דרום רחוק
   [6,-118],[-58,-124],[20,-115],[-30,-120],
-  // מרכז גהה — צפון קיצוני
-  [-10,-140],[0,-145],[-20,-142],[-8,-150],
+  // מרכז גהה — מזרח צפון
+  [55,-112],[68,-108],[72,-122],[58,-128],
 ];
 const _ENEMY_COLS=[0x1e1e1e,0x2a2010,0x181818,0x28200a,0x101018,0x1e1408];
 
@@ -4201,7 +4201,7 @@ function updateNavDirection(){
   }
   else if(G.mission===23||G.mission===24){
     // חקירת עולם — הוביל לנקודת עניין קרובה שלא ביקרנו
-    const poi=[{x:-120,z:130,n:'בריכת הנחת'},{x:0,z:-68,n:'צפון העיר'},{x:40,z:0,n:'כיכר הכדורים'},{x:-80,z:51,n:'שוק לוד'},{x:-51,z:-100,n:'המסגד'},{x:-15,z:-148,n:'מרכז גהה'}];
+    const poi=[{x:-120,z:130,n:'בריכת הנחת'},{x:0,z:-68,n:'צפון העיר'},{x:40,z:0,n:'כיכר הכדורים'},{x:-80,z:51,n:'שוק לוד'},{x:-51,z:-100,n:'המסגד'},{x:62,z:-118,n:'מרכז גהה'}];
     const unvisited=poi.filter(p=>!G[`_visited_${p.n}`]);
     if(unvisited.length>0){
       const nearest=nearestOf(unvisited,o=>o);
@@ -8622,7 +8622,7 @@ let _superSoldiers=[];  // חיילי העל בעולם הפתוח (missions 35+
 // ── קבועים ──
 const SUPER_HP=320, SUPER_SPD=5.2, SUPER_ATK=3.4;
 const Z07_HP=700, Z07_SPD=4.8;
-const SHAFIYA_X=-15, SHAFIYA_Z=-148;
+const SHAFIYA_X=62, SHAFIYA_Z=-118;
 
 // ────────────────────────────────────────────────
 // בניית חייל-על (Super Soldier)
@@ -8665,8 +8665,13 @@ function mkSuperSoldier(col){
 // ────────────────────────────────────────────────
 function _spawnSuperSoldiers(){
   if(_superSoldiers.length>0)return;
-  // 2 חיילים על הדרך לשפיה
-  const positions=[[-10,-155],[8,-162]];
+  // חיילי על — בתוך מרכז גהה (קואורדינטות יחסיות לבניין)
+  const bx=SHAFIYA_X, bz=SHAFIYA_Z;
+  const positions=[
+    [bx-6, bz+2],   // מסדרון שמאל
+    [bx+5, bz-3],   // חדר ימין
+    [bx,   bz-6],   // עומק הבניין
+  ];
   positions.forEach(([x,z])=>{
     const mesh=mkSuperSoldier(0x1a1a2e);
     mesh.position.set(x,0,z);
@@ -9110,44 +9115,53 @@ function updCh7(dt){
     }
   }
 
-  // ── Mission 35 → אם מגיעים לשפיה בלי מארב — ספון חיילים ──
+  // ── Mission 35: התקדמות למרכז גהה — חיילים בפנים ──
   if(G.mission===35){
-    if(!G._superSpawned){
+    // כשמגיעים לכניסת הבניין — ספון חיילים בפנים + קדם ל-36
+    // פולס אינדיקטור כניסה
+    if(G._hospDoorInd){
+      G._hospDoorInd.position.y=3.5+Math.sin(Date.now()*.005)*0.3;
+      G._hospDoorInd.material.color.setHex(Math.sin(Date.now()*.01)>0?0x44ff88:0x22cc55);
+    }
+        const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z+8);
+    if(distToHosp<12&&!G._superSpawned){
       G._superSpawned=true;
       _spawnSuperSoldiers();
+      showN('⚠️ תנועה בתוך הבניין. היזהרו.');
     }
-    updSuperSoldiers(dt);
+    // בדוק אם כל החיילים הובסו → אפשר להיכנס לעומק
+    if(G._superSpawned){
+      const alive=_superSoldiers.filter(s=>s.hp>0&&s.mesh.visible).length;
+      if(alive===0){
+        showN('✅ המסדרון נוקה. היכנסו לעומק.');
+        setTimeout(()=>setMission(36),1500);
+      }
+      updSuperSoldiers(dt);
+    }
   }
 
 
-  // ── Mission 36: כניסה למרכז גהה ──
+  // ── Mission 36: עומק הבניין — כ"ץ ברמקול ──
   if(G.mission===36){
-    // הנפש אינדיקטור
-    if(G._hospDoorInd){
-      G._hospDoorInd.position.y=3.5+Math.sin(Date.now()*.004)*0.25;
-      G._hospDoorInd.material.color.setHex(
-        Math.sin(Date.now()*.008)>0 ? 0x44ff88 : 0x22cc66
-      );
-    }
-    const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z);
-    if(distToHosp<6){
+    const distToDeep=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-4);
+    if(distToDeep<8&&!G._katzIntercomed){
+      G._katzIntercomed=true;
       if(G._hospDoorInd)G._hospDoorInd.visible=false;
-      setMission(37);
-      setTimeout(()=>showCut('ch7_katz_intercom',()=>{}),800);
-      showN('🏥 נכנסתם למרכז גהה הנטוש.\nכ"ץ מדבר מהרמקול.');
+      setTimeout(()=>showCut('ch7_katz_intercom',()=>{
+        setMission(37);
+      }),600);
     }
   }
 
-  // ── Mission 37: בריחה מנעילה — מגיעים לתחתית ──
+  // ── Mission 37: ירידה לתחתית — Z-07 ──
   if(G.mission===37){
-    const distToBottom=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-8);
-    if(distToBottom<6){
+    const distToBasement=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-10);
+    if(distToBasement<6&&!G._z07Spawned){
+      G._z07Spawned=true;
       setMission(38);
       _buildZ07();
       setTimeout(()=>showCut('ch7_z07_intro',()=>{}),600);
     }
-    // חיילים ששומרים את המסדרון
-    updSuperSoldiers(dt);
   }
 
   // ── Mission 38: קרב Z-07 ──

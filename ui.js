@@ -1527,6 +1527,10 @@ const _CUT_PORTRAITS={
   ch6_open:'💔',ch6_reks_dead:'😶',ch6_shadow_seen:'👁️',
   ch6_shadow_zippo:'⚡',ch6_lab_found:'🔬',ch6_recording:'🎙️',
   ch6_shadow_fight:'⚔️',ch6_factory:'😱',ch6_fire:'🔥',ch6_ending:'🌆',
+  // ── פרק ז׳ ──
+  ch7_open:'🌅',ch7_tag_found:'📄',ch7_zippo_crisis:'💔',ch7_ambush:'⚠️',
+  ch7_katz_intercom:'📢',ch7_lockdown:'🔒',ch7_z07_intro:'💀',
+  ch7_z07_phase2:'🔴',ch7_z07_phase3:'👁️',ch7_ending:'🌙',
 };
 function skipTypewriter(){
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
@@ -2532,6 +2536,16 @@ function _devJump(n){
       G._ch6LabVisited=false;G._ch6RecordingPlayed=false;
       G._ch6FactoryVisited=false;G._ch6FireDone=false;
       G._shadowEnemy=null;G._shadowBossDead=false;
+    }
+    // אפס ch7 state אם קופצים לפרק ז׳
+    if(n>=33){
+      G._ch7Started=false;
+      G._ch6FireDone=true; // נדרש כדי שפרק ז׳ יפתח תקין
+      G._gameComplete=false;
+      if(typeof _ch7DebrisItems!=='undefined'){_ch7DebrisItems.forEach(i=>{if(i.mesh)i.mesh.visible=true;if(i.light)i.light.intensity=1.2;i.collected=false;});}
+      if(typeof _z07Enemy!=='undefined'&&_z07Enemy){_z07Enemy.dead=false;if(_z07Enemy.mesh)_z07Enemy.mesh.visible=true;_z07Enemy.hp=700;}
+      if(typeof _superSoldiers!=='undefined')_superSoldiers.forEach(s=>{s.hp=s.mhp;if(s.mesh)s.mesh.visible=true;});
+      G._superSpawned=false;
     }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
