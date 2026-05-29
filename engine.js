@@ -344,7 +344,7 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildSky();buildWorld();_initLampPool();buildCityHall();buildLabExterior();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
+  buildLights();buildSky();buildWorld();_initLampPool();buildCityHall();buildLabExterior();buildHospitalExterior();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
   buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();
   _buildPoolOfRest();
   setupInput();
@@ -2692,6 +2692,8 @@ const _SPAWN_POOL=[
   [-55,68],[-48,58],[-62,55],
   // תחנת רכבת — דרום רחוק
   [6,-118],[-58,-124],[20,-115],[-30,-120],
+  // מרכז גהה — צפון קיצוני
+  [-10,-140],[0,-145],[-20,-142],[-8,-150],
 ];
 const _ENEMY_COLS=[0x1e1e1e,0x2a2010,0x181818,0x28200a,0x101018,0x1e1408];
 
@@ -4199,7 +4201,7 @@ function updateNavDirection(){
   }
   else if(G.mission===23||G.mission===24){
     // חקירת עולם — הוביל לנקודת עניין קרובה שלא ביקרנו
-    const poi=[{x:-120,z:130,n:'בריכת הנחת'},{x:0,z:-68,n:'צפון העיר'},{x:40,z:0,n:'כיכר הכדורים'},{x:-80,z:51,n:'שוק לוד'},{x:-51,z:-100,n:'המסגד'}];
+    const poi=[{x:-120,z:130,n:'בריכת הנחת'},{x:0,z:-68,n:'צפון העיר'},{x:40,z:0,n:'כיכר הכדורים'},{x:-80,z:51,n:'שוק לוד'},{x:-51,z:-100,n:'המסגד'},{x:-15,z:-148,n:'מרכז גהה'}];
     const unvisited=poi.filter(p=>!G[`_visited_${p.n}`]);
     if(unvisited.length>0){
       const nearest=nearestOf(unvisited,o=>o);
@@ -8462,6 +8464,148 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ════════════════════════════════════════════════
+// מרכז גהה — מרכז בריאות הנפש הנטוש, לוד
+// מיקום: (-15, -148) — צפון העיר
+// ════════════════════════════════════════════════
+function buildHospitalExterior(){
+  const x=SHAFIYA_X, z=SHAFIYA_Z;
+
+  // חומרים — בניין מוסדי ישן, בטון מצהיב
+  const wallM  = new THREE.MeshLambertMaterial({color:0xd4c89a, emissive:0x080700});
+  const wall2M = new THREE.MeshLambertMaterial({color:0xbfb488, emissive:0x060500});
+  const roofM  = new THREE.MeshLambertMaterial({color:0x888070, emissive:0x050503});
+  const rustM  = new THREE.MeshLambertMaterial({color:0x7a5a30, emissive:0x0d0700});
+  const boardM = new THREE.MeshLambertMaterial({color:0x3a2a14, emissive:0x060400});
+  const ironM  = new THREE.MeshLambertMaterial({color:0x2a2020, emissive:0x040303});
+
+  // ── גוף ראשי ──
+  const body = new THREE.Mesh(new THREE.BoxGeometry(24,7,16), wallM);
+  body.position.set(x,3.5,z); body.castShadow=true; body.receiveShadow=true; scene.add(body);
+
+  // ── כנף צדדית (ל שמאל) ──
+  const wing = new THREE.Mesh(new THREE.BoxGeometry(8,5.5,10), wall2M);
+  wing.position.set(x-16,2.75,z+3); wing.castShadow=true; scene.add(wing);
+
+  // ── קומה שנייה חלקית — ריקבון ──
+  const top = new THREE.Mesh(new THREE.BoxGeometry(14,3.5,10), wall2M);
+  top.position.set(x+3,8.75,z-2); top.castShadow=true; scene.add(top);
+
+  // ── גגות ──
+  const roof1 = new THREE.Mesh(new THREE.BoxGeometry(24.6,0.5,16.6), roofM);
+  roof1.position.set(x,7.25,z); scene.add(roof1);
+  const roof2 = new THREE.Mesh(new THREE.BoxGeometry(8.6,0.5,10.6), roofM);
+  roof2.position.set(x-16,5.75,z+3); scene.add(roof2);
+  const roof3 = new THREE.Mesh(new THREE.BoxGeometry(14.6,0.5,10.6), roofM);
+  roof3.position.set(x+3,10.5,z-2); scene.add(roof3);
+
+  // ── חלונות סורגים — אופייני לבי"ח נפש ──
+  const winM = new THREE.MeshLambertMaterial({color:0x1a1008, emissive:0x020100});
+  [[-8,4],[0,4],[8,4],[-8,1.5],[0,1.5],[8,1.5]].forEach(([ox,oy])=>{
+    // חלון
+    const win = new THREE.Mesh(new THREE.BoxGeometry(2.2,1.8,0.2), winM);
+    win.position.set(x+ox, oy+1, z+8.1); scene.add(win);
+    // סורגים אנכיים
+    for(let b=-0.7;b<=0.8;b+=0.35){
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08,1.8,0.18), ironM);
+      bar.position.set(x+ox+b, oy+1, z+8.2); scene.add(bar);
+    }
+    // סורג אופקי
+    const hbar = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.08,0.18), ironM);
+    hbar.position.set(x+ox, oy+1, z+8.2); scene.add(hbar);
+  });
+
+  // ── חלונות בכנף ──
+  [[0,3],[-2.5,3]].forEach(([ox,oy])=>{
+    const win = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.6,0.2), winM);
+    win.position.set(x-16+ox, oy, z+8.1); scene.add(win);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.08,0.18), ironM);
+    bar.position.set(x-16+ox, oy, z+8.2); scene.add(bar);
+  });
+
+  // ── דלת כניסה ראשית — שבורה למחצה ──
+  const doorFrM = new THREE.MeshLambertMaterial({color:0x6a5a3a, emissive:0x0a0800});
+  const doorFr = new THREE.Mesh(new THREE.BoxGeometry(3.8,0.4,0.4), doorFrM);
+  doorFr.position.set(x, 4.2, z+8.1); scene.add(doorFr); // משקוף עליון
+  const doorL = new THREE.Mesh(new THREE.BoxGeometry(0.3,4,0.3), doorFrM);
+  doorL.position.set(x-1.9, 2, z+8.1); scene.add(doorL);
+  const doorR = new THREE.Mesh(new THREE.BoxGeometry(0.3,4,0.3), doorFrM);
+  doorR.position.set(x+1.9, 2, z+8.1); scene.add(doorR);
+  // דלת שמאל — פתוחה מעט
+  const dlM = new THREE.MeshLambertMaterial({color:0x2a1a08, emissive:0x040200});
+  const dl = new THREE.Mesh(new THREE.BoxGeometry(1.7,3.8,0.15), dlM);
+  dl.position.set(x-0.6, 1.9, z+8.0); dl.rotation.y=0.35; scene.add(dl);
+  // דלת ימין — סגורה
+  const dr = new THREE.Mesh(new THREE.BoxGeometry(1.7,3.8,0.15), dlM);
+  dr.position.set(x+0.9, 1.9, z+8.1); scene.add(dr);
+
+  // ── שלט "מרכז גהה" ישן ומקולקל ──
+  const signBodyM = new THREE.MeshLambertMaterial({color:0x4a3a18, emissive:0x080600});
+  const signBody = new THREE.Mesh(new THREE.BoxGeometry(5.5,1.2,0.15), signBodyM);
+  signBody.position.set(x, 5.8, z+8.25); signBody.rotation.z=0.03; scene.add(signBody);
+  // אותיות — רצועת צבע בהיר שדהה
+  const signTextM = new THREE.MeshBasicMaterial({color:0x887850});
+  const signText = new THREE.Mesh(new THREE.BoxGeometry(4.2,0.5,0.12), signTextM);
+  signText.position.set(x, 5.8, z+8.32); scene.add(signText);
+
+  // ── עמודי כניסה ישנים ──
+  [x-2.8, x+2.8].forEach(px2=>{
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.25,4.5,8), wall2M);
+    col.position.set(px2, 2.25, z+8.5); scene.add(col);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.2,0.6), roofM);
+    cap.position.set(px2, 4.6, z+8.5); scene.add(cap);
+  });
+
+  // ── גדר ברזל נטוש סביב הבניין ──
+  const fenceM = new THREE.MeshLambertMaterial({color:0x1a1818, emissive:0x030303});
+  for(let fx=-12;fx<=12;fx+=2.2){
+    if(Math.abs(fx)<4)continue; // פתח לדלת
+    const fp = new THREE.Mesh(new THREE.BoxGeometry(0.1,2.2,0.1), fenceM);
+    fp.position.set(x+fx, 1.1, z+10.5); scene.add(fp);
+    const ft = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.3,4), fenceM);
+    ft.position.set(x+fx, 2.4, z+10.5); scene.add(ft); // חוד
+  }
+  // קורת גדר אופקית
+  const frail = new THREE.Mesh(new THREE.BoxGeometry(24,0.1,0.1), fenceM);
+  frail.position.set(x, 1.8, z+10.5); scene.add(frail);
+
+  // ── עגלת חולים ישנה בחצר ──
+  const bedM = new THREE.MeshLambertMaterial({color:0x888878, emissive:0x050504});
+  const bed = new THREE.Mesh(new THREE.BoxGeometry(2,0.35,0.9), bedM);
+  bed.position.set(x+9, 0.2, z+9); scene.add(bed);
+  const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.2,0.9), ironM);
+  leg1.position.set(x+8.1, 0.1, z+9); scene.add(leg1);
+  const leg2 = leg1.clone(); leg2.position.set(x+9.9, 0.1, z+9); scene.add(leg2);
+
+  // ── צינורות/מזגנים ישנים על הגג ──
+  [[2,8],[x-4,7.3],[x+6,7.3]].forEach(([ox,oy],i)=>{
+    const ac = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.8,1.0), ironM);
+    ac.position.set(i===0?x+ox:ox, oy, z-4+i*2); scene.add(ac);
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,2.5,6), ironM);
+    pipe.position.set(i===0?x+ox+0.5:ox+0.5, oy+1.5, z-4+i*2); scene.add(pipe);
+  });
+
+  // ── תאורה — אור ירקרק חולני ──
+  const hospLight = new THREE.PointLight(0x88cc88, 1.8, 18);
+  hospLight.position.set(x, 6, z+7); scene.add(hospLight);
+  // אור כחלחל עמום פנימי (דולף מחלון)
+  const innerLight = new THREE.PointLight(0x4466aa, 0.6, 10);
+  innerLight.position.set(x-3, 3.5, z+6); scene.add(innerLight);
+
+  // ── אינדיקטור כניסה — עיגול ירוק מהבהב ──
+  const ind = new THREE.Mesh(
+    new THREE.SphereGeometry(0.38,8,8),
+    new THREE.MeshBasicMaterial({color:0x44ff88})
+  );
+  ind.position.set(x, 3.5, z+8.3); scene.add(ind);
+  G._hospDoorInd = ind;
+
+  // שמור refs
+  G._hospBuilt = true;
+  G._hospX = x; G._hospZ = z;
+}
+
+
+// ════════════════════════════════════════════════
 // פרק ז׳ — "מקור"
 // חיילי על, שפיה, קרב Z-07
 // ════════════════════════════════════════════════
@@ -8478,7 +8622,7 @@ let _superSoldiers=[];  // חיילי העל בעולם הפתוח (missions 35+
 // ── קבועים ──
 const SUPER_HP=320, SUPER_SPD=5.2, SUPER_ATK=3.4;
 const Z07_HP=700, Z07_SPD=4.8;
-const SHAFIYA_X=-20, SHAFIYA_Z=-200;
+const SHAFIYA_X=-15, SHAFIYA_Z=-148;
 
 // ────────────────────────────────────────────────
 // בניית חייל-על (Super Soldier)
@@ -8695,13 +8839,13 @@ function _buildZ07(){
   const aura=new THREE.PointLight(0xff0000,2.5,8);
   aura.position.set(0,1.5,0);mesh.add(aura);mesh._aura=aura;
 
-  mesh.position.set(SHAFIYA_X,0,SHAFIYA_Z-12);
+  mesh.position.set(SHAFIYA_X,0,SHAFIYA_Z-8);
   scene.add(mesh);
   const bar=hpBar(mesh,2.5,3.5);
   bar.material.color.setHex(0xff0000);
 
   _z07Enemy={
-    mesh,bar,x:SHAFIYA_X,z:SHAFIYA_Z-12,
+    mesh,bar,x:SHAFIYA_X,z:SHAFIYA_Z-8,
     hp:Z07_HP,mhp:Z07_HP,spd:Z07_SPD,
     atk:3.8,atkT:0,dead:false,
     _phase:1,_chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
@@ -8976,19 +9120,27 @@ function updCh7(dt){
   }
 
 
-  // ── Mission 36: כניסה לשפיה ──
+  // ── Mission 36: כניסה למרכז גהה ──
   if(G.mission===36){
+    // הנפש אינדיקטור
+    if(G._hospDoorInd){
+      G._hospDoorInd.position.y=3.5+Math.sin(Date.now()*.004)*0.25;
+      G._hospDoorInd.material.color.setHex(
+        Math.sin(Date.now()*.008)>0 ? 0x44ff88 : 0x22cc66
+      );
+    }
     const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z);
-    if(distToHosp<8){
+    if(distToHosp<6){
+      if(G._hospDoorInd)G._hospDoorInd.visible=false;
       setMission(37);
       setTimeout(()=>showCut('ch7_katz_intercom',()=>{}),800);
-      showN('🏚️ נכנסתם לשפיה. כ"ץ מדבר.');
+      showN('🏥 נכנסתם למרכז גהה הנטוש.\nכ"ץ מדבר מהרמקול.');
     }
   }
 
   // ── Mission 37: בריחה מנעילה — מגיעים לתחתית ──
   if(G.mission===37){
-    const distToBottom=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-12);
+    const distToBottom=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-8);
     if(distToBottom<6){
       setMission(38);
       _buildZ07();
