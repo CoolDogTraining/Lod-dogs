@@ -8841,31 +8841,64 @@ let _ch7DebrisItems=[], _ch7TagFound=false, _ch7FilesFound=false;
 
 function _spawnCh7DebrisItems(){
   if(_ch7DebrisItems.length>0)return;
-  // תג מתכת — גדול יותר וזוהר לבן כדי שיהיה קל למצוא
-  const tagGeo=new THREE.BoxGeometry(0.5,0.12,0.35);
-  const tagM=new THREE.MeshLambertMaterial({color:0xaaaaaa,emissive:0x666666});
-  const tagMesh=new THREE.Mesh(tagGeo,tagM);
-  tagMesh.position.set(27,0.4,-123);
-  scene.add(tagMesh);
-  // אור קטן מעל התג
-  const tagLight=new THREE.PointLight(0xffffff,1.2,5);tagLight.position.set(27,1.5,-123);scene.add(tagLight);
-  _ch7DebrisItems.push({mesh:tagMesh,type:'tag',collected:false,light:tagLight});
+  // תג מתכת — ID tag מעבדה, חרוך אבל קריא
+  const tagGrp=new THREE.Group();
+  // הגוף הראשי של התג
+  const tagBody=new THREE.Mesh(
+    new THREE.BoxGeometry(0.5,0.06,0.32),
+    new THREE.MeshLambertMaterial({color:0x888888,emissive:0x444444})
+  );
+  tagGrp.add(tagBody);
+  // שרשרת קטנה
+  const chainM=new THREE.MeshLambertMaterial({color:0x555555,emissive:0x222222});
+  for(let i=0;i<5;i++){
+    const link=new THREE.Mesh(new THREE.BoxGeometry(0.04,0.04,0.04),chainM);
+    link.position.set(0,0.04+i*0.05,0); tagGrp.add(link);
+  }
+  // כתב Z-01 (רצועת צבע אדומה)
+  const labelM=new THREE.MeshBasicMaterial({color:0xcc2200});
+  const label=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.015,0.08),labelM);
+  label.position.set(0,0.038,0); tagGrp.add(label);
+  tagGrp.position.set(27,0.4,-123);
+  tagGrp.rotation.z=0.18;
+  scene.add(tagGrp);
+  const tagLight=new THREE.PointLight(0xccddff,1.5,6);tagLight.position.set(27,1.8,-123);scene.add(tagLight);
+  _ch7DebrisItems.push({mesh:tagGrp,type:'tag',collected:false,light:tagLight});
 
-  // קבצים שרופים — עם זוהר כתום
-  const fileGeo=new THREE.BoxGeometry(0.5,0.08,0.4);
-  const fileM=new THREE.MeshLambertMaterial({color:0x4a2a08,emissive:0x2a0f00});
-  const fileMesh=new THREE.Mesh(fileGeo,fileM);
-  fileMesh.position.set(23,0.4,-126);
-  scene.add(fileMesh);
-  const fileLight=new THREE.PointLight(0xff6600,0.8,4);fileLight.position.set(23,1.5,-126);scene.add(fileLight);
-  _ch7DebrisItems.push({mesh:fileMesh,type:'files',collected:false,light:fileLight});
+  // קבצים שנחשפו מהשריפה — ניירות חרוכים עם גחלים
+  const fileGrp=new THREE.Group();
+  // שכבות ניירות
+  for(let i=0;i<4;i++){
+    const pg=new THREE.Mesh(
+      new THREE.BoxGeometry(0.48-i*0.03, 0.015, 0.36-i*0.02),
+      new THREE.MeshLambertMaterial({
+        color: i===0?0x1a0a00 : i===1?0x2a1000 : 0x3a1800,
+        emissive: i===0?0x220800 : 0x110400
+      })
+    );
+    pg.position.y = i*0.018;
+    pg.rotation.y = (Math.random()-0.5)*0.15;
+    fileGrp.add(pg);
+  }
+  // גחלים קטנות על הניירות
+  [[-0.1,0.08,-0.05],[0.12,0.075,0.08],[-0.05,0.078,0.1]].forEach(([ex,ey,ez])=>{
+    const em=new THREE.Mesh(
+      new THREE.BoxGeometry(0.04,0.04,0.04),
+      new THREE.MeshBasicMaterial({color:0xff4400})
+    );
+    em.position.set(ex,ey,ez); fileGrp.add(em);
+  });
+  fileGrp.position.set(23,0.4,-126);
+  scene.add(fileGrp);
+  const fileLight=new THREE.PointLight(0xff5500,1.2,5);fileLight.position.set(23,1.5,-126);scene.add(fileLight);
+  _ch7DebrisItems.push({mesh:fileGrp,type:'files',collected:false,light:fileLight});
 }
 
 function updCh7(dt){
   if(G.mission<33||G.mission>38)return;
   const px=PB.position.x,pz=PB.position.z;
 
-  // ── Mission 33: ספון שרידים ──
+  // ── Mission 33: מצאו את התג ──
   if(G.mission===33){
     if(!G._ch7Started){
       G._ch7Started=true;
@@ -8873,53 +8906,75 @@ function updCh7(dt){
       setTimeout(()=>showCut('ch7_open',()=>{}),600);
     }
     _spawnCh7DebrisItems();
-    // הנחיה לאינטראקציה
     const ip=document.getElementById('ip');
-    _ch7DebrisItems.forEach(item=>{
-      if(item.collected)return;
-      const dd=d2(item.mesh.position.x,item.mesh.position.z,px,pz);
-      if(dd<2.5){
-        if(ip){ip.textContent='🔍 E — בדוק';ip.style.display='block';}
+    const tagItem=_ch7DebrisItems.find(i=>i.type==='tag'&&!i.collected);
+    if(tagItem){
+      const dd=d2(tagItem.mesh.position.x,tagItem.mesh.position.z,px,pz);
+      if(dd<3){
+        if(ip){ip.textContent='🔍 E — בדוק תג';ip.style.display='block';}
         if(G.keys['KeyE']||G._eKeyFrame){
           G.keys['KeyE']=false;G._eKeyFrame=false;
-          item.collected=true;item.mesh.visible=false;if(item.light)item.light.intensity=0;
-          if(item.type==='tag'){
-            _ch7TagFound=true;
-            showCut('ch7_tag_found',()=>{});
-            showN('🏷️ נמצא תג: Z-01 — SUBJECT: ZIPPO');
-          } else {
-            _ch7FilesFound=true;
-            showN('📄 קבצים חרוכים — כ"ץ ניסה לשרוף ראיות.');
-          }
-          if(_ch7TagFound&&_ch7FilesFound){
-            setTimeout(()=>{
-              showCut('ch7_zippo_crisis',()=>{});
-              setTimeout(()=>setMission(34),3000);
-            },1500);
-          }
+          tagItem.collected=true;
+          tagItem.mesh.visible=false;
+          if(tagItem.light)tagItem.light.intensity=0;
+          _ch7TagFound=true;
+          showCut('ch7_tag_found',()=>{
+            setTimeout(()=>setMission(34),800);
+          });
         }
       } else {
-        if(ip&&ip.textContent.includes('בדוק'))ip.style.display='none';
+        if(ip&&ip.style.display!=='none')ip.style.display='none';
       }
-      // אנימציית מרחף
-      const _by=0.4;item.mesh.position.y=_by+Math.sin(Date.now()*0.002+item.mesh.position.x)*0.12;
-      if(item.light)item.light.position.y=item.mesh.position.y+1.1;
-    });
-  }
-
-  // ── Mission 34 → 35: ספון חיילי על כשמתקרבים לשפיה ──
-  if(G.mission===34){
-    const distToShafiya=d2(px,pz,SHAFIYA_X,SHAFIYA_Z);
-    if(distToShafiya<60){
-      setMission(35);
-      _spawnSuperSoldiers();
+      // מרחף + סיבוב
+      const _t33=Date.now()*0.001;
+      tagItem.mesh.position.y=0.4+Math.sin(_t33*2)*0.12;
+      tagItem.mesh.rotation.y=_t33*0.8;
+      if(tagItem.light)tagItem.light.position.y=tagItem.mesh.position.y+1.1;
     }
   }
 
-  // ── Mission 35: עדכון חיילי על ──
+  // ── Mission 34: מצאו את הקבצים שנחשפו בשריפה ──
+  if(G.mission===34){
+    _spawnCh7DebrisItems(); // חלק מהחפצים כבר קיימים
+    const ip=document.getElementById('ip');
+    const fileItem=_ch7DebrisItems.find(i=>i.type==='files'&&!i.collected);
+    if(fileItem){
+      const dd=d2(fileItem.mesh.position.x,fileItem.mesh.position.z,px,pz);
+      if(dd<3){
+        if(ip){ip.textContent='📄 E — קרא קבצים';ip.style.display='block';}
+        if(G.keys['KeyE']||G._eKeyFrame){
+          G.keys['KeyE']=false;G._eKeyFrame=false;
+          fileItem.collected=true;
+          fileItem.mesh.visible=false;
+          if(fileItem.light)fileItem.light.intensity=0;
+          _ch7FilesFound=true;
+          showN('📄 הקבצים חשפו: מתקן גיבוי — בית החולים הנטוש שפיה.\nכ"ץ לא הספיק לשרוף הכל.');
+          setTimeout(()=>{
+            showCut('ch7_zippo_crisis',()=>{
+              setMission(35);
+            });
+          },1200);
+        }
+      } else {
+        if(ip&&ip.style.display!=='none')ip.style.display='none';
+      }
+      // מרחף — קובץ שנחשף מהאפר
+      const _t34=Date.now()*0.001;
+      fileItem.mesh.position.y=0.4+Math.sin(_t34*2.5+1)*0.1;
+      fileItem.mesh.rotation.y=_t34*0.5;
+      if(fileItem.light)fileItem.light.position.y=fileItem.mesh.position.y+1.1;
+    }
+  }
+
+  // ── Mission 35 → אם מגיעים לשפיה בלי מארב — ספון חיילים ──
   if(G.mission===35){
+    if(!G._superSpawned){
+      G._superSpawned=true;
+      _spawnSuperSoldiers();
+    }
     updSuperSoldiers(dt);
   }
+
 
   // ── Mission 36: כניסה לשפיה ──
   if(G.mission===36){
