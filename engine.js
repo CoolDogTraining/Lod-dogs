@@ -4274,6 +4274,14 @@ function loop(){
     updHUD();
     return;
   }
+  if(HOSP.inHosp){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updHosp(dt);
+    updPfx(dt);
+    updateNavDirection();
+    if(hospCamera)renderer.render(hospScene,hospCamera);
+    updHUD();
+    return;
+  }
   if(CITY.inCity){
     updCityHall(dt);updPfx(dt);
     updateNavDirection();
@@ -8463,6 +8471,14 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 
+
+// ════════════════════════════════════════════════
+// מרכז גהה — Interior Scene
+// ════════════════════════════════════════════════
+const HOSP={inHosp:false,playerX:0,playerZ:8,playerYaw:Math.PI,enterGrace:0};
+let hospScene=null,hospCamera=null,hospObjects=[];
+let _hospFlickerLights=[],_hospFlickerT=0;
+
 // ════════════════════════════════════════════════
 // מרכז גהה — מרכז בריאות הנפש הנטוש, לוד
 // מיקום: (-15, -148) — צפון העיר
@@ -8606,6 +8622,648 @@ function buildHospitalExterior(){
 
 
 // ════════════════════════════════════════════════
+// buildHospScene — פנים מרכז גהה הנטוש
+// ════════════════════════════════════════════════
+function buildHospScene(){
+  hospScene=new THREE.Scene();
+  hospScene.background=new THREE.Color(0x04050a);
+  hospScene.fog=new THREE.FogExp2(0x04050a,.028);
+  hospCamera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,.1,120);
+  hospScene.add(hospCamera);
+  _hospFlickerLights=[];
+
+  const _add=m=>{m.castShadow=true;m.receiveShadow=true;hospScene.add(m);hospObjects.push(m);return m;};
+  const _addNS=m=>{hospScene.add(m);hospObjects.push(m);return m;};
+  const _box=(w,h,d,col,em,x,y,z,rx,ry,rz)=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),
+      new THREE.MeshLambertMaterial({color:col,emissive:em||0}));
+    m.position.set(x,y,z);
+    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+    _add(m);return m;
+  };
+  const _cyl=(rt,rb,h,seg,col,em,x,y,z,rx)=>{
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),
+      new THREE.MeshLambertMaterial({color:col,emissive:em||0}));
+    m.position.set(x,y,z);if(rx)m.rotation.x=rx;
+    _add(m);return m;
+  };
+
+  // ════════════════════════════
+  // תאורה — עגומה וחולנית
+  // ════════════════════════════
+  hospScene.add(new THREE.AmbientLight(0x080a12,3.0));
+  hospScene.add(new THREE.HemisphereLight(0x050818,0x010205,0.9));
+
+  // נאון מהבהב — לבן-כחלחל קר מאוד
+  const mainL=new THREE.PointLight(0xaabbff,3.5,35);
+  mainL.position.set(0,7.5,0);_addNS(mainL);
+  _hospFlickerLights.push({light:mainL,base:3.5,type:'fluorescent',t:0,period:0.09});
+
+  // אור אדמדם מהמסדרון הצדדי
+  const corrL=new THREE.PointLight(0xff3300,2.0,18);
+  corrL.position.set(-10,3.5,0);_addNS(corrL);
+  _hospFlickerLights.push({light:corrL,base:2.0,type:'pulse',t:0,period:2.2});
+
+  // אור ירוק-חולה מהכניסה לחדר הטיפולים
+  const treatL=new THREE.PointLight(0x22cc44,1.8,14);
+  treatL.position.set(8,3,-8);_addNS(treatL);
+  _hospFlickerLights.push({light:treatL,base:1.8,type:'flicker',t:1.2,period:0.15});
+
+  // זרקורי חירום — אדום עמום
+  [[-5,2.5,-10],[5,2.5,-10]].forEach(([x,y,z])=>{
+    const el=new THREE.PointLight(0xff0000,0.8,8);
+    el.position.set(x,y,z);_addNS(el);
+    _hospFlickerLights.push({light:el,base:0.8,type:'pulse',t:Math.random()*3,period:1.8});
+  });
+
+  // ════════════════════════════
+  // רצפה — אריחים שבורים, כתמים
+  // ════════════════════════════
+  _box(32,0.1,32,0x0c0d10,0x010101,0,0,0);
+  // אריחים שחלקם הפוך
+  for(let tx=-7;tx<=7;tx+=2){
+    for(let tz=-7;tz<=7;tz+=2){
+      if(Math.random()<0.15){// אריח שבור/חסר
+        _box(1.9,0.04,0.9,0x0a0b0e,0,tx,0.06,tz);
+      } else {
+        _box(1.9,0.03,1.9,0x0e0f14,0,tx,0.06,tz);
+      }
+    }
+  }
+  // כתמי לחות כהים
+  [[0,-3],[5,2],[-4,6],[3,-8],[-6,-5],[7,4]].forEach(([sx,sz])=>{
+    const st=new THREE.Mesh(new THREE.PlaneGeometry(1.5+Math.random()*2,1+Math.random()*1.5),
+      new THREE.MeshLambertMaterial({color:0x050608,transparent:true,opacity:0.85}));
+    st.rotation.x=-Math.PI/2;st.position.set(sx,0.02,sz);_addNS(st);
+  });
+  // כתמי דם על הרצפה
+  [[-8,3],[-9,-1],[-10,5],[-7,-4]].forEach(([bx,bz])=>{
+    const bl=new THREE.Mesh(new THREE.PlaneGeometry(0.4+Math.random()*0.7,0.3+Math.random()*0.5),
+      new THREE.MeshLambertMaterial({color:0x2a0000,transparent:true,opacity:0.9}));
+    bl.rotation.x=-Math.PI/2;bl.position.set(bx,0.02,bz);_addNS(bl);
+  });
+
+  // ════════════════════════════
+  // קירות — בטון מצהיב עם טפטים קרועים
+  // ════════════════════════════
+  const wCol=0x14151c,wEm=0x010101;
+  // קיר צפון
+  _box(32,9,0.3,wCol,wEm,0,4.5,-15.85);
+  // קיר דרום
+  _box(32,9,0.3,wCol,wEm,0,4.5,15.85);
+  // קיר מערב
+  _box(0.3,9,32,wCol,wEm,-15.85,4.5,0);
+  // קיר מזרח — עם דלת יציאה
+  _box(0.3,9,12,wCol,wEm,15.85,4.5,-8);
+  _box(0.3,9,8,wCol,wEm,15.85,4.5,9);
+  // משקוף דלת יציאה
+  _box(0.3,2.2,4,wCol,wEm,15.85,8.1,3);
+
+  // פאנלים — טפט ממוסד ישן מתקלף
+  const tapetM=new THREE.MeshLambertMaterial({color:0x1a1c22,emissive:0x020202});
+  for(let i=0;i<8;i++){
+    const pw=3.2+Math.random()*0.5, ph=3+Math.random()*0.8;
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,0.08),tapetM);
+    panel.position.set(-14+i*4,3.5+Math.random()*0.5,-15.75);_addNS(panel);
+  }
+  // פסי עובש ירוק על הקירות
+  [[0,1.5,-15.7],[0,1.5,15.7],[-15.7,1.5,0]].forEach(([wx,wy,wz])=>{
+    const mold=new THREE.Mesh(new THREE.PlaneGeometry(12+Math.random()*6,1.2+Math.random()*0.6),
+      new THREE.MeshLambertMaterial({color:0x0a1a06,emissive:0x020602,transparent:true,opacity:0.7}));
+    mold.rotation.x=wx===0?0:-Math.PI/2;
+    if(wx!==0)mold.rotation.y=Math.PI/2;
+    mold.position.set(wx,wy,wz);_addNS(mold);
+  });
+
+  // ════════════════════════════
+  // תקרה — בטון סדוק עם צינורות
+  // ════════════════════════════
+  _box(32.4,0.4,32.4,0x0e0f14,0x010101,0,9,0);
+  // קורות בטון
+  for(let b=-3;b<=3;b+=3){
+    _box(32,0.5,0.6,0x0c0d10,0,0,8.75,b);
+    _box(0.6,0.5,32,0x0c0d10,0,b,8.75,0);
+  }
+  // צינורות עיגולים על התקרה
+  [[-6,8.6,-6],[4,8.6,-6],[-6,8.6,4],[4,8.6,4]].forEach(([x,y,z])=>{
+    _cyl(0.18,0.18,32,6,0x0d0e12,0,x,y,z,Math.PI/2);
+    // חיבורי ט-pipe
+    _cyl(0.16,0.16,2,6,0x0b0c10,0,x,y-0.9,z);
+  });
+  // נורות פלואורסנט — חלקן שבורות
+  [[-7,8.5,-6],[1,8.5,-6],[9,8.5,-6],[-7,8.5,4],[3,8.5,4]].forEach(([x,y,z],i)=>{
+    _box(3.5,0.1,0.2,0x181920,0,x,y,z);
+    const broken=i===2||i===4;
+    const tubeM=new THREE.MeshLambertMaterial({
+      color:broken?0x111214:0xbbccff,
+      emissive:broken?0:0x4466cc
+    });
+    const tube=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,3.3,8),tubeM);
+    tube.rotation.z=Math.PI/2;tube.position.set(x,y-0.1,z);_addNS(tube);
+    if(!broken){
+      const fl=new THREE.PointLight(0x8899ff,2.2,12);fl.position.set(x,y-0.5,z);_addNS(fl);
+      _hospFlickerLights.push({light:fl,base:2.2,type:'fluorescent',t:i*0.7,period:0.06+i*0.02});
+    }
+  });
+
+  // ════════════════════════════
+  // מסדרון — חדרים צדדיים
+  // ════════════════════════════
+  // מחיצה מסדרון שמאל
+  _box(0.2,9,16,wCol,wEm,-6,4.5,0);
+  // פתחי חדרים (דלתות שבורות)
+  [[-3],[3],[9]].forEach(([dz])=>{
+    const doorM=new THREE.MeshLambertMaterial({color:0x0c0d10,emissive:0x010101});
+    const door=new THREE.Mesh(new THREE.BoxGeometry(0.15,3.2,1.6),doorM);
+    door.position.set(-5.9,1.6,dz);door.rotation.y=0.4+Math.random()*0.3;_add(door);
+    // מסגרת
+    _box(0.2,3.5,0.1,0x181920,0,-6.05,1.75,dz-0.9);
+    _box(0.2,3.5,0.1,0x181920,0,-6.05,1.75,dz+0.9);
+    _box(0.2,0.1,1.8,0x181920,0,-6.05,3.5,dz);
+    // מספר חדר
+    const numM=new THREE.MeshBasicMaterial({color:0x2a2a3a});
+    const num=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.3,0.2),numM);
+    num.position.set(-5.9,2.8,dz);_addNS(num);
+  });
+
+  // ════════════════════════════
+  // רהיטים — עגומים ונטושים
+  // ════════════════════════════
+  // מיטות בית חולים הפוכות/שבורות
+  const bedFrameM=new THREE.MeshLambertMaterial({color:0x181920,emissive:0x010101});
+  const mattM=new THREE.MeshLambertMaterial({color:0x1a1c20,emissive:0x010101});
+  [
+    [4,0,2, 0.1],
+    [7,0,-2, -0.15],
+    [-3,0,-6, 0.05],
+    [2,0,-10, 0.2],
+  ].forEach(([bx,by,bz,tilt])=>{
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(2.0,0.15,0.9),bedFrameM);
+    frame.position.set(bx,0.45,bz);frame.rotation.z=tilt;_add(frame);
+    const matt=new THREE.Mesh(new THREE.BoxGeometry(1.9,0.12,0.85),mattM);
+    matt.position.set(bx,0.54,bz);matt.rotation.z=tilt;_add(matt);
+    // רגליים
+    [[-0.85,0.2],[-0.85,-0.2],[0.85,0.2],[0.85,-0.2]].forEach(([lx,lz])=>{
+      _box(0.08,0.45,0.08,0x141518,0,bx+lx,0.22,bz+lz);
+    });
+    // כרית קרועה
+    const pilM=new THREE.MeshLambertMaterial({color:0x14151a,emissive:0x010101});
+    const pil=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.1,0.38),pilM);
+    pil.position.set(bx+0.65,0.62,bz);pil.rotation.z=tilt+0.1;_add(pil);
+  });
+
+  // כיסא גלגלים שבור
+  const chairM=new THREE.MeshLambertMaterial({color:0x141416,emissive:0x010101});
+  _box(0.45,0.08,0.4,0x141416,0,-2,0.5,6); // מושב
+  _box(0.08,0.55,0.35,chairM,0,-2,0.28,6); // רגל אמצע
+  _box(0.4,0.5,0.05,chairM,0,-2,0.25,5.8);  // גב
+  // גלגל
+  _cyl(0.2,0.2,0.06,12,0x0a0a0c,0,-2.25,0.2,6,Math.PI/2);
+  _cyl(0.2,0.2,0.06,12,0x0a0a0c,0,-1.75,0.2,6,Math.PI/2);
+
+  // שולחן עגול קטן — עם תיק/קופסאות
+  _box(0.8,0.06,0.8,0x181a1e,0,9,0.68,2);
+  _cyl(0.06,0.08,0.68,6,0x141518,0,9,0.34,2);
+  // קופסת תרופות על השולחן
+  _box(0.2,0.1,0.12,0x1a1c22,0x020202,9.2,0.76,2);
+  _box(0.16,0.08,0.1,0x0e1018,0,8.85,0.76,2.1);
+
+  // ========================
+  // ריהוט מסדרון — חולי נפש
+  // ========================
+  // לוח מחיקה ישן עם כתיבה מוזרה
+  _box(3.2,1.8,0.1,0x0c0e12,0,-14,3.5,-10);
+  // "כתיבה" — פסי גיר על הלוח
+  [[0,0.2],[0.3,-0.3],[-0.4,0.1],[0.5,0.4],[-0.2,-0.2]].forEach(([cx,cy])=>{
+    const chalk=new THREE.Mesh(new THREE.BoxGeometry(0.8+Math.random()*0.6,0.04,0.04),
+      new THREE.MeshBasicMaterial({color:0x3a3c50}));
+    chalk.position.set(-14+cx,3.5+cy,-9.94);_addNS(chalk);
+  });
+
+  // כרסא טיפול ישן — עם רצועות
+  _box(0.7,0.1,1.4,0x1a1818,0,7,0.45,-12); // מושב
+  _box(0.7,0.85,0.1,0x1a1818,0,7,0.9,-11.35); // גב
+  // רצועות
+  [[7.25,0.5,-12.4],[6.75,0.5,-12.4],[7.25,0.5,-11.6],[6.75,0.5,-11.6]].forEach(([rx,ry,rz])=>{
+    _box(0.08,0.06,0.45,0x2a2018,0,rx,ry,rz);
+  });
+
+  // ========================
+  // פרטים מפחידים
+  // ========================
+  // שלט "מחלקה ג'" נופל מהקיר
+  const signM2=new THREE.MeshLambertMaterial({color:0x1a1c22,emissive:0x020202});
+  const sign2=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.7,0.1),signM2);
+  sign2.position.set(0,5.5,-15.7);sign2.rotation.z=0.25;_addNS(sign2);
+
+  // מסמכים/ניירות פזורים על הרצפה
+  [[-1,3],[2,5],[-3,1],[4,-2],[0,-6],[-5,4]].forEach(([px,pz])=>{
+    const paper=new THREE.Mesh(new THREE.PlaneGeometry(0.35+Math.random()*0.2,0.28+Math.random()*0.15),
+      new THREE.MeshLambertMaterial({color:0x1a1c20,emissive:0x020202}));
+    paper.rotation.x=-Math.PI/2;paper.rotation.z=Math.random()*Math.PI;
+    paper.position.set(px,0.02,pz);_addNS(paper);
+  });
+
+  // ========================
+  // Z-07 ARENA — בסוף הכניסה
+  // ========================
+  // ריצפת arena שונה
+  _box(10,0.12,10,0x0a0a0e,0x010101,0,0.01,-10);
+  // כלוב ברזל — המקום שZ-07 היה בו
+  const cageM=new THREE.MeshLambertMaterial({color:0x0c0c10,emissive:0x010101});
+  for(let ci=-2;ci<=2;ci++){
+    _box(0.1,4,0.1,cageM,0,ci*1.2-4,2,-13.5);
+    _box(0.1,4,0.1,cageM,0,ci*1.2+4,2,-13.5);
+  }
+  _box(4.4,0.1,0.1,cageM,0,-4,4,-13.5);
+  _box(4.4,0.1,0.1,cageM,0,4,4,-13.5);
+  // שרשראות מהכלוב
+  for(let lk=0;lk<5;lk++){
+    _box(0.12,0.2,0.08,0x181818,0,-4,4-lk*0.22,-13.3,0,lk%2===0?0:Math.PI/2);
+    _box(0.12,0.2,0.08,0x181818,0,4,4-lk*0.22,-13.3,0,lk%2===0?0:Math.PI/2);
+  }
+  // כתם גדול בתוך הכלוב
+  const arenaBlood=new THREE.Mesh(new THREE.PlaneGeometry(3.5,3),
+    new THREE.MeshLambertMaterial({color:0x1a0000,transparent:true,opacity:0.85}));
+  arenaBlood.rotation.x=-Math.PI/2;arenaBlood.position.set(0,0.02,-10.5);_addNS(arenaBlood);
+
+  // אור Z-07 arena — אדום מרתפי
+  const arenaL=new THREE.PointLight(0xaa0000,3.5,18);
+  arenaL.position.set(0,5,-10);_addNS(arenaL);
+  _hospFlickerLights.push({light:arenaL,base:3.5,type:'pulse',t:0,period:1.5});
+
+  // ========================
+  // דלת יציאה
+  // ========================
+  const exitM=new THREE.MeshLambertMaterial({color:0x0c0e12,emissive:0x010101});
+  const exitDoor=new THREE.Mesh(new THREE.BoxGeometry(0.15,3.2,1.8),exitM);
+  exitDoor.position.set(15.7,1.6,3);_addNS(exitDoor);
+  // שלט יציאה ירוק דולק מעל הדלת
+  const exitSign=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.35,0.08),
+    new THREE.MeshLambertMaterial({color:0x003300,emissive:0x005500}));
+  exitSign.position.set(15.7,4.5,3);_addNS(exitSign);
+  const exitL=new THREE.PointLight(0x00aa22,0.8,5);
+  exitL.position.set(15.5,4.2,3);_addNS(exitL);
+
+  // ========================
+  // אינדיקטור Z-07
+  // ========================
+  const z07ind=new THREE.Mesh(new THREE.SphereGeometry(0.3,8,8),
+    new THREE.MeshBasicMaterial({color:0xff0000}));
+  z07ind.position.set(0,3,-10);_addNS(z07ind);
+  G._hospZ07Ind=z07ind;
+}
+
+// ════════════════════════════════════════════════
+// enterHosp / exitHosp
+// ════════════════════════════════════════════════
+function enterHosp(){
+  G.paused=true;
+  fadeOut(()=>{
+    if(!hospScene)buildHospScene();
+    HOSP.inHosp=true;
+    HOSP.playerX=0;HOSP.playerZ=12;HOSP.playerYaw=Math.PI;
+    G.yaw=Math.PI;HOSP.enterGrace=2.5;
+    if(hospCamera){
+      hospCamera.position.set(0,4,16);
+      hospCamera.lookAt(0,1,0);
+    }
+    scene.remove(PB);
+    hospScene.add(PB);
+    PB.position.set(HOSP.playerX,0,HOSP.playerZ);
+    // ספון חיילי על בתוך ה-scene
+    _hospSpawnSoldiers();
+    showN('🏥 מרכז גהה. 20 שנה נטוש.\nמשהו זז כאן.');
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+function exitHosp(){
+  G.paused=true;
+  fadeOut(()=>{
+    HOSP.inHosp=false;
+    if(hospScene)hospScene.remove(PB);
+    scene.add(PB);
+    PB.position.set(SHAFIYA_X,0,SHAFIYA_Z+8);
+    hospObjects.forEach(o=>{
+      if(o.geometry)o.geometry.dispose();
+      if(o.material){
+        if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());
+        else o.material.dispose();
+      }
+    });
+    hospObjects.length=0;
+    hospScene=null;hospCamera=null;
+    G._hospZ07Ind=null;
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+// ════════════════════════════════════════════════
+// חיילי על בתוך ה-interior
+// ════════════════════════════════════════════════
+function _hospSpawnSoldiers(){
+  if(_superSoldiers.length>0)return;
+  if(!hospScene)return;
+  const positions=[[6,0,4],[-4,0,2],[2,0,-4]];
+  positions.forEach(([x,y,z])=>{
+    const mesh=mkSuperSoldier(0x1a1a2e);
+    mesh.position.set(x,y,z);
+    hospScene.add(mesh);
+    const bar=hpBar(mesh,1.8,2.8);
+    // HP bar צריך להיות ב-hospScene
+    if(bar.parent)bar.parent.remove(bar);
+    hospScene.add(bar);
+    _superSoldiers.push({
+      mesh,bar,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
+      atk:SUPER_ATK,atkT:0,state:'patrol',
+      homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2,
+      lastSeenX:0,lastSeenZ:0,searchT:0,
+      _chargeT:0,_chargeReady:false,_chargeActive:false,
+      _cvx:0,_cvz:0,_slamT:0,_howlT:0,
+      _hitFlash:0,_isSuperSoldier:true
+    });
+  });
+}
+
+function _buildZ07Interior(){
+  if(_z07Enemy)return;
+  const mesh=mkSuperSoldier(0x0a0a16);
+  mesh.scale.setScalar(1.35);
+  mesh.traverse(c=>{
+    if(c.isMesh&&c.material&&!(c===mesh._eyeL||c===mesh._eyeR)){
+      c.material=c.material.clone();
+      if(c.material.emissive)c.material.emissive.setHex(0x1a0022);
+    }
+  });
+  const aura=new THREE.PointLight(0xff0000,2.5,8);
+  aura.position.set(0,1.5,0);mesh.add(aura);mesh._aura=aura;
+  mesh.position.set(0,0,-10); // בתוך ה-arena
+  if(hospScene)hospScene.add(mesh);
+  const bar=hpBar(mesh,2.5,3.5);
+  bar.material.color.setHex(0xff0000);
+  if(bar.parent)bar.parent.remove(bar);
+  if(hospScene)hospScene.add(bar);
+
+  _z07Enemy={
+    mesh,bar,x:0,z:-10,
+    hp:Z07_HP,mhp:Z07_HP,spd:Z07_SPD,
+    atk:3.8,atkT:0,dead:false,
+    _phase:1,_chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
+    _slamT:0,_howlT:0,_hitT:0,_hitCD:0,_ctrlOff:false
+  };
+  G._z07Enemy=_z07Enemy;
+}
+
+// ════════════════════════════════════════════════
+// updHosp — לולאת פנים בית החולים
+// ════════════════════════════════════════════════
+function updHosp(dt){
+  if(!HOSP.inHosp||G.paused||G.dlgOpen)return;
+  HOSP.enterGrace=Math.max(0,(HOSP.enterGrace||0)-dt);
+  if(G.atkCD>0)G.atkCD-=dt;
+  const _hospAtkCD=G.dog==='zippo'?0.28:0.5;
+  if(G.keys['KeyF']&&G.atkCD<=0){G._hospAtk=true;G.atkCD=_hospAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);}
+
+  // ── flickering lights ──
+  _hospFlickerT+=dt;
+  _hospFlickerLights.forEach(fl=>{
+    fl.t+=dt;const L=fl.light;if(!L)return;
+    switch(fl.type){
+      case'flicker':if(fl.t>fl.period){fl.t=0;fl.period=0.08+Math.random()*0.25;L.intensity=Math.random()<0.12?0:fl.base*(0.6+Math.random()*0.7);}break;
+      case'fluorescent':if(fl.t>fl.period){fl.t=0;fl.period=0.04+Math.random()*0.08;L.intensity=Math.random()<0.05?0:fl.base*(0.85+Math.random()*0.3);}break;
+      case'pulse':L.intensity=fl.base*(0.5+0.5*Math.sin(fl.t*Math.PI*2/fl.period));break;
+      case'arc':L.intensity=Math.max(0,fl.base*(0.5+Math.sin(fl.t*80)*0.3+Math.random()*0.5));break;
+    }
+  });
+
+  // ── תנועה ──
+  const spd=G.dogs[G.dog].spd;
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
+  _vRgt.set( Math.cos(G.yaw),0,-Math.sin(G.yaw));
+  let inputX=0,inputZ=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp'])   {inputX+=_vFwd.x;inputZ+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']) {inputX-=_vFwd.x;inputZ-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']) {inputX-=_vRgt.x;inputZ-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){inputX+=_vRgt.x;inputZ+=_vRgt.z;}
+  if(G.joy.on){inputX+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;inputZ+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
+  const iln=Math.hypot(inputX,inputZ)||1;
+  let nx=HOSP.playerX+(inputX/iln)*spd*dt;
+  let nz=HOSP.playerZ+(inputZ/iln)*spd*dt;
+  nx=Math.max(-15,Math.min(15,nx));
+  nz=Math.max(-14,Math.min(14,nz));
+  HOSP.playerX=nx;HOSP.playerZ=nz;
+  PB.position.set(HOSP.playerX,0,HOSP.playerZ);
+
+  // ── אנימציית הליכה ──
+  const _hMoving=Math.abs(inputX)>.01||Math.abs(inputZ)>.01;
+  if(_hMoving){
+    walkT+=dt*8;
+    dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y=_by+Math.abs(Math.sin(walkT))*.09;}
+    if(dogTail)dogTail.rotation.z=Math.sin(walkT*2)*.35;
+  } else {
+    dogLegs.forEach(lg=>{lg.node.rotation.x*=.85;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y+=(_by-dogModel.position.y)*.15;}
+    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
+  }
+  if(Math.abs(inputX)>.01||Math.abs(inputZ)>.01)
+    PB.rotation.y=Math.atan2(-inputX,-inputZ);
+
+  // ── מצלמה ──
+  if(hospCamera){
+    const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
+    const hpx=HOSP.playerX,hpy=1.1*sz,hpz=HOSP.playerZ;
+    _vCamTarget.set(hpx+Math.sin(G.yaw)*cd,hpy+ch,hpz+Math.cos(G.yaw)*cd);
+    hospCamera.position.lerp(_vCamTarget,.1);
+    hospCamera.lookAt(hpx,hpy+.7,hpz);
+  }
+
+  // ── חיילי על בתוך ה-interior ──
+  const dog=G.dogs[G.dog];
+  _superSoldiers.forEach(e=>{
+    if(e.hp<=0||!e.mesh.visible)return;
+    const ex=e.mesh.position.x,ez=e.mesh.position.z;
+    const px=HOSP.playerX,pz=HOSP.playerZ;
+    const dd=d2(ex,ez,px,pz);
+
+    e.atkT=Math.max(0,e.atkT-dt);
+    e._chargeT=Math.max(0,e._chargeT-dt);
+    e._slamT=Math.max(0,e._slamT-dt);
+
+    // state
+    if(dd<14){e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;}
+    else if(e.state==='chase'){e.searchT-=dt;if(e.searchT<=0)e.state='patrol';}
+    if(e.state!=='chase')return;
+
+    // charge
+    if(!e._chargeActive&&e._chargeT<=0&&dd>4&&dd<12){
+      e._chargeT=3.5;
+      setTimeout(()=>{
+        if(e.hp<=0)return;
+        e._chargeActive=true;
+        const dx2=px-e.mesh.position.x,dz2=pz-e.mesh.position.z;
+        const l=Math.sqrt(dx2*dx2+dz2*dz2)||1;
+        e._cvx=dx2/l*18;e._cvz=dz2/l*18;
+        setTimeout(()=>{e._chargeActive=false;e._cvx=0;e._cvz=0;},600);
+      },900);
+    }
+
+    if(e._chargeActive){
+      e.mesh.position.x+=e._cvx*dt;e.mesh.position.z+=e._cvz*dt;
+      if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<2.8){
+        dmgPlayer(14);e._chargeActive=false;haptic([40,15,40]);showN('💥 ריסוק!');
+      }
+    } else {
+      const dx=px-ex,dz=pz-ez,l=Math.sqrt(dx*dx+dz*dz)||1;
+      e.mesh.position.x+=dx/l*e.spd*dt;
+      e.mesh.position.z+=dz/l*e.spd*dt;
+      e.mesh.rotation.y=Math.atan2(dx,dz);
+      if(e._slamT<=0&&dd<3.5){
+        e._slamT=4.0;haptic([60,20,60]);dmgPlayer(16);showN('🔨 מחיצה!');
+      }
+      if(dd<e.atk&&e.atkT<=0){e.atkT=1.6;dmgPlayer(10);haptic(25);}
+    }
+
+    // פגיעת שחקן
+    if(dd<4.5&&(G._hospAtk||G._atkFrame)&&e.hp>0){
+      G._hospAtk=false;
+      const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));
+      e.hp-=dmg;flash(e.mesh.children[0]);
+      spawnBlood(ex,1,ez,8);showDmg(ex,1,ez,Math.round(dmg));haptic(22);
+      if(e.hp<=0){
+        e.hp=0;e.mesh.visible=false;sEDie();
+        haptic([60,20,50]);addXP(50);G.score+=150;G.coins+=20;updCoins();
+        showN('✅ חייל על הוכנע!');
+        const alive=_superSoldiers.filter(s=>s.hp>0&&s.mesh.visible).length;
+        if(alive===0&&G.mission===35){
+          showN('✅ המסדרון נוקה. התקדמו לעומק הבניין...');
+          setTimeout(()=>{
+            setMission(36);
+            setTimeout(()=>showCut('ch7_katz_intercom',()=>{
+              setMission(37);
+              showN('🔒 הדלתות ננעלות. רדו לתחתית.');
+              setTimeout(()=>showCut('ch7_lockdown',()=>{}),500);
+            }),1000);
+          },1500);
+        }
+      }
+    }
+    if(e.bar)e.bar.scale.x=Math.max(0,e.hp/e.mhp);
+  });
+
+  // ── Z-07 בתוך ה-interior ──
+  if(G.mission===38&&_z07Enemy&&!_z07Enemy.dead){
+    const b=_z07Enemy;
+    b.x=b.mesh.position.x;b.z=b.mesh.position.z;
+    if(G._hospZ07Ind){
+      G._hospZ07Ind.position.y=2+Math.sin(_hospFlickerT*3)*0.3;
+      if(b.hp/b.mhp<0.25)G._hospZ07Ind.visible=false;
+    }
+    updZ07Interior(dt,b);
+  }
+
+  // ── אינדיקטור Z-07 ──
+  if(G._hospZ07Ind&&G.mission===37){
+    G._hospZ07Ind.position.y=2+Math.sin(_hospFlickerT*3)*0.3;
+    G._hospZ07Ind.material.color.setHex(Math.sin(_hospFlickerT*4)>0?0xff0000:0x880000);
+  }
+
+  // ── Mission 37: הגיע לתחתית → ספון Z-07 ──
+  if(G.mission===37&&!G._z07Spawned){
+    const distToArena=d2(HOSP.playerX,HOSP.playerZ,0,-8);
+    if(distToArena<7){
+      G._z07Spawned=true;
+      setMission(38);
+      _buildZ07Interior();
+      setTimeout(()=>showCut('ch7_z07_intro',()=>{}),600);
+    }
+  }
+
+  // ── יציאה — דלת מזרח (רק אחרי סיום הקרב) ──
+  const distExit=d2(HOSP.playerX,HOSP.playerZ,15.0,3);
+  if(distExit<2.5&&HOSP.enterGrace<=0&&G.mission!==37&&G.mission!==38){
+    exitHosp();
+  }
+}
+
+// Z-07 inside interior
+function updZ07Interior(dt,b){
+  const px=HOSP.playerX,pz=HOSP.playerZ;
+  const dd=d2(b.x,b.z,px,pz);
+  const dog=G.dogs[G.dog];
+
+  b.atkT=Math.max(0,b.atkT-dt);
+  b._chargeT=Math.max(0,b._chargeT-dt);
+  b._slamT=Math.max(0,b._slamT-dt);
+  b._hitT=Math.max(0,b._hitT-dt);
+  b._hitCD=Math.max(0,b._hitCD-dt);
+
+  const hpPct=b.hp/b.mhp;
+  if(hpPct<=0.5&&b._phase===1){
+    b._phase=2;
+    showCut('ch7_z07_phase2',()=>{});
+    b.spd*=0.8;if(b.mesh._aura)b.mesh._aura.color.setHex(0xaa0000);
+  }
+  if(hpPct<=0.25&&b._phase===2){
+    b._phase=3;b._ctrlOff=true;b.spd*=0.65;
+    b.mesh.traverse(c=>{if(c.isMesh&&c.material&&c.material.color&&c.material.color.getHex()===0xff0000)c.material.color.setHex(0x220000);});
+    if(b.mesh._aura)b.mesh._aura.intensity=0.4;
+    showCut('ch7_z07_phase3',()=>{});
+  }
+
+  if(!b._chargeActive){
+    const dx=px-b.x,dz=pz-b.z,l=Math.sqrt(dx*dx+dz*dz)||1;
+    b.mesh.position.x+=dx/l*b.spd*dt;
+    b.mesh.position.z+=dz/l*b.spd*dt;
+    b.mesh.rotation.y=Math.atan2(dx,dz);
+    if(b._chargeT<=0&&dd>5&&dd<16&&!b._ctrlOff){
+      b._chargeT=5.0;
+      setTimeout(()=>{
+        if(b.dead)return;
+        b._chargeActive=true;
+        const dx2=px-b.x,dz2=pz-b.z,l2=Math.sqrt(dx2*dx2+dz2*dz2)||1;
+        b._cvx=dx2/l2*22;b._cvz=dz2/l2*22;
+        setTimeout(()=>{b._chargeActive=false;b._cvx=0;b._cvz=0;},700);
+      },1000);
+    }
+    if(b._slamT<=0&&dd<4){b._slamT=3.5;haptic([80,25,80]);dmgPlayer(22);showN('🔨 מחיצת Z-07!');}
+    if(dd<b.atk&&b.atkT<=0){b.atkT=1.4;dmgPlayer(12);haptic(35);}
+  } else {
+    b.mesh.position.x+=b._cvx*dt;b.mesh.position.z+=b._cvz*dt;
+    if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<3.5){
+      dmgPlayer(20);b._chargeActive=false;haptic([60,20,60]);showN('💥 ריסוק! Z-07 תפס אותך!');
+    }
+  }
+
+  if(dd<5.5&&G.atkCD<=0&&b._hitT<=0&&(G._hospAtk||G._atkFrame)){
+    G._hospAtk=false;
+    const dmg=Math.round(dog.pow*13*(1+dog.lv*.12));
+    b.hp-=dmg;sHit();haptic(30);
+    flash(b.mesh.children[0]);
+    spawnBlood(b.x,1.5,b.z,12);showDmg(b.x,2,b.z,Math.round(dmg));
+    b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.55;
+    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+    if(b.hp<=0){
+      b.dead=true;b.mesh.visible=false;
+      if(b.mesh._aura)b.mesh._aura.intensity=0;
+      sCapture();haptic([120,50,100,30,120]);
+      addXP(300);G.score+=2000;G.coins+=150;updCoins();
+      spawnBlood(b.x,2,b.z,20);
+      G.paused=true;
+      setTimeout(()=>showCut('ch7_ending',()=>{
+        G.paused=false;
+        exitHosp();
+        setTimeout(()=>setMission(39),1000);
+      }),800);
+    }
+  }
+}
+
+
+// ════════════════════════════════════════════════
 // פרק ז׳ — "מקור"
 // חיילי על, שפיה, קרב Z-07
 // ════════════════════════════════════════════════
@@ -8620,7 +9278,7 @@ let _z07Enemy=null,_z07Phase=1,_z07PhaseDone=false;
 let _superSoldiers=[];  // חיילי העל בעולם הפתוח (missions 35+)
 
 // ── קבועים ──
-const SUPER_HP=320, SUPER_SPD=5.2, SUPER_ATK=3.4;
+const SUPER_HP=180, SUPER_SPD=4.2, SUPER_ATK=2.8;
 const Z07_HP=700, Z07_SPD=4.8;
 const SHAFIYA_X=62, SHAFIYA_Z=-118;
 
@@ -8745,8 +9403,8 @@ function updSuperSoldiers(dt){
       e.mesh.position.z+=e._cvz*dt;
       // פגיעה במהלך ריצה
       if(d2(e.mesh.position.x,e.mesh.position.z,px,pz)<2.8){
-        dmgPlayer(22);e._chargeActive=false;e._cvx=0;e._cvz=0;
-        haptic([60,20,60]);showN('💥 ריסוק!');
+        dmgPlayer(14);e._chargeActive=false;e._cvx=0;e._cvz=0;
+        haptic([40,15,40]);showN('💥 ריסוק!');
       }
     } else {
       // ── תנועה רגילה ──
@@ -8758,8 +9416,8 @@ function updSuperSoldiers(dt){
       // ── Slam — קפיצה ומחיצה ──
       if(e._slamT<=0&&dd<3.5){
         e._slamT=4.0;
-        spawnBlood(ex,0.5,ez,12);spawnPfx(ex,0.2,ez,0xff4400,8);
-        haptic([80,30,80]);dmgPlayer(28);showN('🔨 מחיצה!');
+        spawnBlood(ex,0.5,ez,8);spawnPfx(ex,0.2,ez,0xff4400,6);
+        haptic([60,20,60]);dmgPlayer(16);showN('🔨 מחיצה!');
         // רעידת מצלמה
         camera.position.y+=1.2;setTimeout(()=>{camera.position.y-=1.2;},80);
       }
@@ -8778,7 +9436,7 @@ function updSuperSoldiers(dt){
       }
 
       // ── תקיפה רגילה ──
-      if(dd<e.atk&&e.atkT<=0){e.atkT=1.4;dmgPlayer(16);haptic(35);}
+      if(dd<e.atk&&e.atkT<=0){e.atkT=1.6;dmgPlayer(10);haptic(25);}
     }
 
     // ── פגיעת שחקן ──
@@ -8934,19 +9592,19 @@ function updZ07(dt){
     // ── Slam ──
     if(b._slamT<=0&&dd<4){
       b._slamT=3.5;
-      spawnBlood(b.x,0.5,b.z,18);haptic([100,30,100]);
-      dmgPlayer(35);showN('🔨 מחיצת Z-07!');
+      spawnBlood(b.x,0.5,b.z,12);haptic([80,25,80]);
+      dmgPlayer(22);showN('🔨 מחיצת Z-07!');
       camera.position.y+=1.8;setTimeout(()=>{camera.position.y-=1.8;},100);
     }
 
     // ── תקיפה רגילה ──
-    if(dd<b.atk&&b.atkT<=0){b.atkT=1.2;dmgPlayer(20);haptic(45);}
+    if(dd<b.atk&&b.atkT<=0){b.atkT=1.4;dmgPlayer(12);haptic(35);}
   } else {
     // charge בתנועה
     b.mesh.position.x+=b._cvx*dt;
     b.mesh.position.z+=b._cvz*dt;
     if(d2(b.mesh.position.x,b.mesh.position.z,px,pz)<3.5){
-      dmgPlayer(32);b._chargeActive=false;haptic([80,25,80]);showN('💥 ריסוק! Z-07 תפס אותך!');
+      dmgPlayer(20);b._chargeActive=false;haptic([60,20,60]);showN('💥 ריסוק! Z-07 תפס אותך!');
     }
   }
 
@@ -9115,58 +9773,20 @@ function updCh7(dt){
     }
   }
 
-  // ── Mission 35: התקדמות למרכז גהה — חיילים בפנים ──
+  // ── Mission 35: הגיעו לכניסת מרכז גהה — כניסה לInterior ──
   if(G.mission===35){
-    // כשמגיעים לכניסת הבניין — ספון חיילים בפנים + קדם ל-36
-    // פולס אינדיקטור כניסה
     if(G._hospDoorInd){
       G._hospDoorInd.position.y=3.5+Math.sin(Date.now()*.005)*0.3;
       G._hospDoorInd.material.color.setHex(Math.sin(Date.now()*.01)>0?0x44ff88:0x22cc55);
     }
-        const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z+8);
-    if(distToHosp<12&&!G._superSpawned){
-      G._superSpawned=true;
-      _spawnSuperSoldiers();
-      showN('⚠️ תנועה בתוך הבניין. היזהרו.');
-    }
-    // בדוק אם כל החיילים הובסו → אפשר להיכנס לעומק
-    if(G._superSpawned){
-      const alive=_superSoldiers.filter(s=>s.hp>0&&s.mesh.visible).length;
-      if(alive===0){
-        showN('✅ המסדרון נוקה. היכנסו לעומק.');
-        setTimeout(()=>setMission(36),1500);
-      }
-      updSuperSoldiers(dt);
-    }
-  }
-
-
-  // ── Mission 36: עומק הבניין — כ"ץ ברמקול ──
-  if(G.mission===36){
-    const distToDeep=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-4);
-    if(distToDeep<8&&!G._katzIntercomed){
-      G._katzIntercomed=true;
+    const distToHosp=d2(px,pz,SHAFIYA_X,SHAFIYA_Z+8);
+    if(distToHosp<5&&!HOSP.inHosp&&!G._hospEntering){
+      G._hospEntering=true;
       if(G._hospDoorInd)G._hospDoorInd.visible=false;
-      setTimeout(()=>showCut('ch7_katz_intercom',()=>{
-        setMission(37);
-      }),600);
+      enterHosp();
     }
   }
 
-  // ── Mission 37: ירידה לתחתית — Z-07 ──
-  if(G.mission===37){
-    const distToBasement=d2(px,pz,SHAFIYA_X,SHAFIYA_Z-10);
-    if(distToBasement<6&&!G._z07Spawned){
-      G._z07Spawned=true;
-      setMission(38);
-      _buildZ07();
-      setTimeout(()=>showCut('ch7_z07_intro',()=>{}),600);
-    }
-  }
-
-  // ── Mission 38: קרב Z-07 ──
-  if(G.mission===38){
-    updZ07(dt);
-  }
+  // missions 36-38 מטופלות ב-updHosp בתוך ה-interior
 }
 

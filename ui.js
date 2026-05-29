@@ -2540,12 +2540,24 @@ function _devJump(n){
     // אפס ch7 state אם קופצים לפרק ז׳
     if(n>=33){
       G._ch7Started=false;
-      G._ch6FireDone=true; // נדרש כדי שפרק ז׳ יפתח תקין
+      G._ch6FireDone=true;
       G._gameComplete=false;
-      if(typeof _ch7DebrisItems!=='undefined'){_ch7DebrisItems.forEach(i=>{if(i.mesh)i.mesh.visible=true;if(i.light)i.light.intensity=1.2;i.collected=false;});}
-      if(typeof _z07Enemy!=='undefined'&&_z07Enemy){_z07Enemy.dead=false;if(_z07Enemy.mesh)_z07Enemy.mesh.visible=true;_z07Enemy.hp=700;}
-      if(typeof _superSoldiers!=='undefined')_superSoldiers.forEach(s=>{s.hp=s.mhp;if(s.mesh)s.mesh.visible=true;});
       G._superSpawned=false;
+      G._hospEntering=false;
+      G._z07Spawned=false;
+      G._katzIntercomed=false;
+      if(typeof HOSP!=='undefined')HOSP.inHosp=false;
+      if(typeof hospScene!=='undefined'&&hospScene){
+        hospObjects.forEach(o=>{if(o.geometry)o.geometry.dispose();});
+        hospObjects.length=0;hospScene=null;hospCamera=null;
+      }
+      if(typeof _ch7DebrisItems!=='undefined'){
+        _ch7DebrisItems.forEach(i=>{if(i.mesh)i.mesh.visible=true;if(i.light)i.light.intensity=1.2;i.collected=false;});
+        _ch7DebrisItems.length=0; // force re-spawn
+      }
+      if(typeof _z07Enemy!=='undefined')_z07Enemy=null;
+      if(typeof _superSoldiers!=='undefined')_superSoldiers.length=0;
+      if(typeof G._z07Enemy!=='undefined')G._z07Enemy=null;
     }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
