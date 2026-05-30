@@ -194,9 +194,9 @@ function updDayNight(dt){
     // לילה→שחר
     const f=t/0.21;
     sky.copy(_SKY_NIGHT).lerp(_SKY_DAWN,f*f); // slow at night, faster near dawn
-    _ambLight&&(_ambLight.intensity=0.14+f*0.12,_ambLight.color.setHex(0x334477));
+    _ambLight&&(_ambLight.intensity=0.30+f*0.08,_ambLight.color.setHex(0x445588));
     _sunLight&&(_sunLight.intensity=0.02+f*0.04);
-    _hemiLight&&(_hemiLight.intensity=0.06+f*0.06);
+    _hemiLight&&(_hemiLight.intensity=0.18+f*0.06);
   } else if(t<0.29){
     // שחר→יום
     const f=(t-0.21)/0.08;
@@ -221,16 +221,16 @@ function updDayNight(dt){
     // שקיעה→סגול-לילה
     const f=(t-0.73)/0.08;
     sky.copy(_SKY_DUSK).lerp(_SKY_DUSK2,f);
-    _ambLight&&(_ambLight.intensity=0.24-f*0.10,_ambLight.color.setHex(0x886688));
+    _ambLight&&(_ambLight.intensity=0.32-f*0.04,_ambLight.color.setHex(0x886688));
     _sunLight&&(_sunLight.intensity=Math.max(0,0.23-f*0.23));
-    _hemiLight&&(_hemiLight.intensity=Math.max(0.06,0.16-f*0.10));
+    _hemiLight&&(_hemiLight.intensity=Math.max(0.16,0.22-f*0.06));
   } else {
     // סגול→לילה
     const f=(t-0.81)/0.19;
     sky.copy(_SKY_DUSK2).lerp(_SKY_NIGHT,f);
-    _ambLight&&(_ambLight.intensity=Math.max(0.20,0.14-f*0.09),_ambLight.color.setHex(0x334477));
+    _ambLight&&(_ambLight.intensity=Math.max(0.28,0.30-f*0.04),_ambLight.color.setHex(0x445588));
     _sunLight&&(_sunLight.intensity=0);
-    _hemiLight&&(_hemiLight.intensity=Math.max(0.05,0.06));
+    _hemiLight&&(_hemiLight.intensity=Math.max(0.16,0.18-f*0.02));
   }
 
   if(scene) scene.background.copy(sky);
@@ -249,8 +249,8 @@ function updDayNight(dt){
   // ── ערפל ──
   if(scene&&scene.fog){
     const isNight=t>0.75||t<0.27;
-    scene.fog.near=isNight?55:85;
-    scene.fog.far=isNight?170:255;
+    scene.fog.near=isNight?70:85;
+    scene.fog.far=isNight?220:280;
     scene.fog.color.copy(sky);
   }
 
@@ -1527,10 +1527,6 @@ const _CUT_PORTRAITS={
   ch6_open:'💔',ch6_reks_dead:'😶',ch6_shadow_seen:'👁️',
   ch6_shadow_zippo:'⚡',ch6_lab_found:'🔬',ch6_recording:'🎙️',
   ch6_shadow_fight:'⚔️',ch6_factory:'😱',ch6_fire:'🔥',ch6_ending:'🌆',
-  // ── פרק ז׳ ──
-  ch7_open:'🌅',ch7_tag_found:'📄',ch7_zippo_crisis:'💔',ch7_ambush:'⚠️',
-  ch7_katz_intercom:'📢',ch7_lockdown:'🔒',ch7_z07_intro:'💀',
-  ch7_z07_phase2:'🔴',ch7_z07_phase3:'👁️',ch7_ending:'🌙',
 };
 function skipTypewriter(){
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
@@ -2536,28 +2532,6 @@ function _devJump(n){
       G._ch6LabVisited=false;G._ch6RecordingPlayed=false;
       G._ch6FactoryVisited=false;G._ch6FireDone=false;
       G._shadowEnemy=null;G._shadowBossDead=false;
-    }
-    // אפס ch7 state אם קופצים לפרק ז׳
-    if(n>=33){
-      G._ch7Started=false;
-      G._ch6FireDone=true;
-      G._gameComplete=false;
-      G._superSpawned=false;
-      G._hospEntering=false;
-      G._z07Spawned=false;
-      G._katzIntercomed=false;
-      if(typeof HOSP!=='undefined')HOSP.inHosp=false;
-      if(typeof hospScene!=='undefined'&&hospScene){
-        hospObjects.forEach(o=>{if(o.geometry)o.geometry.dispose();});
-        hospObjects.length=0;hospScene=null;hospCamera=null;
-      }
-      if(typeof _ch7DebrisItems!=='undefined'){
-        _ch7DebrisItems.forEach(i=>{if(i.mesh)i.mesh.visible=true;if(i.light)i.light.intensity=1.2;i.collected=false;});
-        _ch7DebrisItems.length=0; // force re-spawn
-      }
-      if(typeof _z07Enemy!=='undefined')_z07Enemy=null;
-      if(typeof _superSoldiers!=='undefined')_superSoldiers.length=0;
-      if(typeof G._z07Enemy!=='undefined')G._z07Enemy=null;
     }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
