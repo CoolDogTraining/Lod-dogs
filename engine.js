@@ -4319,6 +4319,7 @@ function loop(){
     updCh5(dt); // פרק ה׳
     updCh6(dt); // פרק ו׳
     updCh7(dt); // פרק ז׳
+    try{updCh8(dt);}catch(e){console.error('updCh8:',e);}
     // כניסה למסגד — שחקן הגיע לדלת במשימה 8
     if(G.mission===8&&G.gateMarker){
       const px=PB.position.x,pz=PB.position.z;
@@ -8473,6 +8474,18 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // ════════════════════════════════════════════════
+// פרק ח׳ — "אינסטינקט"
+// ════════════════════════════════════════════════
+let _z18Enemy=null;
+const Z18_HP=850, Z18_SPD=5.8;
+let _ch8WitnessCount=0;  // NPC conversations
+let _ch8WarehouseCleared=false;
+let _ch8GrabTriggered=false;
+let _ch8WaveCount=0;
+const _APEX_LOGO_COL=0x220033;
+
+
+// ════════════════════════════════════════════════
 // מרכז גהה — Interior Scene
 // ════════════════════════════════════════════════
 const HOSP={inHosp:false,playerX:0,playerZ:8,playerYaw:Math.PI,enterGrace:0};
@@ -9467,7 +9480,7 @@ function updZ07Interior(dt,b){
       setTimeout(()=>showCut('ch7_ending',()=>{
         G.paused=false;
         exitHosp();
-        setTimeout(()=>setMission(39),1000);
+        setTimeout(()=>setMission(40),1800);
       }),800);
     }
   }
@@ -10113,5 +10126,479 @@ function updCh7(dt){
   }
 
   // missions 36-38 מטופלות ב-updHosp בתוך ה-interior
+}
+
+
+// ════════════════════════════════════════════════
+// Z-18 MODEL — זיפו כהה, Super Saiyan Rose
+// ════════════════════════════════════════════════
+function mkZ18Model(){
+  const S=1.18; // גדול מזיפו ב-18%
+  const BK=new THREE.MeshLambertMaterial({color:0x04040a,emissive:0x080510});
+  const DK=new THREE.MeshLambertMaterial({color:0x020208,emissive:0x040308});
+  const ROSE=new THREE.MeshLambertMaterial({color:0x2a0a1e,emissive:0x1a0612}); // ורוד-כהה
+  const ROSEHI=new THREE.MeshLambertMaterial({color:0x3a0a28,emissive:0x280818}); // הדגשות ורוד
+  const AR=new THREE.MeshLambertMaterial({color:0x0e0818,emissive:0x0a0512}); // שריון כהה
+  const EY=new THREE.MeshBasicMaterial({color:0xcc0055}); // עיניים ארגמן-ורוד
+  const EYG=new THREE.MeshBasicMaterial({color:0xff2266,transparent:true,opacity:0.7});
+
+  const g=new THREE.Group();
+  const _m=(geo,mat,x,y,z,rx,ry,rz)=>{
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(x||0,y||0,z||0);
+    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+    m.castShadow=true;g.add(m);return m;
+  };
+
+  // ── גוף — מבנה זיפו, גדול יותר ──
+  _m(new THREE.BoxGeometry(0.74*S,0.7*S,1.22*S), BK, 0,0.64*S,0.05*S);
+  _m(new THREE.BoxGeometry(0.82*S,0.52*S,0.58*S), BK, 0,0.74*S,0.52*S);
+  _m(new THREE.BoxGeometry(0.7*S,0.54*S,0.44*S), DK, 0,0.6*S,-0.5*S);
+  // שריון חזה — ורוד-כהה עם פרטים
+  _m(new THREE.BoxGeometry(0.72*S,0.46*S,0.1*S), AR, 0,0.78*S,0.78*S);
+  _m(new THREE.BoxGeometry(0.28*S,0.42*S,0.08*S), ROSE, -0.2*S,0.78*S,0.82*S);
+  _m(new THREE.BoxGeometry(0.28*S,0.42*S,0.08*S), ROSEHI, 0.2*S,0.76*S,0.82*S);
+  // פרטי ורוד על הגוף
+  [-0.14,0,0.14].forEach(oy=>{
+    _m(new THREE.BoxGeometry(0.72*S,0.055*S,0.055*S), ROSE, 0,0.44*S+oy*S,0.22*S);
+  });
+  // בטן
+  _m(new THREE.BoxGeometry(0.64*S,0.3*S,0.4*S), BK, 0,0.42*S,0.28*S);
+
+  // ── שתלי עמוד שדרה — ורוד-כהה ──
+  [0.6,0.44,0.28,0.12].forEach((sy,i)=>{
+    _m(new THREE.BoxGeometry(0.12*S,0.12*S,0.1*S), ROSEHI, 0,sy*S,-0.54*S);
+    if(i<3)_m(new THREE.CylinderGeometry(0.022*S,0.022*S,0.14*S,6),ROSE,0,(sy-0.08)*S,-0.54*S);
+  });
+
+  // ── צוואר + קולר כהה ──
+  _m(new THREE.BoxGeometry(0.46*S,0.4*S,0.46*S), BK, 0,1.12*S,0.4*S);
+  _m(new THREE.BoxGeometry(0.54*S,0.1*S,0.54*S), AR, 0,1.24*S,0.4*S);
+  // LED ורוד על קולר
+  _m(new THREE.BoxGeometry(0.08*S,0.05*S,0.05*S),
+    new THREE.MeshBasicMaterial({color:0xff0066}), 0,1.24*S,0.66*S);
+
+  // ── ראש ──
+  const hG=new THREE.Group();
+  hG.position.set(0,1.4*S,0.64*S);hG.rotation.x=0.15;g.add(hG);
+  const _mH=(geo,mat,x,y,z,rx,ry,rz)=>{
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(x||0,y||0,z||0);
+    if(rx)m.rotation.x=rx;if(ry)m.rotation.y=ry;if(rz)m.rotation.z=rz;
+    m.castShadow=true;hG.add(m);return m;
+  };
+
+  _mH(new THREE.BoxGeometry(0.58*S,0.56*S,0.68*S), BK, 0,0,0);
+  _mH(new THREE.BoxGeometry(0.2*S,0.3*S,0.36*S), DK, -0.28*S,-0.04*S,0.08*S);
+  _mH(new THREE.BoxGeometry(0.2*S,0.3*S,0.36*S), DK,  0.28*S,-0.04*S,0.08*S);
+  _mH(new THREE.BoxGeometry(0.52*S,0.2*S,0.24*S), BK, 0,0.24*S,0.22*S);
+  // קמטי מצח אנכיים — כועס/קר
+  [-0.12,0.12].forEach(cx=>{
+    _mH(new THREE.BoxGeometry(0.035*S,0.16*S,0.05*S), ROSE, cx*S,0.22*S,0.28*S,0.25);
+  });
+  _mH(new THREE.BoxGeometry(0.34*S,0.24*S,0.42*S), BK, 0,-0.15*S,0.3*S);
+  // אף
+  const nsG=new THREE.Mesh(new THREE.SphereGeometry(0.1*S,8,8),DK);
+  nsG.scale.set(1,0.7,0.85);nsG.position.set(0,0.02*S,0.37*S);hG.add(nsG);
+  // שיניים
+  [-0.07,0,0.07].forEach(tx=>{
+    _mH(new THREE.BoxGeometry(0.055*S,0.09*S,0.04*S),
+      new THREE.MeshLambertMaterial({color:0xccc8b0,emissive:0x080806}), tx*S,-0.2*S,0.37*S);
+  });
+
+  // ── עיניים — ארגמן ורוד זוהר ──
+  [-1,1].forEach(sd=>{
+    const eG=new THREE.Group();
+    eG.position.set(sd*0.18*S,0.1*S,0.3*S);hG.add(eG);
+    const eyeBase=new THREE.Mesh(new THREE.SphereGeometry(0.085*S,10,10),
+      new THREE.MeshLambertMaterial({color:0x080005,emissive:0x050002}));
+    eyeBase.castShadow=true;eG.add(eyeBase);
+    const pupil=new THREE.Mesh(new THREE.SphereGeometry(0.06*S,8,8),EY);
+    pupil.position.z=0.06*S;eG.add(pupil);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.075*S,8,8),EYG);
+    glow.position.z=0.048*S;eG.add(glow);
+    if(sd===-1){
+      g._eyeL=pupil;
+      const el=new THREE.PointLight(0xff0066,1.5,4);el.position.set(-0.18*S,0.1*S,0.44*S);hG.add(el);
+      g._eyeLLight=el;
+    } else {
+      g._eyeR=pupil;
+      const er=new THREE.PointLight(0xff0066,1.5,4);er.position.set(0.18*S,0.1*S,0.44*S);hG.add(er);
+      g._eyeRLight=er;
+    }
+  });
+
+  // ── אוזניים — שטוחות לאחור לגמרי ──
+  [-1,1].forEach(sd=>{
+    const eG=new THREE.Group();
+    eG.position.set(sd*0.26*S,0.2*S,-0.18*S);
+    eG.rotation.z=sd*0.5;eG.rotation.x=-0.85;hG.add(eG);
+    const earM=new THREE.Mesh(new THREE.BoxGeometry(0.14*S,0.28*S,0.09*S),BK);
+    earM.position.y=0.14*S;earM.castShadow=true;eG.add(earM);
+  });
+
+  // ── שתל גולגולת — ורוד-כהה ──
+  _mH(new THREE.BoxGeometry(0.2*S,0.09*S,0.24*S), ROSEHI, 0,0.32*S,-0.12*S);
+  _mH(new THREE.BoxGeometry(0.07*S,0.14*S,0.07*S), ROSE, -0.07*S,0.42*S,-0.1*S);
+  _mH(new THREE.BoxGeometry(0.07*S,0.14*S,0.07*S), ROSE,  0.07*S,0.42*S,-0.1*S);
+  const crownLed=new THREE.Mesh(new THREE.BoxGeometry(0.045*S,0.045*S,0.045*S),
+    new THREE.MeshBasicMaterial({color:0xff0066}));
+  crownLed.position.set(0,0.5*S,-0.1*S);hG.add(crownLed);
+  g._crownLed=crownLed;
+
+  // ── כתפיים — שריון ורוד-כהה ──
+  [-1,1].forEach(sd=>{
+    _m(new THREE.BoxGeometry(0.34*S,0.34*S,0.54*S), BK, sd*0.62*S,0.84*S,0.28*S);
+    _m(new THREE.BoxGeometry(0.38*S,0.14*S,0.5*S), ROSEHI, sd*0.62*S,1.0*S,0.26*S);
+    _m(new THREE.BoxGeometry(0.26*S,0.56*S,0.24*S), DK, sd*0.68*S,0.54*S,0.36*S);
+    _m(new THREE.BoxGeometry(0.22*S,0.5*S,0.22*S), BK, sd*0.62*S,0.14*S,0.44*S);
+    _m(new THREE.BoxGeometry(0.24*S,0.16*S,0.28*S), DK, sd*0.6*S,-0.1*S,0.5*S);
+    [-0.09,0,0.09].forEach(cx=>{
+      _m(new THREE.BoxGeometry(0.046*S,0.15*S,0.046*S), DK, sd*0.6*S+cx*sd,-0.22*S,0.58*S);
+    });
+  });
+
+  // ── רגליים אחוריות ──
+  [-1,1].forEach(sd=>{
+    _m(new THREE.BoxGeometry(0.3*S,0.48*S,0.32*S), BK, sd*0.3*S,0.0*S,-0.3*S);
+    _m(new THREE.BoxGeometry(0.26*S,0.36*S,0.28*S), DK, sd*0.28*S,-0.4*S,-0.22*S);
+    _m(new THREE.BoxGeometry(0.26*S,0.14*S,0.38*S), BK, sd*0.26*S,-0.62*S,-0.1*S);
+    [-0.09,0,0.09].forEach(cx=>{
+      _m(new THREE.BoxGeometry(0.045*S,0.11*S,0.045*S), DK, sd*0.26*S+cx*sd,-0.73*S,0.04*S);
+    });
+  });
+
+  // ── זנב — שטוח כלפי מטה ──
+  const tG=new THREE.Group();tG.position.set(0,0.74*S,-0.64*S);tG.rotation.x=0.3;g.add(tG);
+  const t1=new THREE.Mesh(new THREE.CylinderGeometry(0.1*S,0.07*S,0.28*S,8),BK);
+  t1.position.y=0.14*S;t1.castShadow=true;tG.add(t1);
+  g._tail=tG;
+
+  // ── הילה ורודה-כהה — PointLight ──
+  const aura=new THREE.PointLight(0xcc0066,3.5,10);
+  aura.position.set(0,1.2*S,0);g.add(aura);g._aura=aura;
+
+  // ── Dark Flame particles (placeholder — animated in updZ18) ──
+  g._darkFlameT=0;
+
+  g.castShadow=true;
+  return g;
+}
+
+// ════════════════════════════════════════════════
+// buildZ18 — בניית Z-18 בעולם
+// ════════════════════════════════════════════════
+function buildZ18(){
+  if(_z18Enemy)return;
+  const mesh=mkZ18Model();
+  mesh.position.set(10,0,-38);
+  scene.add(mesh);
+  const bar=hpBar(mesh,2.8,4.0);
+  bar.material.color.setHex(0xcc0066);
+
+  _z18Enemy={
+    mesh,bar,
+    hp:Z18_HP,mhp:Z18_HP,spd:Z18_SPD,
+    atk:4.0,atkT:0,dead:false,
+    _phase:1,
+    _shadowT:0,  // Shadow Step cooldown
+    _darkFlameT:0,
+    _grabDone:false,
+    _chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
+    _hitT:0,_hitCD:0
+  };
+  G._z18Enemy=_z18Enemy;
+}
+
+// ════════════════════════════════════════════════
+// updZ18 — AI + מכות מיוחדות
+// ════════════════════════════════════════════════
+function updZ18(dt){
+  if(!_z18Enemy||_z18Enemy.dead||G.mission!==46)return;
+  const b=_z18Enemy;
+  const px=PB.position.x,pz=PB.position.z;
+  b.mesh.position.y=0; // keep grounded
+  const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
+  const dog=G.dogs[G.dog];
+
+  b.atkT=Math.max(0,b.atkT-dt);
+  b._shadowT=Math.max(0,b._shadowT-dt);
+  b._darkFlameT=Math.max(0,b._darkFlameT-dt);
+  b._chargeT=Math.max(0,b._chargeT-dt);
+  b._hitT=Math.max(0,b._hitT-dt);
+  b._hitCD=Math.max(0,b._hitCD-dt);
+
+  // ── הילה מתפשטת — פולס ──
+  if(b.mesh._aura){
+    const pulse=0.8+0.2*Math.sin(Date.now()*0.004);
+    b.mesh._aura.intensity=(b._phase===2?5.5:3.5)*pulse;
+  }
+
+  // ── פאזה 2 (50% HP) ── 
+  if(b.hp/b.mhp<=0.5&&b._phase===1){
+    b._phase=2;b.spd*=1.3;
+    showCut('ch8_z18_phase2',()=>{});
+    // העיניים מתעצמות
+    if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=3.5;
+    if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=3.5;
+    if(b.mesh._eyeLLight)b.mesh._eyeLLight.color.setHex(0xff00aa);
+    if(b.mesh._eyeRLight)b.mesh._eyeRLight.color.setHex(0xff00aa);
+    if(b.mesh._aura)b.mesh._aura.color.setHex(0xff0088);
+    // Dark Flame burst
+    for(let i=0;i<12;i++)spawnPfx(
+      b.mesh.position.x+(Math.random()-.5)*3,
+      0.5+Math.random()*2,
+      b.mesh.position.z+(Math.random()-.5)*3,
+      0xcc0066,3
+    );
+    haptic([100,40,100,40,100]);
+  }
+
+  // ── תנועה + מכות ──
+  if(!b._chargeActive&&!b._shadowStepping){
+    // תנועה לעבר השחקן
+    const dx=px-b.mesh.position.x,dz=pz-b.mesh.position.z;
+    const l=Math.sqrt(dx*dx+dz*dz)||1;
+    b.mesh.position.x+=dx/l*b.spd*dt;
+    b.mesh.position.z+=dz/l*b.spd*dt;
+    b.mesh.rotation.y=Math.atan2(dx,dz);
+
+    // ── Shadow Step — קפיצה לאחור השחקן ──
+    if(b._shadowT<=0&&dd<12&&Math.random()<0.008){
+      b._shadowT=b._phase===2?4.0:6.5;
+      b._shadowStepping=true;
+      // נעלם לחצי שנייה
+      b.mesh.visible=false;
+      spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xcc0066,8);
+      setTimeout(()=>{
+        if(b.dead)return;
+        // מופיע מאחורי השחקן
+        const ang=G.yaw+Math.PI+((Math.random()-.5)*0.6);
+        b.mesh.position.x=PB.position.x+Math.sin(ang)*2.5;
+        b.mesh.position.z=PB.position.z+Math.cos(ang)*2.5;
+        b.mesh.visible=true;
+        b._shadowStepping=false;
+        spawnPfx(b.mesh.position.x,1,b.mesh.position.z,0xff0088,8);
+        showN('👁️ Shadow Step!');
+        haptic(30);
+        // מכה מיידית מהגב
+        const ddNow=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
+        if(ddNow<3){dmgPlayer(18);haptic([50,20,50]);}
+      },400);
+    }
+
+    // ── Dark Flame — גל אש כהה ──
+    if(b._darkFlameT<=0&&b._phase>=2&&dd<10){
+      b._darkFlameT=5.0;
+      showN('🌑 Dark Flame!');
+      haptic([60,25,60]);
+      // פיצוץ particles ורודים-שחורים
+      for(let i=0;i<8;i++){
+        const ang=i/8*Math.PI*2;
+        spawnPfx(
+          b.mesh.position.x+Math.cos(ang)*2,0.5,
+          b.mesh.position.z+Math.sin(ang)*2,
+          0xaa0044,4
+        );
+      }
+      if(dd<5){dmgPlayer(22);haptic([70,25,70]);}
+    }
+
+    // ── מכה רגילה ──
+    if(dd<b.atk&&b.atkT<=0){
+      b.atkT=b._phase===2?0.9:1.3;
+      dmgPlayer(b._phase===2?15:11);
+      haptic(30);
+    }
+  }
+
+  // ── פגיעת שחקן — רק זיפו ──
+  if(G.dog==='zippo'&&dd<5.5&&G.atkCD<=0&&b._hitT<=0){
+    const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
+    b.hp-=dmg;sHit();haptic(28);
+    flash(b.mesh.children[0]);
+    spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,12);
+    showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg));
+    b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
+    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+
+    if(b.hp<=0){
+      b.dead=true;b.mesh.visible=false;
+      if(b.mesh._aura)b.mesh._aura.intensity=0;
+      if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=0;
+      if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=0;
+      sCapture();haptic([120,50,100,30,120]);
+      addXP(400);G.score+=3000;G.coins+=200;updCoins();
+      for(let i=0;i<16;i++)spawnPfx(
+        b.mesh.position.x+(Math.random()-.5)*5,0.5+Math.random()*3,
+        b.mesh.position.z+(Math.random()-.5)*5, 0xcc0066,3
+      );
+      G.paused=true;
+      setTimeout(()=>showCut('ch8_ending',()=>{
+        G.paused=false;
+        setMission(47);
+        showN('🔜 APEX נמשך. פרק ט׳ בקרוב.');
+      }),1000);
+    }
+  }
+  if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+}
+
+// ════════════════════════════════════════════════
+// updCh8 — לולאת פרק ח
+// ════════════════════════════════════════════════
+function updCh8(dt){
+  if(G.mission<40||G.mission>47)return;
+  const px=PB.position.x,pz=PB.position.z;
+
+  // ── Mission 40: עדויות NPC ──
+  if(G.mission===40){
+    if(!G._ch8WitnessInit){
+      G._ch8WitnessInit=true;
+      _ch8WitnessCount=0;
+    }
+    // בדוק קרבה ל-NPC מוכרים (שוק, שכונה)
+    // 3 "עדים" בפוזיציות קבועות
+    const witnesses=[{x:-68,z:44},{x:-55,z:60},{x:-80,z:30}];
+    const ip=document.getElementById('ip');
+    let nearAny=false;
+    witnesses.forEach((w,i)=>{
+      if(G[`_ch8w${i}`])return; // כבר דיברנו
+      if(d2(px,pz,w.x,w.z)<4){
+        nearAny=true;
+        if(ip){ip.textContent='💬 E — דבר';ip.style.display='block';}
+        if(G._eKeyFrame||G.keys['KeyE']){
+          G._eKeyFrame=false;G.keys['KeyE']=false;
+          G[`_ch8w${i}`]=true;
+          _ch8WitnessCount++;
+          const lines=[
+            'תושב: \\"הכלב של השכן... נעלם אמש. הוא לא הבין.\\"',
+            'ילדה: \\"הכלב שלנו, בוקסר, לא היה בבוקר. הוא לא בורח אף פעם.\\"',
+            'זקן: \\"שלושה כלבים מהרחוב הזה. שבוע אחד. משהו לא בסדר.\\"'
+          ];
+          showN(`🐾 ${lines[i]}`);
+          if(_ch8WitnessCount>=3){
+            setTimeout(()=>{
+              showN('🐾 מומו: \\"הדפוס ברור. זה לא מקרי.\\"');
+              setTimeout(()=>setMission(41),2000);
+            },1500);
+          }
+        }
+      }
+    });
+    if(!nearAny&&ip&&ip.style.display!=='none'&&ip.textContent.includes('דבר'))
+      ip.style.display='none';
+  }
+
+  // ── Mission 41: עקבות לאזור תעשייה — קרב ──
+  if(G.mission===41){
+    const dist=d2(px,pz,80,-45);
+    if(dist<8&&!G._ch8TrailReached){
+      G._ch8TrailReached=true;
+      showN('🏭 מומו: \\"פה. הריח ממשיך פנימה.\\"');
+      // ספון 3 שומרים
+      [[85,-40],[80,-50],[90,-48]].forEach(([sx,sz])=>{
+        const eg=mkEnemy(0x1a0a0a,1);eg.position.set(sx,0,sz);scene.add(eg);
+        const bar=hpBar(eg,1.4,2.3);
+        G.enemies.push({mesh:eg,hp:70,mhp:70,spd:3.8,alert:16,atk:2.6,atkT:0,bar,
+          homeX:sx,homeZ:sz,patAng:0,patT:0,state:'patrol',
+          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה'});
+      });
+      setTimeout(()=>{
+        // אחרי שמנקים — ל-42
+        const checkClear=setInterval(()=>{
+          const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='תעשייה').length;
+          if(alive===0){clearInterval(checkClear);setTimeout(()=>setMission(42),1500);}
+        },500);
+      },500);
+    }
+  }
+
+  // ── Mission 42: מחסן — גילוי APEX ──
+  if(G.mission===42){
+    const dist=d2(px,pz,92,-38);
+    if(dist<6&&!G._ch8WarehouseReached){
+      G._ch8WarehouseReached=true;
+      showCut('ch8_warehouse',()=>{
+        showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
+        setTimeout(()=>setMission(43),2500);
+      });
+    }
+  }
+
+  // ── Mission 43: חזרה לבסיס ──
+  if(G.mission===43){
+    const dist=d2(px,pz,0,5);
+    if(dist<6&&!G._ch8HomeReached){
+      G._ch8HomeReached=true;
+      showCut('ch8_they_know',()=>setMission(44));
+    }
+  }
+
+  // ── Mission 44: Z-18 מופיע לראשונה (ויזואלי בלבד) ──
+  if(G.mission===44){
+    forceDog('zippo','זיפו יוצא לסיור');
+    const dist=d2(px,pz,5,-22);
+    if(dist<8&&!G._ch8Z18FirstSeen){
+      G._ch8Z18FirstSeen=true;
+      // בנה Z-18 preview — עומד מרחוק
+      if(!G._z18Preview){
+        const pm=mkZ18Model();
+        pm.position.set(5,-0.1,-42);
+        scene.add(pm);G._z18Preview=pm;
+      }
+      showCut('ch8_z18_first',()=>{
+        // Z-18 נעלם
+        if(G._z18Preview){scene.remove(G._z18Preview);G._z18Preview=null;}
+        setMission(45);
+      });
+    }
+  }
+
+  // ── Mission 45: קרב ללא זיפו + grab מומו ──
+  if(G.mission===45){
+    if(!G._ch8Wave1Done){
+      // ספון גל חיילים — קולין ומומו בלבד
+      forceDog('colin','קולין ומומו נלחמים לבד — זיפו ב\\"שבר\\"');
+      if(!G._ch8WaveSpawned){
+        G._ch8WaveSpawned=true;
+        [[5,-26],[12,-30],[0,-32],[8,-22]].forEach(([sx,sz])=>{
+          const eg=mkEnemy(0x1a1a2e,1);eg.position.set(sx,0,sz);scene.add(eg);
+          const bar=hpBar(eg,1.4,2.3);
+          G.enemies.push({mesh:eg,hp:80,mhp:80,spd:4,alert:18,atk:2.6,atkT:0,bar,
+            homeX:sx,homeZ:sz,patAng:0,patT:0,state:'chase',
+            lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'ch8wave'});
+        });
+      }
+      // בדוק ניקוי
+      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='ch8wave').length;
+      if(alive===0&&G._ch8WaveSpawned){
+        G._ch8Wave1Done=true;
+        // Z-18 מופיע ואוחז במומו
+        setTimeout(()=>{
+          if(!G._ch8GrabTriggered){
+            G._ch8GrabTriggered=true;
+            // בנה Z-18 grab scene
+            if(!G._z18Preview){
+              const pm=mkZ18Model();
+              pm.position.set(8,-0.1,-33);
+              scene.add(pm);G._z18Preview=pm;
+            }
+            // פעם מיידית
+            showCut('ch8_zippo_returns',()=>{
+              if(G._z18Preview){scene.remove(G._z18Preview);G._z18Preview=null;}
+              setMission(46);
+              buildZ18();
+            });
+          }
+        },1000);
+      }
+    }
+  }
+
+  // ── Mission 46: קרב Z-18 ──
+  if(G.mission===46){
+    updZ18(dt);
+  }
 }
 
