@@ -4096,7 +4096,7 @@ function mAtk(){
 }function mE(){
   if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
   // פרק ז׳ — אינטראקציה עם חפצים
-  if(G.mission>=33&&G.mission<=38){G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);return;}
+  if(G.mission>=33&&G.mission<=47){G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);return;}
   if(G.near)doInteract();
 }function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
@@ -10456,20 +10456,41 @@ function updCh8(dt){
     if(!G._ch8WitnessInit){
       G._ch8WitnessInit=true;
       _ch8WitnessCount=0;
+      // בנה mesh לכל עד — NPC פשוט עם אינדיקטור
+      const wDefs=[
+        {x:-68,z:44,buildFn:()=>mkShuki(.82)},
+        {x:-55,z:60,buildFn:()=>mkBoxer(.80)},
+        {x:-80,z:30,buildFn:()=>mkBella(.78)}
+      ];
+      G._ch8Witnesses=wDefs.map((w,i)=>{
+        const mesh=w.buildFn();
+        mesh.position.set(w.x,0,w.z);
+        // סבב לכיוון השחקן — כלפי מרכז
+        mesh.rotation.y=Math.atan2(0-w.x, 60-w.z);
+        scene.add(mesh);
+        // אינדיקטור שאלה צהוב
+        const ind=new THREE.Mesh(
+          new THREE.SphereGeometry(.28,6,6),
+          new THREE.MeshLambertMaterial({color:0xffcc00,emissive:0x443300})
+        );
+        ind.position.set(0,2.5,0);
+        mesh.add(ind);
+        return {mesh,ind,x:w.x,z:w.z,talked:false};
+      });
     }
-    // בדוק קרבה ל-NPC מוכרים (שוק, שכונה)
-    // 3 "עדים" בפוזיציות קבועות
-    const witnesses=[{x:-68,z:44},{x:-55,z:60},{x:-80,z:30}];
+    const witnesses=G._ch8Witnesses||[{x:-68,z:44},{x:-55,z:60},{x:-80,z:30}];
     const ip=document.getElementById('ip');
     let nearAny=false;
     witnesses.forEach((w,i)=>{
-      if(G[`_ch8w${i}`])return; // כבר דיברנו
-      if(d2(px,pz,w.x,w.z)<4){
+      if(w.talked)return; // כבר דיברנו
+      const wx=w.x||w.mesh?.position.x, wz=w.z||w.mesh?.position.z;
+      if(d2(px,pz,wx,wz)<4){
         nearAny=true;
         if(ip){ip.textContent='💬 E — דבר';ip.style.display='block';}
         if(G._eKeyFrame||G.keys['KeyE']){
           G._eKeyFrame=false;G.keys['KeyE']=false;
-          G[`_ch8w${i}`]=true;
+          w.talked=true;
+          if(w.ind)w.ind.visible=false; // הסר אינדיקטור
           _ch8WitnessCount++;
           const lines=[
             'תושב: \\"הכלב של השכן... נעלם אמש. הוא לא הבין.\\"',
@@ -10492,6 +10513,11 @@ function updCh8(dt){
 
   // ── Mission 41: עקבות לאזור תעשייה — קרב ──
   if(G.mission===41){
+    // הסתר אינדיקטורים של עדים שנשארו
+    if(G._ch8Witnesses&&!G._ch8WitnessesHidden){
+      G._ch8WitnessesHidden=true;
+      G._ch8Witnesses.forEach(w=>{if(w.ind)w.ind.visible=false;});
+    }
     const dist=d2(px,pz,80,-45);
     if(dist<8&&!G._ch8TrailReached){
       G._ch8TrailReached=true;
@@ -10504,13 +10530,13 @@ function updCh8(dt){
           homeX:sx,homeZ:sz,patAng:0,patT:0,state:'patrol',
           lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה'});
       });
-      setTimeout(()=>{
-        // אחרי שמנקים — ל-42
-        const checkClear=setInterval(()=>{
-          const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='תעשייה').length;
-          if(alive===0){clearInterval(checkClear);setTimeout(()=>setMission(42),1500);}
-        },500);
-      },500);
+      // בדוק ניקוי כל frame במקום setInterval
+      G._ch8ClearCheck=true;
+    }
+    // בדוק ניקוי אויבי תעשייה
+    if(G._ch8ClearCheck&&G._ch8TrailReached){
+      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='תעשייה').length;
+      if(alive===0){G._ch8ClearCheck=false;setTimeout(()=>setMission(42),1500);}
     }
   }
 
