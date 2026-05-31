@@ -2160,6 +2160,7 @@ function updReksAlly(dt){
   // לפני mission 21 — עמוד בכיכר, אל תעקוב
   if(G.mission<21)return;
   // מ-mission 21 עד 23 — עקוב אחרי השחקן
+  if(!PB)return;
   const px=PB.position.x,pz=PB.position.z;
   const dx=px+Math.sin(G.yaw+1.2)*3.5-r.x;
   const dz=pz+Math.cos(G.yaw+1.2)*3.5-r.z;
@@ -2439,6 +2440,16 @@ function loadGame(){
     if(G.mission===21&&!G._titanScoutsSpawned){
       _spawnTitanScouts();
     }
+    // שחזר רקס ally אם פרק ה׳
+    if(G.mission>=20&&G.mission<=24&&!G._reksAlly){
+      _spawnReksAlly();
+      // הצמד רקס לשחקן בטעינה כדי שיופיע ליד ולא בכיכר
+      if(G._reksAlly&&PB){
+        const px=PB.position.x,pz=PB.position.z;
+        G._reksAlly.x=px+3;G._reksAlly.z=pz+3;
+        G._reksAlly.mesh.position.set(px+3,0,pz+3);
+      }
+    }
     // שחזר שטחים שנכבשו
     G.terrCnt=s.terrCnt||0;
     document.getElementById('tc').textContent=G.terrCnt;
@@ -2544,6 +2555,13 @@ function _devJump(n){
     if(n===21){G._titanScoutsSpawned=false;}
     // אפס ch5 scout kills אם קופצים לפרק ה׳
     if(n>=20){_ch5ScoutKills=0;G._ch5ScoutsDone=false;}
+    // אפס רקס ally כדי שייוצר מחדש
+    if(n>=20&&n<=24){
+      if(G._reksAlly&&G._reksAlly.mesh){
+        try{scene.remove(G._reksAlly.mesh);}catch(_){}
+      }
+      G._reksAlly=null;G._reksCollapsing=false;G._reksCollapseT=0;
+    }
     // אפס ch6 state אם קופצים לפרק ו׳
     if(n>=25){
       G._ch6BaseVisited=false;G._ch6MarketVisited=false;G._ch6PortVisited=false;
