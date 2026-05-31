@@ -340,7 +340,7 @@ function init(){
   renderer.outputColorSpace = (THREE.SRGBColorSpace !== undefined)
     ? THREE.SRGBColorSpace
     : THREE.LinearEncoding; // fallback לגרסאות ישנות
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,90,260);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,110,320);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
@@ -501,7 +501,7 @@ function buildWorld(){
     }
     const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(50,50);
     const roughTex=new THREE.CanvasTexture(tc);roughTex.wrapS=roughTex.wrapT=THREE.RepeatWrapping;roughTex.repeat.set(50,50);
-    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400,1,1),
+    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(550,550,1,1),
       new THREE.MeshStandardMaterial({map:tex,roughness:.98,metalness:0,color:0xffffff}));
     gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
   })();
@@ -584,7 +584,137 @@ function buildWorld(){
   addTerr(-52,73,20,'העיר העתיקה');
 
   addTerr(72,96,18,'שכונת גני אביב — בית הכנסת');
+  addTerr(100,-55,28,'אזור תעשייה');
   addStreetDeco();
+  buildIndustrialZone();
+}
+
+// ════════════════════════════════════════════════
+// אזור תעשייה — דרום מזרח לוד (x≈80-130, z≈-30 עד -90)
+// ════════════════════════════════════════════════
+function buildIndustrialZone(){
+  const IND_MAT = c=>new THREE.MeshLambertMaterial({color:c});
+  // פונקציית בנייה מקומית (מוסיפה collision)
+  const iB=(w,h,d,c,x,z)=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),IND_MAT(c));
+    m.position.set(x,h/2,z);m.castShadow=true;m.receiveShadow=true;
+    scene.add(m);blds.push({x,z,w,d});return m;
+  };
+  // רצועת כביש תעשייתי (N-S)
+  mkRd(100,-60,8,90,true);
+  // כביש גישה (E-W) מחבר לרחוב הרצל
+  mkRd(115,-30,50,8,false);
+
+  // ── מחסן ראשי (מחסן APEX) x=92,z=-38 ──
+  iB(20,6,14,0x4a4a4a,92,-38);                      // גוף
+  iB(22,.4,15.5,0x3a3a3a,92,6.2,-38);               // גג
+  // דלת מחסן
+  const door=new THREE.Mesh(new THREE.BoxGeometry(4,4,.15),IND_MAT(0x555555));
+  door.position.set(92,2,-31);scene.add(door);
+  // שלט APEX
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(5,1.5,.1),IND_MAT(0x1a001a));
+  sign.position.set(92,7,-31);scene.add(sign);
+  // פסי פלדה על הגג
+  [[88,-38],[92,-38],[96,-38]].forEach(([sx,sz])=>{
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(.4,1.5,.4),IND_MAT(0x888888));
+    beam.position.set(sx,7.5,sz);scene.add(beam);
+  });
+
+  // ── מפעל מתכות (x=115, z=-55) ──
+  iB(18,8,12,0x555566,115,-55);
+  iB(19,.4,13,0x444455,115,8.2,-55);
+  // ארובה
+  const chim=new THREE.Mesh(new THREE.CylinderGeometry(.8,1,9,8),IND_MAT(0x666666));
+  chim.position.set(121,4.5,-52);scene.add(chim);
+  const chimTop=new THREE.Mesh(new THREE.CylinderGeometry(1.1,.8,.6,8),IND_MAT(0x444444));
+  chimTop.position.set(121,9.6,-52);scene.add(chimTop);
+
+  // ── מחסן קטן (x=78, z=-62) ──
+  iB(12,4,10,0x5a5050,78,-62);
+  iB(13,.3,11,0x484040,78,4.15,-62);
+
+  // ── מחסן שמירה (x=95, z=-70) ──
+  iB(14,5,12,0x4a5060,95,-70);
+
+  // ── מיכל דלק גדול (x=110, z=-42) ──
+  const tank=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,7,12),IND_MAT(0x7a6a50));
+  tank.position.set(110,3.5,-42);tank.castShadow=true;scene.add(tank);
+  blds.push({x:110,z:-42,w:8,d:8});
+  const tankTop=new THREE.Mesh(new THREE.SphereGeometry(3.6,12,6,0,Math.PI*2,0,Math.PI/2),IND_MAT(0x887a60));
+  tankTop.position.set(110,7,-42);scene.add(tankTop);
+  // צינור דלק
+  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,18,6),IND_MAT(0x888888));
+  pipe.rotation.z=Math.PI/2;pipe.position.set(101,-42,1.2);
+  scene.add(pipe);
+
+  // ── גדר תעשייה ──
+  const fenceM=IND_MAT(0x445566);
+  // גדר צפונית (z=-30)
+  for(let fx=72;fx<=130;fx+=6){
+    const fp=new THREE.Mesh(new THREE.BoxGeometry(.2,2.5,.2),fenceM);
+    fp.position.set(fx,1.25,-30);scene.add(fp);
+    if(fx<130){
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(5.8,.1,.1),fenceM);
+      fr.position.set(fx+3,2.4,-30);scene.add(fr);
+      const fr2=new THREE.Mesh(new THREE.BoxGeometry(5.8,.1,.1),fenceM);
+      fr2.position.set(fx+3,1.2,-30);scene.add(fr2);
+    }
+  }
+  // גדר מערבית (x=72)
+  for(let fz=-30;fz>=-88;fz-=6){
+    const fp=new THREE.Mesh(new THREE.BoxGeometry(.2,2.5,.2),fenceM);
+    fp.position.set(72,1.25,fz);scene.add(fp);
+    if(fz>-88){
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,5.8),fenceM);
+      fr.position.set(72,2.4,fz-3);scene.add(fr);
+      const fr2=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,5.8),fenceM);
+      fr2.position.set(72,1.2,fz-3);scene.add(fr2);
+    }
+  }
+  // שלטי כניסה
+  const gateL=new THREE.Mesh(new THREE.BoxGeometry(.4,3.5,.4),IND_MAT(0x666666));
+  gateL.position.set(105,1.75,-30);scene.add(gateL);
+  const gateR=new THREE.Mesh(new THREE.BoxGeometry(.4,3.5,.4),IND_MAT(0x666666));
+  gateR.position.set(111,1.75,-30);scene.add(gateR);
+  const gateBar=new THREE.Mesh(new THREE.BoxGeometry(6.4,.25,.25),IND_MAT(0xcc2200));
+  gateBar.position.set(108,3.6,-30);scene.add(gateBar);
+
+  // ── פנסי אזור תעשייה ──
+  [[92,-32],[115,-45],[80,-60],[100,-72]].forEach(([lx,lz])=>{
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,7,6),IND_MAT(0x666666));
+    pole.position.set(lx,3.5,lz);scene.add(pole);
+    const lamp=new THREE.PointLight(0xffcc88,.8,22);
+    lamp.position.set(lx,7.2,lz);scene.add(lamp);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.8,.3,1.4),IND_MAT(0x888888));
+    head.position.set(lx,7,lz);scene.add(head);
+  });
+
+  // ── קרונות/מכולות ──
+  [[85,-50,0x3a5a3a],[88,-72,0x5a3a3a],[120,-60,0x3a3a5a]].forEach(([cx,cz,cc])=>{
+    iB(8,3,3.5,cc,cx,cz);
+  });
+
+  // ── אזור חניה לרכב כבד ──
+  const parkLot=new THREE.Mesh(new THREE.PlaneGeometry(28,18),new THREE.MeshLambertMaterial({color:0x383838}));
+  parkLot.rotation.x=-Math.PI/2;parkLot.position.set(118,-0.02,-72);scene.add(parkLot);
+  // קווי חניה
+  const lineMat=new THREE.MeshLambertMaterial({color:0xffffff});
+  for(let i=0;i<3;i++){
+    const line=new THREE.Mesh(new THREE.PlaneGeometry(.15,18),lineMat);
+    line.rotation.x=-Math.PI/2;line.position.set(107+i*6,.01,-72);scene.add(line);
+  }
+
+  // ── אובייקטי פרופס — חביות/ארגזים ──
+  const barrelM=IND_MAT(0x6a3a20);
+  [[94,-34],[96,-34],[90,-33]].forEach(([bx,bz])=>{
+    const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,1.1,8),barrelM);
+    barrel.position.set(bx,.55,bz);scene.add(barrel);
+  });
+  const crateM=IND_MAT(0x8a6a40);
+  [[80,-57],[81,-55],[83,-57]].forEach(([cx,cz])=>{
+    const crate=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.5,1.5),crateM);
+    crate.position.set(cx,.75,cz);scene.add(crate);
+  });
 }
 
 // טקסטורת אספלט גלובלית
@@ -2932,6 +3062,7 @@ function addCityGuard(x,_floorY,waypoints,spd){
 }
 
 function enterCityHall(){
+  _lodStaticObjs=null; // reset LOD cache on scene switch
   G.paused=true;
   fadeOut(()=>{
     if(!cityScene)buildCityScene();
@@ -3700,6 +3831,7 @@ function addGuard(sc,waypoints,x,y,z,spd,arr){
 // ENTER / EXIT MOSQUE
 // ════════════════════════════════════════════════
 function enterMosque(){
+  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!mosqueScene)buildMosqueScene();
@@ -4389,8 +4521,8 @@ function updPlayer(dt){
   if(PB.position.y<=_gndY){PB.position.y=_gndY;G.velY=0;G.onGround=true;}
   // תנועה עם collision — X וZ נבדקים בנפרד (sliding לאורך קירות)
   // pruning: בודקים רק בניינים בטווח 20 יחידות מהשחקן
-  const nx=Math.max(-175,Math.min(175,PB.position.x+G.vx*dt));
-  const nz=Math.max(-175,Math.min(175,PB.position.z+G.vz*dt));
+  const nx=Math.max(-220,Math.min(220,PB.position.x+G.vx*dt));
+  const nz=Math.max(-220,Math.min(220,PB.position.z+G.vz*dt));
   let blkX=false,blkZ=false;
   const px_=PB.position.x,pz_=PB.position.z;
   for(const b of blds){
@@ -4583,26 +4715,61 @@ function doAtk(){
 }
 
 // ════════════════════════════════════════════════
-// LOD — Level of Detail: ביצועים טובים יותר
+// LOD — Level of Detail: ביצועים טובים יותר + distance culling
 // ════════════════════════════════════════════════
 let _lodFrame=0;
-function _updLOD(){
-  _lodFrame++;
-  if(_lodFrame%45!==0||!PB)return; // כל ~45 frames (~0.75s)
-  const px=PB.position.x,pz=PB.position.z;
-  // Shadow culling: כבה צללים על אובייקטים רחוקים
+// רשימת אובייקטים סטטיים לניהול LOD (נאסוף אחרי buildWorld)
+let _lodStaticObjs=null;
+function _initLODStatics(){
+  _lodStaticObjs=[];
   scene.traverse(obj=>{
     if(!obj.isMesh)return;
-    const d=Math.sqrt((obj.position.x-px)**2+(obj.position.z-pz)**2);
-    const near=d<55;
-    obj.castShadow=near&&obj._canShadow!==false;
-    obj.receiveShadow=d<75;
+    // אל תחתוך את השחקן או אויבים — אלה מנוהלים בנפרד
+    if(obj===PB||obj.parent===PB)return;
+    _lodStaticObjs.push(obj);
   });
-  // AI LOD: אויבים רחוקים מדלגים על חישובים
+}
+function _updLOD(){
+  _lodFrame++;
+  if(!PB)return;
+  const px=PB.position.x,pz=PB.position.z;
+
+  // כל frame: visibility culling מהיר לאויבים
   G.enemies.forEach(e=>{
-    if(!e.mesh||!e.mesh.visible)return;
+    if(!e.mesh)return;
     const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
-    e._lodSkip=1;
+    // AI throttle: רחוק = פחות חישובים
+    e._lodSkip = d>120 ? 6 : d>70 ? 3 : 1;
+  });
+
+  // כל 30 frames (~0.5s): shadow culling + static visibility
+  if(_lodFrame%30!==0)return;
+
+  // אתחל רשימה סטטית פעם אחת אחרי שהכל נבנה
+  if(!_lodStaticObjs)_initLODStatics();
+
+  _lodStaticObjs.forEach(obj=>{
+    // מיקום גלובלי — עבור objects בתוך groups
+    const wx=obj.getWorldPosition?obj.getWorldPosition(new THREE.Vector3()).x:obj.position.x;
+    const wz=obj.getWorldPosition?obj.getWorldPosition(new THREE.Vector3()).z:obj.position.z;
+    const d=Math.sqrt((wx-px)**2+(wz-pz)**2);
+
+    // Visibility culling: הסתר אובייקטים רחוקים מאוד
+    if(d>200){obj.visible=false;return;}
+    obj.visible=true;
+
+    // Shadow culling: רק אובייקטים קרובים מטילים/מקבלים צל
+    obj.castShadow   = d<60 && obj._canShadow!==false;
+    obj.receiveShadow= d<80;
+
+    // Geometry detail: הפחת polygon updates לרחוקים (אי אפשר לשנות LOD דינמי ב-Three ללא LOD object,
+    // אבל נוכל לוודא שה-frustum culling עובד ע"י matrixWorldNeedsUpdate)
+    if(d>140){
+      // רחוק — skip frustum update כל frame (Three עושה זאת אוטומטית רוב הזמן)
+      obj.matrixAutoUpdate=false;
+    } else if(!obj.matrixAutoUpdate){
+      obj.matrixAutoUpdate=true;
+    }
   });
 }
 
@@ -4620,6 +4787,7 @@ const _ZONES=[
   {x:50,  z:90,  r:28, name:'רמת אשכול'},
   {x:-50, z:-100,r:28, name:'שכונת הגשר'},
   {x:80,  z:-80, r:22, name:'כיכר העירייה'},
+  {x:100, z:-55, r:35, name:'אזור תעשייה'},
 ];
 let _lastZone='',_zoneToastTimer=null;
 
@@ -5392,6 +5560,9 @@ function drawMM(){
   ctx.fillStyle='#e8791a';ctx.beginPath();ctx.arc(cx+40*sc,cy,5,0,Math.PI*2);ctx.fill();
   // בית כנסת
   ctx.fillStyle='#5588ff';ctx.beginPath();ctx.arc(cx+72*sc,cy+96*sc,4,0,Math.PI*2);ctx.fill();
+  // אזור תעשייה — ריבוע אפור-כחלחל
+  ctx.fillStyle='#667799';ctx.fillRect(cx+72*sc,cy-30*sc,30*sc,60*sc);
+  ctx.strokeStyle='#99aacc';ctx.lineWidth=1;ctx.strokeRect(cx+72*sc,cy-30*sc,30*sc,60*sc);
   // בריכת הנחת (פרק ה׳)
   ctx.fillStyle='#00aaff';ctx.beginPath();ctx.arc(cx-120*sc,cy+130*sc,4,0,Math.PI*2);ctx.fill();
   // שטחים
@@ -6924,6 +7095,7 @@ function _spawnShadowInLab(){
 }
 
 function enterLab(){
+  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!labScene)buildLabScene();
@@ -8935,6 +9107,7 @@ function buildHospScene(){
 // enterHosp / exitHosp
 // ════════════════════════════════════════════════
 function enterHosp(){
+  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!hospScene)buildHospScene();
@@ -10511,26 +10684,29 @@ function updCh8(dt){
       ip.style.display='none';
   }
 
-  // ── Mission 41: עקבות לאזור תעשייה — קרב ──
+  // ── Mission 41: עקבות לאזור תעשייה — קרב עם חיילי על ──
   if(G.mission===41){
     // הסתר אינדיקטורים של עדים שנשארו
     if(G._ch8Witnesses&&!G._ch8WitnessesHidden){
       G._ch8WitnessesHidden=true;
       G._ch8Witnesses.forEach(w=>{if(w.ind)w.ind.visible=false;});
     }
-    const dist=d2(px,pz,80,-45);
-    if(dist<8&&!G._ch8TrailReached){
+    const dist=d2(px,pz,100,-55);
+    if(dist<12&&!G._ch8TrailReached){
       G._ch8TrailReached=true;
-      showN('🏭 מומו: \\"פה. הריח ממשיך פנימה.\\"');
-      // ספון 3 שומרים
-      [[85,-40],[80,-50],[90,-48]].forEach(([sx,sz])=>{
-        const eg=mkEnemy(0x1a0a0a,1);eg.position.set(sx,0,sz);scene.add(eg);
-        const bar=hpBar(eg,1.4,2.3);
-        G.enemies.push({mesh:eg,hp:70,mhp:70,spd:3.8,alert:16,atk:2.6,atkT:0,bar,
+      showN('🏭 מומו: "פה. הריח ממשיך פנימה."');
+      // ספון 3 חיילי על — שומרי אזור התעשייה
+      [[95,-48],[105,-52],[100,-62]].forEach(([sx,sz])=>{
+        const mesh=mkSuperSoldier(0x1a1020);
+        mesh.position.set(sx,0,sz);scene.add(mesh);
+        const bar=hpBar(mesh,1.8,2.8);
+        G.enemies.push({mesh,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
+          alert:20,atk:SUPER_ATK,atkT:0,bar,
           homeX:sx,homeZ:sz,patAng:0,patT:0,state:'patrol',
-          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה'});
+          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה',
+          _chargeT:0,_chargeReady:false,_chargeActive:false,
+          _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
-      // בדוק ניקוי כל frame במקום setInterval
       G._ch8ClearCheck=true;
     }
     // בדוק ניקוי אויבי תעשייה
@@ -10539,7 +10715,6 @@ function updCh8(dt){
       if(alive===0){G._ch8ClearCheck=false;setTimeout(()=>setMission(42),1500);}
     }
   }
-
   // ── Mission 42: מחסן — גילוי APEX ──
   if(G.mission===42){
     const dist=d2(px,pz,92,-38);
@@ -10589,11 +10764,15 @@ function updCh8(dt){
       if(!G._ch8WaveSpawned){
         G._ch8WaveSpawned=true;
         [[5,-26],[12,-30],[0,-32],[8,-22]].forEach(([sx,sz])=>{
-          const eg=mkEnemy(0x1a1a2e,1);eg.position.set(sx,0,sz);scene.add(eg);
-          const bar=hpBar(eg,1.4,2.3);
-          G.enemies.push({mesh:eg,hp:80,mhp:80,spd:4,alert:18,atk:2.6,atkT:0,bar,
+          const mesh=mkSuperSoldier(0x0d0d20);
+          mesh.position.set(sx,0,sz);scene.add(mesh);
+          const bar=hpBar(mesh,1.8,2.8);
+          G.enemies.push({mesh,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
+            alert:20,atk:SUPER_ATK,atkT:0,bar,
             homeX:sx,homeZ:sz,patAng:0,patT:0,state:'chase',
-            lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'ch8wave'});
+            lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'ch8wave',
+            _chargeT:0,_chargeReady:false,_chargeActive:false,
+            _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
         });
       }
       // בדוק ניקוי
