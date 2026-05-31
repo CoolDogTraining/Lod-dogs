@@ -5057,7 +5057,7 @@ function doAtk(){
           }
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
-          if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+          if(!e._titan&&!e._isSuperSoldier&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
         }
       }
     });
@@ -5258,7 +5258,7 @@ function _colinStunAttack(){
         updateMissionHUD();
         if(G.mission===3&&G.enemiesKilled>=3){showN('\u2705 \u05d4\u05db\u05e0\u05e2\u05ea 3/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd! \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05dc\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0!');setTimeout(()=>setMission(4),1200);}
         else if(G.mission===3)showN(`\u26d4 \u05d4\u05db\u05e0\u05e2\u05ea ${G.enemiesKilled}/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd`);
-        if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+        if(!e._titan&&!e._isSuperSoldier&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
       } else {
         if(e.bar)e.bar.material.color.setHex(0xffff00);
       }
@@ -11121,6 +11121,7 @@ function updCh8(dt){
     if(inZone && !G._ch8TrailReached){
       G._ch8TrailReached=true;
       G._ch8ClearCheck=true;
+      G._ch8Advancing42=false;
       showN('🏭 מומו: "הריח מוביל לאזור התעשייה. מישהו כאן."');
       [[208,-110],[225,-115],[240,-108],[215,-130]].forEach(([sx,sz])=>{
         const mesh=mkSuperSoldier(0x1a1020);
@@ -11138,7 +11139,8 @@ function updCh8(dt){
     // ── בדוק ניקוי ──
     if(G._ch8TrailReached){
       const alive=G.enemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible&&e.zone==='תעשייה').length;
-      if(alive===0){
+      if(alive===0&&!G._ch8Advancing42){
+        G._ch8Advancing42=true;
         G._ch8ClearCheck=false;
         setTimeout(()=>{if(G.mission===41)setMission(42);},1200);
       }
