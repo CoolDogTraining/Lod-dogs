@@ -10867,12 +10867,288 @@ function mkZ18Model(){
 }
 
 // ════════════════════════════════════════════════
+// _triggerZ18GrabScene — אנימציה סינמטית: Z-18 אוחז במומו
+// ════════════════════════════════════════════════
+function _triggerZ18GrabScene(){
+  // 1. בנה Z-18 ומומו-dummy בבסיס
+  const z18mesh=mkZ18Model();
+  z18mesh.position.set(108,0,22);
+  z18mesh.rotation.y=Math.PI; // פונה אל הבסיס
+  scene.add(z18mesh);
+  G._z18GrabMesh=z18mesh;
+
+  // מומו dummy — כדור ורוד שמייצג את מומו נישאת
+  const momoDummy=new THREE.Group();
+  const mBody=new THREE.Mesh(new THREE.SphereGeometry(0.35,8,8),
+    new THREE.MeshLambertMaterial({color:0xd4a0c8,emissive:0x3a1a30}));
+  mBody.position.y=0.35;momoDummy.add(mBody);
+  // אוזניים
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.06,0.22,6),
+      new THREE.MeshLambertMaterial({color:0xc090b8}));
+    ear.position.set(s*0.2,0.65,0);ear.rotation.z=s*0.3;momoDummy.add(ear);
+  });
+  // זנב
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.03,0.3,6),
+    new THREE.MeshLambertMaterial({color:0xc090b8}));
+  tail.position.set(0,0.25,-0.4);tail.rotation.x=0.8;momoDummy.add(tail);
+
+  momoDummy.position.set(108,0,22);
+  scene.add(momoDummy);
+  G._momoDummy=momoDummy;
+
+  // 2. אפקטי פתיחה — רעידה + אור אדום
+  haptic([80,20,80,20,80]);
+  const grabLight=new THREE.PointLight(0xff0044,0,12);
+  grabLight.position.set(108,3,22);
+  scene.add(grabLight);G._grabLight=grabLight;
+
+  // נעל את השחקן
+  G.paused=true;
+
+  // 3. אנימציה — שלבים
+  let t=0;
+  const BASE_Y_MOMO=0;
+  const GRAB_DUR=3200; // ms סה"כ
+
+  // שלב א: Z-18 נוחת (0-600ms) — אור מהבהב, רעידת מצלמה
+  let flashCount=0;
+  const flashInt=setInterval(()=>{
+    flashCount++;
+    grabLight.intensity= flashCount%2===0 ? 4 : 0;
+    // רעידת camera קטנה
+    if(camera){
+      camera.position.x+=( Math.random()-.5)*0.15;
+      camera.position.z+=( Math.random()-.5)*0.15;
+    }
+    if(flashCount>=8) clearInterval(flashInt);
+  },75);
+
+  // שלב ב (600ms): Z-18 מרים את מומו — הפנל הצדדי מופיע
+  setTimeout(()=>{
+    grabLight.intensity=3;
+    haptic([120,30,60]);
+
+    // הפנל הסינמטי הצדדי — "תמונה בתמונה"
+    _showGrabPanel();
+
+    // אנימציה: מומו עולה לאוויר
+    let liftT=0;
+    const liftInt=setInterval(()=>{
+      liftT+=16;
+      const prog=Math.min(liftT/600,1);
+      const eased=1-Math.pow(1-prog,3);
+      momoDummy.position.y=eased*1.6; // מומו עולה 1.6 יחידות
+      // z18 מרים יד — rotate כתף
+      if(z18mesh.rotation){
+        z18mesh.rotation.x=eased*(-0.15);
+      }
+      // אור פולס
+      grabLight.intensity=3+Math.sin(liftT*0.02)*1.2;
+      if(liftT>=600) clearInterval(liftInt);
+    },16);
+
+    showN('😱 Z-18 אחז במומו! זיפו — איפה אתה?!');
+  },600);
+
+  // שלב ג (1800ms): מומו נישאת — particles ורודים
+  setTimeout(()=>{
+    for(let i=0;i<10;i++){
+      spawnPfx(108+(Math.random()-.5)*3,1.5+Math.random(),22+(Math.random()-.5)*3,0xff0066,3);
+    }
+    haptic([50,20,100,20,50]);
+    showN('💔 מומו: "זיפו—!"');
+  },1800);
+
+  // שלב ד (2600ms): Z-18 נסוג — מומו נופלת
+  setTimeout(()=>{
+    // מומו נופלת בחזרה
+    let dropT=0;
+    const dropInt=setInterval(()=>{
+      dropT+=16;
+      const prog=Math.min(dropT/400,1);
+      momoDummy.position.y=(1-prog)*1.6;
+      if(dropT>=400){
+        clearInterval(dropInt);
+        // פגיעת נחיתה
+        spawnPfx(108,0.3,22,0xffaa00,6);
+        haptic(40);
+      }
+    },16);
+    // Z-18 נסוג אחורה
+    let retT=0;
+    const retInt=setInterval(()=>{
+      retT+=16;
+      z18mesh.position.z-=0.1;
+      if(retT>=500) clearInterval(retInt);
+    },16);
+  },2600);
+
+  // שלב ה (3200ms): סיום — פנל נסגר, כנס לcutscene ואז mission 46
+  setTimeout(()=>{
+    _closeGrabPanel();
+    grabLight.intensity=0;
+    scene.remove(z18mesh);
+    scene.remove(momoDummy);
+    if(G._grabLight){scene.remove(G._grabLight);G._grabLight=null;}
+    G.paused=false;
+
+    showCut('ch8_zippo_returns',()=>{
+      setMission(46);
+      buildZ18();
+    });
+  },GRAB_DUR);
+}
+
+// פנל סינמטי צדדי — מציג את האנימציה
+let _grabPanelEl=null;
+function _showGrabPanel(){
+  if(_grabPanelEl)return;
+  const el=document.createElement('div');
+  el.id='grab-panel';
+  el.style.cssText=`
+    position:fixed;right:12px;top:50%;transform:translateY(-50%);
+    width:160px;background:rgba(10,0,15,0.92);
+    border:2px solid #cc0066;border-radius:8px;
+    padding:8px;z-index:900;
+    box-shadow:0 0 18px #cc006688;
+    animation:grab-panel-in 0.4s ease-out;
+    font-family:inherit;
+  `;
+
+  // כותרת
+  const title=document.createElement('div');
+  title.style.cssText='color:#ff3388;font-size:11px;font-weight:bold;text-align:center;margin-bottom:6px;letter-spacing:1px;';
+  title.textContent='Z-18 × MOMO';
+  el.appendChild(title);
+
+  // Canvas לאנימציה
+  const cvs=document.createElement('canvas');
+  cvs.width=144;cvs.height=120;
+  cvs.style.cssText='display:block;margin:0 auto;border-radius:4px;border:1px solid #550033;';
+  el.appendChild(cvs);
+
+  // תיאור
+  const desc=document.createElement('div');
+  desc.id='grab-panel-desc';
+  desc.style.cssText='color:#ffaacc;font-size:9px;text-align:center;margin-top:5px;line-height:1.4;';
+  desc.textContent='Z-18 פורץ לבסיס';
+  el.appendChild(desc);
+
+  // CSS אנימציה
+  if(!document.getElementById('grab-panel-style')){
+    const s=document.createElement('style');
+    s.id='grab-panel-style';
+    s.textContent=`
+      @keyframes grab-panel-in{from{opacity:0;transform:translateY(-50%) translateX(20px);}to{opacity:1;transform:translateY(-50%) translateX(0);}}
+      @keyframes grab-pulse{0%,100%{box-shadow:0 0 18px #cc006688;}50%{box-shadow:0 0 32px #ff0088cc;}}
+      #grab-panel{animation:grab-panel-in 0.4s ease-out,grab-pulse 1.2s ease-in-out infinite;}
+    `;
+    document.head.appendChild(s);
+  }
+
+  document.body.appendChild(el);
+  _grabPanelEl=el;
+
+  // אנימציה על canvas — ציור Z-18 אוחז במומו
+  const ctx=cvs.getContext('2d');
+  let animT=0;
+  const descTexts=[
+    'Z-18 פורץ לבסיס',
+    'מומו נתפסת!',
+    '💔 Z-18 אוחז בצוואר',
+    'זיפו — בוא!'
+  ];
+  let descIdx=0;
+
+  G._grabPanelAnim=setInterval(()=>{
+    animT+=16;
+    const t=animT/1000;
+    ctx.clearRect(0,0,144,120);
+
+    // רקע כהה עם עיגול אדמדם
+    ctx.fillStyle='#0a000f';
+    ctx.fillRect(0,0,144,120);
+    const grad=ctx.createRadialGradient(72,60,5,72,60,60);
+    grad.addColorStop(0,'rgba(150,0,60,0.3)');
+    grad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,144,120);
+
+    // מומו (ורוד, שמאל) — נישאת
+    const momoY=50+Math.sin(t*3)*4+(animT>600?-Math.min((animT-600)/600,1)*22:0);
+    ctx.fillStyle='#d4a0c8';
+    ctx.beginPath();ctx.arc(45,momoY,14,0,Math.PI*2);ctx.fill(); // גוף
+    // אוזניים מומו
+    ctx.fillStyle='#c090b8';
+    ctx.beginPath();ctx.ellipse(38,momoY-14,5,8,-.4,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(52,momoY-14,5,8,.4,0,Math.PI*2);ctx.fill();
+    // עיניים מומו
+    ctx.fillStyle='#ff88aa';
+    ctx.beginPath();ctx.arc(42,momoY-3,2.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(48,momoY-3,2.5,0,Math.PI*2);ctx.fill();
+
+    // Z-18 (שחור-ורוד, ימין)
+    ctx.fillStyle='#0a0012';
+    ctx.beginPath();ctx.arc(100,55,18,0,Math.PI*2);ctx.fill(); // גוף
+    ctx.fillStyle='#1a0025';
+    ctx.beginPath();ctx.arc(100,40,13,0,Math.PI*2);ctx.fill(); // ראש
+    // עיניים Z-18 — אדומות זוהרות
+    const eyeGlow=0.7+Math.sin(t*4)*0.3;
+    ctx.fillStyle=`rgba(255,0,80,${eyeGlow})`;
+    ctx.beginPath();ctx.arc(95,38,3.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(105,38,3.5,0,Math.PI*2);ctx.fill();
+    // הילה
+    ctx.strokeStyle=`rgba(204,0,102,${0.3+Math.sin(t*2)*0.2})`;
+    ctx.lineWidth=3;ctx.beginPath();ctx.arc(100,50,22,0,Math.PI*2);ctx.stroke();
+
+    // יד Z-18 אוחזת — מתחבר כשמומו נישאת
+    if(animT>600){
+      const grabProg=Math.min((animT-600)/600,1);
+      const armX=100-grabProg*55+4;
+      const armY=50-grabProg*10;
+      ctx.strokeStyle='#1a0025';ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(100,52);ctx.lineTo(armX,armY);ctx.stroke();
+      // "אחיזה" — עיגול אדום
+      if(grabProg>0.6){
+        ctx.fillStyle=`rgba(200,0,50,${(grabProg-0.6)/0.4})`;
+        ctx.beginPath();ctx.arc(armX,armY,7,0,Math.PI*2);ctx.fill();
+      }
+    }
+
+    // particles
+    if(animT>600&&Math.random()>0.6){
+      ctx.fillStyle=`rgba(255,0,80,${Math.random()*0.7})`;
+      const px2=45+(Math.random()-.5)*25;
+      const py2=momoY+(Math.random()-.5)*20;
+      ctx.beginPath();ctx.arc(px2,py2,Math.random()*3+1,0,Math.PI*2);ctx.fill();
+    }
+
+    // עדכן תיאור
+    const newDescIdx=Math.min(Math.floor(animT/800),descTexts.length-1);
+    if(newDescIdx!==descIdx){
+      descIdx=newDescIdx;
+      const d=document.getElementById('grab-panel-desc');
+      if(d)d.textContent=descTexts[descIdx];
+    }
+  },16);
+}
+
+function _closeGrabPanel(){
+  if(G._grabPanelAnim){clearInterval(G._grabPanelAnim);G._grabPanelAnim=null;}
+  if(_grabPanelEl){
+    _grabPanelEl.style.transition='opacity 0.4s';
+    _grabPanelEl.style.opacity='0';
+    setTimeout(()=>{if(_grabPanelEl){_grabPanelEl.remove();_grabPanelEl=null;}},400);
+  }
+}
+
+// ════════════════════════════════════════════════
 // buildZ18 — בניית Z-18 בעולם
 // ════════════════════════════════════════════════
 function buildZ18(){
   if(_z18Enemy)return;
   const mesh=mkZ18Model();
-  mesh.position.set(10,0,-38);
+  mesh.position.set(105,0,15);  // ליד הכניסה לבסיס
   scene.add(mesh);
   const bar=hpBar(mesh,2.8,4.0);
   bar.material.color.setHex(0xcc0066);
@@ -10898,7 +11174,7 @@ function updZ18(dt){
   if(!_z18Enemy||_z18Enemy.dead||G.mission!==46)return;
   const b=_z18Enemy;
   const px=PB.position.x,pz=PB.position.z;
-  b.mesh.position.y=0; // keep grounded
+  b.mesh.position.y=0; // keep grounded — בבסיס
   const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
   const dog=G.dogs[G.dog];
 
@@ -11177,25 +11453,25 @@ function updCh8(dt){
     }
   }
 
-  // ── Mission 43: חזרה לבסיס ──
+  // ── Mission 43: חזרה לבסיס האמיתי ──
   if(G.mission===43){
-    const dist=d2(px,pz,0,5);
-    if(dist<6&&!G._ch8HomeReached){
+    const dist=d2(px,pz,105,25);
+    if(dist<10&&!G._ch8HomeReached){
       G._ch8HomeReached=true;
       showCut('ch8_they_know',()=>setMission(44));
     }
   }
 
-  // ── Mission 44: Z-18 מופיע לראשונה (ויזואלי בלבד) ──
+  // ── Mission 44: Z-18 מופיע ליד הבסיס ──
   if(G.mission===44){
     forceDog('zippo','זיפו יוצא לסיור');
-    const dist=d2(px,pz,5,-22);
-    if(dist<8&&!G._ch8Z18FirstSeen){
+    const dist=d2(px,pz,105,10);
+    if(dist<10&&!G._ch8Z18FirstSeen){
       G._ch8Z18FirstSeen=true;
-      // בנה Z-18 preview — עומד מרחוק
+      // בנה Z-18 preview — עומד מרחוק מחוץ לבסיס
       if(!G._z18Preview){
         const pm=mkZ18Model();
-        pm.position.set(5,-0.1,-42);
+        pm.position.set(105,-0.1,-8);
         scene.add(pm);G._z18Preview=pm;
       }
       showCut('ch8_z18_first',()=>{
@@ -11206,14 +11482,15 @@ function updCh8(dt){
     }
   }
 
-  // ── Mission 45: קרב ללא זיפו + grab מומו ──
+  // ── Mission 45: קרב בבסיס ללא זיפו + grab מומו ──
   if(G.mission===45){
     if(!G._ch8Wave1Done){
-      // ספון גל חיילים — קולין ומומו בלבד
-      forceDog('colin','קולין ומומו נלחמים לבד — זיפו ב\\"שבר\\"');
+      // ספון גל חיילי APEX שתוקפים את הבסיס
+      forceDog('colin','קולין ומומו מגנים על הבסיס');
       if(!G._ch8WaveSpawned){
         G._ch8WaveSpawned=true;
-        [[5,-26],[12,-30],[0,-32],[8,-22]].forEach(([sx,sz])=>{
+        // אויבים תוקפים מכל כיוון אל הבסיס
+        [[95,40],[115,40],[100,8],[110,8],[88,25],[122,25]].forEach(([sx,sz])=>{
           const mesh=mkSuperSoldier(0x0d0d20);
           mesh.position.set(sx,0,sz);scene.add(mesh);
           const bar=hpBar(mesh,1.8,2.8);
@@ -11224,29 +11501,18 @@ function updCh8(dt){
             _chargeT:0,_chargeReady:false,_chargeActive:false,
             _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
         });
+        showN('⚠️ APEX תוקפים את הבסיס! הגן על הבסיס!');
+        haptic([100,30,100]);
       }
       // בדוק ניקוי
       const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='ch8wave').length;
-      if(alive===0&&G._ch8WaveSpawned){
+      if(alive===0&&G._ch8WaveSpawned&&!G._ch8GrabTriggered){
         G._ch8Wave1Done=true;
-        // Z-18 מופיע ואוחז במומו
+        G._ch8GrabTriggered=true;
+        // Z-18 מופיע בבסיס ואוחז במומו — אנימציה סינמטית
         setTimeout(()=>{
-          if(!G._ch8GrabTriggered){
-            G._ch8GrabTriggered=true;
-            // בנה Z-18 grab scene
-            if(!G._z18Preview){
-              const pm=mkZ18Model();
-              pm.position.set(8,-0.1,-33);
-              scene.add(pm);G._z18Preview=pm;
-            }
-            // פעם מיידית
-            showCut('ch8_zippo_returns',()=>{
-              if(G._z18Preview){scene.remove(G._z18Preview);G._z18Preview=null;}
-              setMission(46);
-              buildZ18();
-            });
-          }
-        },1000);
+          _triggerZ18GrabScene();
+        },800);
       }
     }
   }

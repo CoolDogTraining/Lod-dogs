@@ -626,34 +626,35 @@ const MISSIONS=[
 
   // 43 — חוזרים הביתה, מישהו היה פה
   {txt:'4️⃣3️⃣ חזרו לבסיס — משהו לא בסדר 🏠',
-   hint:'בסיס כלבי לוד',
-   targetFn:()=>({x:0,z:5}),
+   hint:'בסיס כלבי לוד — צפון מזרח',
+   targetFn:()=>({x:105,z:25}),
    unlock:()=>{
+     forceDog('colin','קולין מוביל את הקבוצה לבסיס');
      setTimeout(()=>showCut('ch8_they_know',()=>{}),1000);
    }},
 
-  // 44 — Z-18 מופיע לראשונה
+  // 44 — Z-18 מופיע ליד הבסיס
   {txt:'4️⃣4️⃣ סיירו ברחובות — הישארו ביחד 👁️',
-   hint:'רחוב הרצל — מרכז לוד',
-   targetFn:()=>({x:5,z:-22}),
+   hint:'ליד בסיס כלבי לוד',
+   targetFn:()=>({x:105,z:10}),
    unlock:()=>{
      forceDog('zippo','זיפו יוצא לסיור');
      setTimeout(()=>showCut('ch8_z18_first',()=>{}),1200);
    }},
 
-  // 45 — קרב ללא זיפו + Z-18 אוחז במומו
-  {txt:'4️⃣5️⃣ הדפו את גל החיילים! ⚔️',
-   hint:'רחובות לוד — גל תקיפה',
-   targetFn:()=>({x:10,z:-30}),
+  // 45 — קרב ללא זיפו + Z-18 אוחז במומו — בבסיס
+  {txt:'4️⃣5️⃣ הגן על הבסיס! ⚔️',
+   hint:'בסיס כלבי לוד — הגנה!',
+   targetFn:()=>({x:105,z:25}),
    unlock:()=>{
-     forceDog('colin','קולין ומומו נלחמים לבד');
+     forceDog('colin','קולין ומומו מגנים על הבסיס');
      setTimeout(()=>showCut('ch8_zippo_break',()=>{}),800);
    }},
 
-  // 46 — קרב Z-18 (בוס)
+  // 46 — קרב Z-18 (בוס) — בבסיס
   {txt:'4️⃣6️⃣ זיפו — הכנע את Z-18! 🔥',
-   hint:'זירת הקרב',
-   targetFn:()=>G._z18Enemy?{x:G._z18Enemy.mesh.position.x,z:G._z18Enemy.mesh.position.z}:{x:10,z:-35},
+   hint:'בסיס כלבי לוד — קרב סופי',
+   targetFn:()=>G._z18Enemy?{x:G._z18Enemy.mesh.position.x,z:G._z18Enemy.mesh.position.z}:{x:105,z:25},
    unlock:()=>{
      forceDog('zippo','זיפו חוזר');
      setTimeout(()=>showCut('ch8_z18_boss',()=>{}),600);
@@ -661,6 +662,6 @@ const MISSIONS=[
 
   // 47 — סיום פרק ח
   {txt:'🔜 APEX נמשך. פרק ט׳ בקרוב.',
-   hint:'לוד',targetFn:()=>({x:0,z:60}),
+   hint:'בסיס כלבי לוד',targetFn:()=>({x:105,z:25}),
    unlock:()=>showN('🔜 APEX נמשך. הם לא ייעצרו כאן.')},
 ];
