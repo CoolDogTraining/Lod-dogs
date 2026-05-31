@@ -502,9 +502,9 @@ function buildWorld(){
     }
     const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(50,50);
     const roughTex=new THREE.CanvasTexture(tc);roughTex.wrapS=roughTex.wrapT=THREE.RepeatWrapping;roughTex.repeat.set(50,50);
-    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(550,550,1,1),
+    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(700,700,1,1),
       new THREE.MeshStandardMaterial({map:tex,roughness:.98,metalness:0,color:0xffffff}));
-    gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
+    gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;gnd._isGround=true;scene.add(gnd);
   })();
 
   // === רחובות ראשיים ===
@@ -813,8 +813,10 @@ function buildIndustrialZone(){
   // קרקע תעשייתית
   const floorM=new THREE.MeshStandardMaterial({map:aTex.clone(),roughness:.96,color:0xeeeeee});
   const fl=new THREE.Mesh(new THREE.PlaneGeometry(100,130),floorM);
-  fl.rotation.x=-Math.PI/2;fl.position.set(IX,.01,IZ);fl.receiveShadow=true;scene.add(fl);
+  fl.rotation.x=-Math.PI/2;fl.position.set(IX,.01,IZ);fl.receiveShadow=true;fl._isGround=true;scene.add(fl);
 
+  // כביש גישה מהעיר לאזור (x=215, z=-55 עד z=-90)
+  mkRd(215,-72,10,36,true);   // connector מהעיר לשער
   // כבישים פנימיים
   mkRd(IX,-90,10,130,true);    // ציר N-S ראשי
   mkRd(IX+18,-90,8,130,true);  // ציר N-S שניוני
@@ -895,7 +897,7 @@ function buildIndustrialZone(){
   // רצפת מחסן
   const inFloor=new THREE.Mesh(new THREE.PlaneGeometry(WH_W-.4,WH_D-.4),
     new THREE.MeshStandardMaterial({map:_mkConcreteTexture(256,true),roughness:.95,color:0xcccccc}));
-  inFloor.rotation.x=-Math.PI/2;inFloor.position.set(WH_X,.02,WH_Z);scene.add(inFloor);
+  inFloor.rotation.x=-Math.PI/2;inFloor.position.set(WH_X,.02,WH_Z);inFloor._isGround=true;scene.add(inFloor);
   // תאורת פנים
   [[WH_X-8,8,WH_Z-6],[WH_X+8,8,WH_Z-6],[WH_X,8,WH_Z+4]].forEach(([lx,ly,lz])=>{
     const il=new THREE.PointLight(0xffe8b0,1.1,20);il.position.set(lx,ly,lz);scene.add(il);
@@ -1019,7 +1021,7 @@ function buildIndustrialZone(){
   // ══════════════════════════════════════════════
   const pkM=new THREE.MeshStandardMaterial({map:aTex.clone(),roughness:.97,color:0xcccccc});
   const pk=new THREE.Mesh(new THREE.PlaneGeometry(38,24),pkM);
-  pk.rotation.x=-Math.PI/2;pk.position.set(220,-.01,-195);pk.receiveShadow=true;scene.add(pk);
+  pk.rotation.x=-Math.PI/2;pk.position.set(220,-.01,-195);pk.receiveShadow=true;pk._isGround=true;scene.add(pk);
   for(let ci=0;ci<5;ci++){
     const cl=new THREE.Mesh(new THREE.PlaneGeometry(.14,24),new THREE.MeshLambertMaterial({color:0xffffff}));
     cl.rotation.x=-Math.PI/2;cl.position.set(202+ci*7,.015,-195);scene.add(cl);
@@ -1367,7 +1369,7 @@ function bldHouse(x,z,h){
   blds.push({x,z,w:9,d:9});
 }
 function bldPark(x,z){
-  const pg=new THREE.Mesh(new THREE.PlaneGeometry(40,35),new THREE.MeshLambertMaterial({color:0x3d8a2a}));pg.rotation.x=-Math.PI/2;pg.position.set(x,.07,z);scene.add(pg);
+  const pg=new THREE.Mesh(new THREE.PlaneGeometry(40,35),new THREE.MeshLambertMaterial({color:0x3d8a2a}));pg.rotation.x=-Math.PI/2;pg.position.set(x,.07,z);pg._isGround=true;scene.add(pg);
   for(let i=0;i<7;i++)bldTree(x+(Math.random()-.5)*32,z+(Math.random()-.5)*26);
   mkB(2.5,.35,.8,0x5c3317,x-5,.2,z-7);
 }
@@ -1381,7 +1383,7 @@ function buildDogBase(){
 
   // רצפת חצר — quad אחד
   const yard=new THREE.Mesh(new THREE.PlaneGeometry(22,18),new THREE.MeshLambertMaterial({color:0xd4b896}));
-  yard.rotation.x=-Math.PI/2;yard.position.set(X,.06,Z);scene.add(yard);
+  yard.rotation.x=-Math.PI/2;yard.position.set(X,.06,Z);yard._isGround=true;scene.add(yard);
 
   // בניין — שני קוביות (גוף+גג)
   const body=mkB(12,4,7,0xf0ddb0,X,2,Z-4);
@@ -4918,8 +4920,8 @@ function updPlayer(dt){
   if(PB.position.y<=_gndY){PB.position.y=_gndY;G.velY=0;G.onGround=true;}
   // תנועה עם collision — X וZ נבדקים בנפרד (sliding לאורך קירות)
   // pruning: בודקים רק בניינים בטווח 20 יחידות מהשחקן
-  const nx=Math.max(-220,Math.min(220,PB.position.x+G.vx*dt));
-  const nz=Math.max(-220,Math.min(220,PB.position.z+G.vz*dt));
+  const nx=Math.max(-280,Math.min(280,PB.position.x+G.vx*dt));
+  const nz=Math.max(-280,Math.min(280,PB.position.z+G.vz*dt));
   let blkX=false,blkZ=false;
   const px_=PB.position.x,pz_=PB.position.z;
   for(const b of blds){
@@ -5112,59 +5114,64 @@ function doAtk(){
 }
 
 // ════════════════════════════════════════════════
-// LOD — Level of Detail: ביצועים טובים יותר + distance culling
+// ════════════════════════════════════════════════
+// LOD — Level of Detail v2: קל + מהיר + לא מסתיר קרקע
+// אסטרטגיה: Shadow culling בלבד (ללא visibility culling לסטטיקה),
+//             visibility culling רק לאויבים ו-NPCs,
+//             matrixAutoUpdate=false לאובייקטים רחוקים.
 // ════════════════════════════════════════════════
 let _lodFrame=0;
-// רשימת אובייקטים סטטיים לניהול LOD (נאסוף אחרי buildWorld)
-let _lodStaticObjs=null;
+let _lodStaticObjs=null;   // נאסף פעם אחת
+let _lodShadowObjs=null;   // רק אובייקטים שמטילים צל
+
 function _initLODStatics(){
   _lodStaticObjs=[];
+  _lodShadowObjs=[];
+  const _tmpV=new THREE.Vector3();
   scene.traverse(obj=>{
-    if(!obj.isMesh)return;
-    // אל תחתוך את השחקן או אויבים — אלה מנוהלים בנפרד
-    if(obj===PB||obj.parent===PB)return;
+    if(!obj.isMesh||obj===PB||obj.parent===PB)return;
+    if(obj._isCloud||obj._isGround){
+      // עננים וקרקע — תמיד visible, אף פעם לא בrculling
+      obj.visible=true;
+      if(obj._isGround){obj.receiveShadow=true;obj.castShadow=false;}
+      return;
+    }
+    // שמור world-position כ-cache (סטטי — לא זז)
+    obj.getWorldPosition(_tmpV);
+    obj._lodX=_tmpV.x;
+    obj._lodZ=_tmpV.z;
     _lodStaticObjs.push(obj);
+    if(obj.castShadow)_lodShadowObjs.push(obj);
   });
 }
+
 function _updLOD(){
   _lodFrame++;
   if(!PB)return;
-  const px=PB.position.x,pz=PB.position.z;
+  const px=PB.position.x, pz=PB.position.z;
 
-  // כל frame: visibility culling מהיר לאויבים
+  // ── כל frame: AI throttle לפי מרחק ──
   G.enemies.forEach(e=>{
     if(!e.mesh)return;
-    const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
-    // AI throttle: רחוק = פחות חישובים
-    e._lodSkip = d>120 ? 6 : d>70 ? 3 : 1;
+    const dx=e.mesh.position.x-px, dz=e.mesh.position.z-pz;
+    const d2=dx*dx+dz*dz;
+    e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
   });
 
-  // כל 30 frames (~0.5s): shadow culling + static visibility
-  if(_lodFrame%30!==0)return;
-
-  // אתחל רשימה סטטית פעם אחת אחרי שהכל נבנה
+  // ── כל 45 frames (~0.75s): shadow culling בלבד ──
+  // visibility culling לסטטיקה הוסר — גורם לקרקע להיעלם
+  if(_lodFrame%45!==0)return;
   if(!_lodStaticObjs)_initLODStatics();
 
-  _lodStaticObjs.forEach(obj=>{
-    // עננים ושמיים — תמיד מוצגים, ללא LOD
-    if(obj._isCloud){obj.visible=true;obj.castShadow=false;obj.receiveShadow=false;return;}
-    // מיקום גלובלי — עבור objects בתוך groups
-    const wx=obj.getWorldPosition?obj.getWorldPosition(new THREE.Vector3()).x:obj.position.x;
-    const wz=obj.getWorldPosition?obj.getWorldPosition(new THREE.Vector3()).z:obj.position.z;
-    const d=Math.sqrt((wx-px)**2+(wz-pz)**2);
-
-    // Visibility culling: הסתר אובייקטים רחוקים מאוד
-    if(d>210){obj.visible=false;return;}
-    obj.visible=true;
-
-    // Shadow culling: רק אובייקטים קרובים מטילים/מקבלים צל
-    obj.castShadow   = d<60 && obj._canShadow!==false;
-    obj.receiveShadow= d<80;
-
-    // Geometry detail: הפחת polygon updates לרחוקים (אי אפשר לשנות LOD דינמי ב-Three ללא LOD object,
-    // אבל נוכל לוודא שה-frustum culling עובד ע"י matrixWorldNeedsUpdate)
-    if(d>140){
-      // רחוק — skip frustum update כל frame (Three עושה זאת אוטומטית רוב הזמן)
+  _lodShadowObjs.forEach(obj=>{
+    if(obj._isCloud||obj._isGround)return;
+    const dx=obj._lodX-px, dz=obj._lodZ-pz;
+    const d2=dx*dx+dz*dz;
+    const near=d2<3600;   // <60 יחידות
+    obj.castShadow   = near && obj._canShadow!==false;
+    obj.receiveShadow= d2<6400;  // <80
+    // matrixAutoUpdate: כבה לאובייקטים רחוקים שלא זזים
+    if(d2>19600){        // >140
       obj.matrixAutoUpdate=false;
     } else if(!obj.matrixAutoUpdate){
       obj.matrixAutoUpdate=true;
