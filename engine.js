@@ -4626,8 +4626,8 @@ function mAtk(){
   } else {doAtk();}
 }function mE(){
   if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
-  // פרק ז׳ — אינטראקציה עם חפצים
-  if(G.mission>=33&&G.mission<=47){G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);return;}
+  // סמן eKeyFrame בכל המשימות — מאפשר doInteract גם לפני חידוש checkNear
+  G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);
   if(G.near)doInteract();
 }function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
@@ -4820,7 +4820,7 @@ function loop(){
     updHUD();
     return;
   }
-  if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
+  if(!G.paused&&!G.dlgOpen&&!G.cutOpen&&!G._grabPaused){
     try{updPlayer(dt);}catch(e){console.error('updPlayer:',e);}
     try{updEnemies(dt);}catch(e){console.error('updEnemies:',e);}
     try{updPickups(dt);}catch(e){}
@@ -4959,7 +4959,7 @@ function updPlayer(dt){
   const _atkCooldown=G.dog==='zippo'?0.28:0.5;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
   if(G.keys['KeyQ']){G.keys['KeyQ']=false;_useSpecialSkill();}
-  if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
+  if(G.keys['KeyE']){G.keys['KeyE']=false;checkNear();if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
   if(!G._frameCount||G._frameCount%3===0)checkNear();
@@ -11004,127 +11004,183 @@ function _triggerZ18GrabScene(){
 let _grabPanelEl=null;
 function _showGrabPanel(){
   if(_grabPanelEl)return;
+  // עצור את המשחק — כמו התקף הלב של רקס
+  G._grabPaused=true;
+
   const el=document.createElement('div');
   el.id='grab-panel';
   el.style.cssText=`
-    position:fixed;right:12px;top:50%;transform:translateY(-50%);
-    width:160px;background:rgba(10,0,15,0.92);
-    border:2px solid #cc0066;border-radius:8px;
-    padding:8px;z-index:900;
-    box-shadow:0 0 18px #cc006688;
-    animation:grab-panel-in 0.4s ease-out;
+    position:fixed;inset:0;background:rgba(5,0,12,0.94);
+    z-index:9000;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
     font-family:inherit;
   `;
-
-  // כותרת
-  const title=document.createElement('div');
-  title.style.cssText='color:#ff3388;font-size:11px;font-weight:bold;text-align:center;margin-bottom:6px;letter-spacing:1px;';
-  title.textContent='Z-18 × MOMO';
-  el.appendChild(title);
-
-  // Canvas לאנימציה
-  const cvs=document.createElement('canvas');
-  cvs.width=144;cvs.height=120;
-  cvs.style.cssText='display:block;margin:0 auto;border-radius:4px;border:1px solid #550033;';
-  el.appendChild(cvs);
-
-  // תיאור
-  const desc=document.createElement('div');
-  desc.id='grab-panel-desc';
-  desc.style.cssText='color:#ffaacc;font-size:9px;text-align:center;margin-top:5px;line-height:1.4;';
-  desc.textContent='Z-18 פורץ לבסיס';
-  el.appendChild(desc);
 
   // CSS אנימציה
   if(!document.getElementById('grab-panel-style')){
     const s=document.createElement('style');
     s.id='grab-panel-style';
     s.textContent=`
-      @keyframes grab-panel-in{from{opacity:0;transform:translateY(-50%) translateX(20px);}to{opacity:1;transform:translateY(-50%) translateX(0);}}
-      @keyframes grab-pulse{0%,100%{box-shadow:0 0 18px #cc006688;}50%{box-shadow:0 0 32px #ff0088cc;}}
-      #grab-panel{animation:grab-panel-in 0.4s ease-out,grab-pulse 1.2s ease-in-out infinite;}
+      @keyframes grab-in{from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);}}
+      @keyframes grab-pulse-border{0%,100%{box-shadow:0 0 28px #cc006699,inset 0 0 40px rgba(150,0,60,0.12);}50%{box-shadow:0 0 50px #ff008888,inset 0 0 60px rgba(200,0,80,0.18);}}
+      #grab-panel{animation:grab-in 0.45s ease-out forwards;}
+      @keyframes grab-title-flash{0%,100%{opacity:1;}50%{opacity:0.6;}}
+      #grab-title{animation:grab-title-flash 1.1s ease-in-out infinite;}
     `;
     document.head.appendChild(s);
   }
 
+  // כותרת
+  const title=document.createElement('div');
+  title.id='grab-title';
+  title.style.cssText='color:#ff2266;font-size:clamp(18px,4vw,26px);font-weight:bold;letter-spacing:3px;text-align:center;margin-bottom:18px;text-shadow:0 0 16px #ff0055;';
+  title.textContent='💔 Z-18 תופס את מומו!';
+  el.appendChild(title);
+
+  // Canvas לאנימציה
+  const cvs=document.createElement('canvas');
+  const cvsSize=Math.min(window.innerWidth*.7,340);
+  cvs.width=340;cvs.height=280;
+  cvs.style.cssText=`width:${cvsSize}px;height:${Math.round(cvsSize*280/340)}px;border-radius:8px;border:2px solid #cc0066;box-shadow:0 0 30px #cc006655;`;
+  el.appendChild(cvs);
+
+  // תיאור
+  const desc=document.createElement('div');
+  desc.id='grab-panel-desc';
+  desc.style.cssText='color:#ffaacc;font-size:clamp(12px,2.5vw,16px);text-align:center;margin-top:16px;line-height:1.6;max-width:320px;text-shadow:0 0 8px #ff006644;';
+  desc.textContent='Z-18 פורץ לבסיס';
+  el.appendChild(desc);
+
+  // כפתור המשך — מופיע אחרי 3 שניות
+  const cont=document.createElement('div');
+  cont.style.cssText='color:#ff6699;font-size:13px;margin-top:20px;opacity:0;transition:opacity 0.5s;cursor:pointer;border:1px solid #cc0066;padding:8px 20px;border-radius:6px;';
+  cont.textContent='הבן / הביני (הקש/י להמשיך)';
+  el.appendChild(cont);
+  setTimeout(()=>cont.style.opacity='1',3000);
+  cont.onclick=()=>_closeGrabPanel();
+
   document.body.appendChild(el);
   _grabPanelEl=el;
 
-  // אנימציה על canvas — ציור Z-18 אוחז במומו
+  // אנימציה על canvas
   const ctx=cvs.getContext('2d');
+  const W=340,H=280;
   let animT=0;
   const descTexts=[
     'Z-18 פורץ לבסיס',
-    'מומו נתפסת!',
-    '💔 Z-18 אוחז בצוואר',
-    'זיפו — בוא!'
+    '💔 מומו נתפסת!',
+    'Z-18 אוחז בה בכוח',
+    'זיפו — בוא מהר!'
   ];
   let descIdx=0;
 
   G._grabPanelAnim=setInterval(()=>{
     animT+=16;
     const t=animT/1000;
-    ctx.clearRect(0,0,144,120);
+    ctx.clearRect(0,0,W,H);
 
-    // רקע כהה עם עיגול אדמדם
-    ctx.fillStyle='#0a000f';
-    ctx.fillRect(0,0,144,120);
-    const grad=ctx.createRadialGradient(72,60,5,72,60,60);
-    grad.addColorStop(0,'rgba(150,0,60,0.3)');
+    // רקע
+    ctx.fillStyle='#050008';
+    ctx.fillRect(0,0,W,H);
+    const grad=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,130);
+    grad.addColorStop(0,'rgba(180,0,60,0.25)');
     grad.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=grad;ctx.fillRect(0,0,144,120);
+    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
 
-    // מומו (ורוד, שמאל) — נישאת
-    const momoY=50+Math.sin(t*3)*4+(animT>600?-Math.min((animT-600)/600,1)*22:0);
+    // אפקט וינייט
+    const vig=ctx.createRadialGradient(W/2,H/2,60,W/2,H/2,160);
+    vig.addColorStop(0,'rgba(0,0,0,0)');
+    vig.addColorStop(1,'rgba(0,0,20,0.7)');
+    ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
+
+    // מומו (ורוד, שמאל) — מרקדת / נישאת
+    const grabProg=animT>800?Math.min((animT-800)/900,1):0;
+    const momoX=90+(grabProg*30);
+    const momoY=140+Math.sin(t*4)*(grabProg>0.5?2:5)-(grabProg*28);
+    const momoRot=grabProg*0.4;
+
+    ctx.save();
+    ctx.translate(momoX,momoY);
+    ctx.rotate(momoRot);
+    // גוף מומו
     ctx.fillStyle='#d4a0c8';
-    ctx.beginPath();ctx.arc(45,momoY,14,0,Math.PI*2);ctx.fill(); // גוף
-    // אוזניים מומו
+    ctx.beginPath();ctx.ellipse(0,0,22,16,0,0,Math.PI*2);ctx.fill();
+    // ראש
+    ctx.fillStyle='#e0b0d4';
+    ctx.beginPath();ctx.arc(0,-20,16,0,Math.PI*2);ctx.fill();
+    // אוזניים
     ctx.fillStyle='#c090b8';
-    ctx.beginPath();ctx.ellipse(38,momoY-14,5,8,-.4,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(52,momoY-14,5,8,.4,0,Math.PI*2);ctx.fill();
-    // עיניים מומו
+    ctx.beginPath();ctx.ellipse(-10,-34,5,9,-.4,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(10,-34,5,9,.4,0,Math.PI*2);ctx.fill();
+    // עיניים — פחד
+    const eyeOpen=grabProg>0.3?0.6+Math.sin(t*8)*0.4:1;
     ctx.fillStyle='#ff88aa';
-    ctx.beginPath();ctx.arc(42,momoY-3,2.5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(48,momoY-3,2.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(-6,-22,3.5,3.5*eyeOpen,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(6,-22,3.5,3.5*eyeOpen,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#220011';
+    ctx.beginPath();ctx.arc(-6,-22,1.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(6,-22,1.5,0,Math.PI*2);ctx.fill();
+    // רגליים
+    ctx.fillStyle='#c090b8';
+    ctx.beginPath();ctx.ellipse(-8,14,5,10,-.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(8,14,5,10,.2,0,Math.PI*2);ctx.fill();
+    ctx.restore();
 
-    // Z-18 (שחור-ורוד, ימין)
+    // Z-18 (ימין)
+    const z18X=220;const z18Y=135;
+    // גוף Z-18
     ctx.fillStyle='#0a0012';
-    ctx.beginPath();ctx.arc(100,55,18,0,Math.PI*2);ctx.fill(); // גוף
-    ctx.fillStyle='#1a0025';
-    ctx.beginPath();ctx.arc(100,40,13,0,Math.PI*2);ctx.fill(); // ראש
-    // עיניים Z-18 — אדומות זוהרות
-    const eyeGlow=0.7+Math.sin(t*4)*0.3;
-    ctx.fillStyle=`rgba(255,0,80,${eyeGlow})`;
-    ctx.beginPath();ctx.arc(95,38,3.5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(105,38,3.5,0,Math.PI*2);ctx.fill();
-    // הילה
-    ctx.strokeStyle=`rgba(204,0,102,${0.3+Math.sin(t*2)*0.2})`;
-    ctx.lineWidth=3;ctx.beginPath();ctx.arc(100,50,22,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.ellipse(z18X,z18Y,28,22,0,0,Math.PI*2);ctx.fill();
+    // ראש
+    ctx.fillStyle='#120018';
+    ctx.beginPath();ctx.arc(z18X,z18Y-30,20,0,Math.PI*2);ctx.fill();
+    // עיניים זוהרות
+    const eyeG=0.75+Math.sin(t*5)*0.25;
+    const eyeSize=3.5+Math.sin(t*3)*0.5;
+    ctx.fillStyle=`rgba(255,0,80,${eyeG})`;
+    ctx.beginPath();ctx.arc(z18X-8,z18Y-32,eyeSize,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(z18X+8,z18Y-32,eyeSize,0,Math.PI*2);ctx.fill();
+    // הילה אדומה
+    ctx.strokeStyle=`rgba(220,0,90,${0.25+Math.sin(t*2)*0.15})`;
+    ctx.lineWidth=4;ctx.beginPath();ctx.arc(z18X,z18Y-5,32,0,Math.PI*2);ctx.stroke();
 
-    // יד Z-18 אוחזת — מתחבר כשמומו נישאת
-    if(animT>600){
-      const grabProg=Math.min((animT-600)/600,1);
-      const armX=100-grabProg*55+4;
-      const armY=50-grabProg*10;
-      ctx.strokeStyle='#1a0025';ctx.lineWidth=6;
-      ctx.beginPath();ctx.moveTo(100,52);ctx.lineTo(armX,armY);ctx.stroke();
-      // "אחיזה" — עיגול אדום
-      if(grabProg>0.6){
-        ctx.fillStyle=`rgba(200,0,50,${(grabProg-0.6)/0.4})`;
-        ctx.beginPath();ctx.arc(armX,armY,7,0,Math.PI*2);ctx.fill();
+    // יד Z-18 אוחזת
+    if(grabProg>0){
+      const armEndX=momoX+20;
+      const armEndY=momoY-5;
+      const armStartX=z18X-20;
+      const armStartY=z18Y+5;
+      ctx.strokeStyle=`rgba(18,0,30,${Math.min(1,grabProg*1.5)})`;
+      ctx.lineWidth=9;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(armStartX,armStartY);ctx.lineTo(armEndX,armEndY);ctx.stroke();
+      // "טפרים"
+      if(grabProg>0.5){
+        const gp=(grabProg-0.5)*2;
+        ctx.strokeStyle=`rgba(200,0,50,${gp*0.8})`;
+        ctx.lineWidth=2;
+        for(let i=-2;i<=2;i++){
+          ctx.beginPath();ctx.moveTo(armEndX,armEndY);ctx.lineTo(armEndX+i*5,armEndY-10*gp);ctx.stroke();
+        }
       }
     }
 
-    // particles
-    if(animT>600&&Math.random()>0.6){
-      ctx.fillStyle=`rgba(255,0,80,${Math.random()*0.7})`;
-      const px2=45+(Math.random()-.5)*25;
-      const py2=momoY+(Math.random()-.5)*20;
+    // particles חרדה
+    if(grabProg>0.3&&Math.random()>0.5){
+      ctx.fillStyle=`rgba(255,0,80,${Math.random()*0.6})`;
+      const px2=momoX+(Math.random()-.5)*40;
+      const py2=momoY+(Math.random()-.5)*35;
+      ctx.beginPath();ctx.arc(px2,py2,Math.random()*4+1,0,Math.PI*2);ctx.fill();
+    }
+    // ניצוצות שחורים של Z-18
+    if(Math.random()>0.7){
+      ctx.fillStyle=`rgba(150,0,60,${Math.random()*0.5})`;
+      const px2=z18X+(Math.random()-.5)*50;
+      const py2=z18Y+(Math.random()-.5)*45;
       ctx.beginPath();ctx.arc(px2,py2,Math.random()*3+1,0,Math.PI*2);ctx.fill();
     }
 
     // עדכן תיאור
-    const newDescIdx=Math.min(Math.floor(animT/800),descTexts.length-1);
+    const newDescIdx=Math.min(Math.floor(animT/1000),descTexts.length-1);
     if(newDescIdx!==descIdx){
       descIdx=newDescIdx;
       const d=document.getElementById('grab-panel-desc');
@@ -11136,10 +11192,11 @@ function _showGrabPanel(){
 function _closeGrabPanel(){
   if(G._grabPanelAnim){clearInterval(G._grabPanelAnim);G._grabPanelAnim=null;}
   if(_grabPanelEl){
-    _grabPanelEl.style.transition='opacity 0.4s';
+    _grabPanelEl.style.transition='opacity 0.45s';
     _grabPanelEl.style.opacity='0';
-    setTimeout(()=>{if(_grabPanelEl){_grabPanelEl.remove();_grabPanelEl=null;}},400);
+    setTimeout(()=>{if(_grabPanelEl){_grabPanelEl.remove();_grabPanelEl=null;}},450);
   }
+  G._grabPaused=false;
 }
 
 // ════════════════════════════════════════════════

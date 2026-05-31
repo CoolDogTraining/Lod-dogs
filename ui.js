@@ -2087,32 +2087,50 @@ function updTitan(dt){
       spawnPfx(b.x,2,b.z,0xf5c518,32);
       spawnPfx(b.x,2,b.z,0xff4400,24);
       showN('🏆 טיטאן הובס!');
-      // ── רקס: התקף לב — קריסה לאחר כמה שניות דרמטיות ──
-      G._reksCollapsing=false; // לא קורס עדיין
-      // שלב א׳: 3 שניות של שתיקה ואווירה אחרי הניצחון
+      // ── רקס: התקף לב — overlay מלא שלא ניתן לפספס ──
+      G._reksCollapsing=false;
+      // שלב א׳: ניצחון קצר
       setTimeout(()=>{
         showN('רקס עומד בשקט. מסתכל על לוד מלמטה...');
       },2000);
-      // שלב ב׳: 5 שניות — רקס מתחיל לקרוס
+      // שלב ב׳: רקס מתחיל לקרוס + overlay מלא
       setTimeout(()=>{
-        // אפקט מסך — הבהוב אדום
-        const flash=document.createElement('div');
-        flash.style.cssText='position:fixed;inset:0;background:rgba(180,0,0,0.35);z-index:9999;pointer-events:none;transition:opacity 1.8s;';
-        document.body.appendChild(flash);
-        setTimeout(()=>flash.style.opacity='0',200);
-        setTimeout(()=>flash.remove(),2200);
-        showN('💔 רקס: "אני... לא..."');
         G._reksCollapsing=true;
         G._reksCollapseT=0;
-      },5000);
-      // שלב ג׳: 9 שניות — cutscene
+        // overlay מלא — אי אפשר לפספס
+        const ov=document.createElement('div');
+        ov.id='rex-heart-ov';
+        ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0);z-index:8500;pointer-events:none;transition:background 1.2s;';
+        document.body.appendChild(ov);
+        // הבהובים אדומים
+        const fl=document.createElement('div');
+        fl.style.cssText='position:fixed;inset:0;background:rgba(200,0,0,0);z-index:8501;pointer-events:none;transition:background 0.15s;';
+        document.body.appendChild(fl);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0.55)',50);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0)',220);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0.38)',420);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0)',700);
+        setTimeout(()=>fl.remove(),800);
+        // הכהה המסך
+        setTimeout(()=>ov.style.background='rgba(0,0,0,0.65)',500);
+        // טקסט מרכזי
+        const txt=document.createElement('div');
+        txt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8502;color:#ff3333;font-size:clamp(20px,5vw,30px);font-weight:bold;text-align:center;letter-spacing:2px;text-shadow:0 0 20px #ff0000,0 0 40px #880000;pointer-events:none;opacity:0;transition:opacity 0.5s;font-family:inherit;';
+        txt.innerHTML='💔 רקס...<br><span style="font-size:0.6em;color:#ff8888;letter-spacing:1px;">\"אני... לא...\"</span>';
+        document.body.appendChild(txt);
+        setTimeout(()=>txt.style.opacity='1',600);
+        setTimeout(()=>txt.style.opacity='0',3600);
+        setTimeout(()=>txt.remove(),4100);
+        setTimeout(()=>{const e=document.getElementById('rex-heart-ov');if(e)e.remove();},4600);
+      },4500);
+      // שלב ג׳: cutscene
       setTimeout(()=>{
         showCut('rex_heart_attack',()=>{
           G.mission=24;
           if(MISSIONS[24])MISSIONS[24].unlock();
           updateMissionHUD();updateNavArrow();saveGame();
         });
-      },9000);
+      },8500);
     }
   }
 }
