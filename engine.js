@@ -11105,10 +11105,22 @@ function updCh8(dt){
       G._ch8WitnessesHidden=true;
       G._ch8Witnesses.forEach(w=>{if(w.ind)w.ind.visible=false;});
     }
-    // trigger zone-based — כל עוד בתוך האזור (x>180, z<-88)
-    const inZone = px>180 && px<278 && pz<-88 && pz>-218;
-    if(inZone&&!G._ch8TrailReached){
+    const inZone = px>178 && px<280 && pz<-86 && pz>-220;
+
+    // ── reset אם נשמר מצב שבור מגרסה קודמת ──
+    if(inZone && G._ch8TrailReached && !G._ch8ClearCheck){
+      // נלחמנו כבר? בדוק אם יש אויבי תעשייה בכלל
+      const existEnemies = G.enemies.filter(e=>e.zone==='תעשייה').length;
+      if(existEnemies===0){
+        // אין אויבים — כנראה save ישן. ספון מחדש
+        G._ch8TrailReached=false;
+      }
+    }
+
+    // ── ספון אויבים בכניסה לזון ──
+    if(inZone && !G._ch8TrailReached){
       G._ch8TrailReached=true;
+      G._ch8ClearCheck=true;
       showN('🏭 מומו: "הריח מוביל לאזור התעשייה. מישהו כאן."');
       [[208,-110],[225,-115],[240,-108],[215,-130]].forEach(([sx,sz])=>{
         const mesh=mkSuperSoldier(0x1a1020);
@@ -11121,16 +11133,15 @@ function updCh8(dt){
           _chargeT:0,_chargeReady:false,_chargeActive:false,
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
-      G._ch8ClearCheck=true;
     }
-    // אם כבר עבר את השער — אפשר גם לטרגר ידנית
-    if(!G._ch8TrailReached && !inZone){
-      const distGate=d2(px,pz,215,-90);
-      if(distGate<30){ G._ch8TrailReached=false; } // יאפשר trigger כשנכנס
-    }
-    if(G._ch8ClearCheck&&G._ch8TrailReached){
-      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='תעשייה').length;
-      if(alive===0){G._ch8ClearCheck=false;setTimeout(()=>setMission(42),1500);}
+
+    // ── בדוק ניקוי ──
+    if(G._ch8TrailReached){
+      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible&&e.zone==='תעשייה').length;
+      if(alive===0){
+        G._ch8ClearCheck=false;
+        setTimeout(()=>{if(G.mission===41)setMission(42);},1200);
+      }
     }
   }
 
@@ -11139,7 +11150,7 @@ function updCh8(dt){
     const wPos=G.warehousePos||{x:205,z:-125};
     const doorZ=wPos.z+11;
     const distDoor=d2(px,pz,wPos.x,doorZ);
-    if(distDoor<28&&!G._ch8WarehouseGuardsSpawned){
+    if(distDoor<30&&!G._ch8WarehouseGuardsSpawned){
       G._ch8WarehouseGuardsSpawned=true;
       [[wPos.x-8,doorZ+4],[wPos.x+9,doorZ+4],[wPos.x,wPos.z-6]].forEach(([sx,sz])=>{
         const mesh=mkSuperSoldier(0x0d0820);
@@ -11153,13 +11164,13 @@ function updCh8(dt){
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
     }
-    // trigger — כשבפנים המחסן (zone-based)
-    const insideWH = px>wPos.x-14 && px<wPos.x+14 && pz>wPos.z-12 && pz<wPos.z+10;
+    // trigger כניסה למחסן — zone-based
+    const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
     if(insideWH&&!G._ch8WarehouseReached){
       G._ch8WarehouseReached=true;
       showCut('ch8_warehouse',()=>{
         showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
-        setTimeout(()=>setMission(43),2500);
+        setTimeout(()=>{if(G.mission===42)setMission(43);},2500);
       });
     }
   }
