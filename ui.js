@@ -2568,6 +2568,7 @@ function _devJump(n){
       G._ch6LabVisited=false;G._ch6RecordingPlayed=false;
       G._ch6FactoryVisited=false;G._ch6FireDone=false;
       G._shadowEnemy=null;G._shadowBossDead=false;
+      G._bigFireRunning=false;
     }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }

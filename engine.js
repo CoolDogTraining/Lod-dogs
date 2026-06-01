@@ -56,6 +56,8 @@ const G={
   _ch6RecordingPlayed:false,
   _ch6FactoryVisited:false,
   _ch6FireDone:false,
+  _bigFireRunning:false,
+  _ch8ZippoForced:false,
 };
 
 let scene,camera,renderer,clock,mmCtx;
@@ -8141,6 +8143,8 @@ function _buildBurntRuins(BX,BZ){
 }
 
 function _startBigFire(){
+  if(G._bigFireRunning)return;
+  G._bigFireRunning=true;
   const BX=25,BZ=-125;
   const bld=G._labBldMeshes||{};
   const mat=G._labBldMat||{};
@@ -11414,7 +11418,7 @@ function updCh8(dt){
 
   // ── Mission 44: Z-18 מופיע ליד הבסיס ──
   if(G.mission===44){
-    forceDog('zippo','זיפו יוצא לסיור');
+    if(!G._ch8ZippoForced){G._ch8ZippoForced=true;forceDog('zippo','זיפו יוצא לסיור');}
     const dist=d2(px,pz,105,10);
     if(dist<10&&!G._ch8Z18FirstSeen){
       G._ch8Z18FirstSeen=true;
