@@ -8038,16 +8038,13 @@ function _applyWorldState(m){
   }
 
   // ── פרק ה׳ (20+): רקס ally ──
-  if(m>=20&&m<=24){
-    // ודא שהבריכה נבנתה
-    if(!G._poolGroup&&typeof _buildPoolOfRest==='function') _buildPoolOfRest();
+  if(m>=20){
     if(!G._reksAlly&&typeof _spawnReksAlly==='function'){
       _spawnReksAlly();
-      // הצמד רקס לשחקן כדי שיופיע ליד ולא בכיכר
       if(G._reksAlly&&PB){
-        const px=PB.position.x,pz=PB.position.z;
-        G._reksAlly.x=px+3;G._reksAlly.z=pz+3;
-        G._reksAlly.mesh.position.set(px+3,0,pz+3);
+        G._reksAlly.x=PB.position.x+3;
+        G._reksAlly.z=PB.position.z+3;
+        G._reksAlly.mesh.position.set(PB.position.x+3,0,PB.position.z+3);
       }
     }
     // titan scouts
@@ -8059,8 +8056,8 @@ function _applyWorldState(m){
       if(!G._titanEnemy)_spawnTitanBoss(false);
       else G._titanEnemy.frozen=false;
     }
-    // titan dead ב-mission 24 (טיטאן הובס, לפני פרק ו׳)
-    if(m===24&&G._titanEnemy){G._titanEnemy.dead=true;if(G._titanEnemy.mesh)G._titanEnemy.mesh.visible=false;}
+    // titan dead אם mission 24+
+    if(m>=24&&G._titanEnemy){G._titanEnemy.dead=true;if(G._titanEnemy.mesh)G._titanEnemy.mesh.visible=false;}
   }
 
   // ── פרק ו׳ (25+): רקס מת ──

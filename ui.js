@@ -2217,77 +2217,7 @@ function _spawnFinalFireworks(){
 
 // ── בריכת הנחת — מבנה עולמי ──
 function _buildPoolOfRest(){
-  console.log('[pool] _buildPoolOfRest נקראת, scene=',!!scene);
-  if(G._poolGroup){scene.remove(G._poolGroup);} // אפס אם קיים
-  const grp=new THREE.Group();
-  G._poolGroup=grp;
-  const cx=0,cz=0; // הכל יחסי לcenter, נזיז את הGroup
-  const mk=(geo,col,opts={})=>{
-    const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col,...opts}));
-    m.castShadow=true;m.receiveShadow=true;grp.add(m);return m;
-  };
-  mk(new THREE.BoxGeometry(30,0.3,30),0x8a9ea8).position.set(cx,0.15,cz);
-  [[cx,cz-14.7,30,0.08,0.6],[cx,cz+14.7,30,0.08,0.6],
-   [cx-14.7,cz,0.6,0.08,28.4],[cx+14.7,cz,0.6,0.08,28.4]].forEach(([x,z,w,h,d])=>{
-    mk(new THREE.BoxGeometry(w,h,d),0xd0dce0).position.set(x,0.31,z);
-  });
-  for(let tx=-12;tx<=12;tx+=3)for(let tz=-12;tz<=12;tz+=3){
-    if(Math.abs(tx)<7&&Math.abs(tz)<5)continue;
-    const col=(Math.round((tx+tz)/3)%2===0)?0x7a8e98:0x96aab4;
-    mk(new THREE.BoxGeometry(2.8,0.07,2.8),col).position.set(cx+tx,0.305,cz+tz);
-  }
-  mk(new THREE.BoxGeometry(13,0.6,9),0x2a4050).position.set(cx,0.0,cz);
-  const water=mk(new THREE.BoxGeometry(12.2,0.14,8.2),0x1a7acc,
-    {transparent:true,opacity:0.82,emissive:0x0a3a5a});
-  water.position.set(cx,0.38,cz);G._poolWater=water;
-  [[cx,cz-4.6,13,0.45,0.6],[cx,cz+4.6,13,0.45,0.6],
-   [cx-6.6,cz,0.6,0.45,8.6],[cx+6.6,cz,0.6,0.45,8.6]].forEach(([x,z,w,h,d])=>{
-    mk(new THREE.BoxGeometry(w,h,d),0xeee8d8).position.set(x,0.53,z);
-  });
-  [[-6.6,-4.6],[6.6,-4.6],[-6.6,4.6],[6.6,4.6]].forEach(([ox,oz])=>{
-    mk(new THREE.BoxGeometry(0.65,0.45,0.65),0xfff4e8).position.set(cx+ox,0.53,cz+oz);
-  });
-  mk(new THREE.CylinderGeometry(1.5,1.7,0.4,12),0xd4cbb8).position.set(cx,0.6,cz);
-  mk(new THREE.CylinderGeometry(0.15,0.2,2.6,8),0xc8c0a8).position.set(cx,1.9,cz);
-  mk(new THREE.CylinderGeometry(0.65,0.85,0.22,12),0xe2d8c4).position.set(cx,3.25,cz);
-  const jet=mk(new THREE.CylinderGeometry(0.04,0.2,1.4,8),0x88ccee,
-    {transparent:true,opacity:0.6,emissive:0x224466});
-  jet.position.set(cx,4.1,cz);G._poolJet=jet;
-  mk(new THREE.SphereGeometry(0.22,8,6),0xddd4c0).position.set(cx,5.0,cz);
-  [[cx-11,cz-11],[cx,cz-11],[cx+11,cz-11],
-   [cx+11,cz],[cx+11,cz+11],[cx,cz+11],[cx-11,cz+11],[cx-11,cz]].forEach(([px,pz])=>{
-    mk(new THREE.BoxGeometry(0.7,0.3,0.7),0xc8c0a8).position.set(px,0.15,pz);
-    mk(new THREE.CylinderGeometry(0.25,0.32,5.5,10),0xd8d0b8).position.set(px,3.05,pz);
-    mk(new THREE.BoxGeometry(0.8,0.28,0.8),0xc0b8a0).position.set(px,5.94,pz);
-    mk(new THREE.BoxGeometry(0.28,0.32,0.28),0xffee88,{emissive:0x996600}).position.set(px,6.35,pz);
-    const lamp=new THREE.PointLight(0xffcc66,0.7,12);lamp.position.set(px,6.5,pz);grp.add(lamp);
-    blds.push({x:px+(-120),z:pz+130,w:1.2,d:1.2}); // עולמי
-  });
-  for(let bz=-11;bz<=11;bz+=5.5)
-    mk(new THREE.BoxGeometry(24,0.28,0.4),0xb8a880).position.set(cx,6.08,cz+bz);
-  for(let bx=-11;bx<=11;bx+=5.5)
-    mk(new THREE.BoxGeometry(0.4,0.28,24),0xb8a880).position.set(cx+bx,6.08,cz);
-  [[-10,0,3,0.5],[10,0,3,0.5],[0,-10,0.5,3],[0,10,0.5,3]].forEach(([ox,oz,sw,sd])=>{
-    mk(new THREE.BoxGeometry(sw,0.18,sd),0xa89870).position.set(cx+ox,0.49,cz+oz);
-    mk(new THREE.BoxGeometry(sw,0.35,0.15),0x887858).position.set(cx+ox,0.35,cz+oz-(sd/2-0.1));
-    mk(new THREE.BoxGeometry(sw,0.35,0.15),0x887858).position.set(cx+ox,0.35,cz+oz+(sd/2-0.1));
-  });
-  [[-12,-12],[12,-12],[-12,12],[12,12]].forEach(([ox,oz])=>{
-    mk(new THREE.CylinderGeometry(0.18,0.26,5,7),0x3a2208).position.set(cx+ox,2.5,cz+oz);
-    mk(new THREE.ConeGeometry(0.95,6,7),0x1a5518).position.set(cx+ox,8.5,cz+oz);
-  });
-  [[-13,0],[13,0]].forEach(([ox,oz])=>{
-    mk(new THREE.CylinderGeometry(0.22,0.3,4.5,8),0x3a2208).position.set(cx+ox,2.25,cz+oz);
-    mk(new THREE.SphereGeometry(2.4,9,7),0x1e5c12).position.set(cx+ox,6.2,cz+oz);
-  });
-  const poolLight=new THREE.PointLight(0x2299dd,1.2,22);
-  poolLight.position.set(cx,2.2,cz);grp.add(poolLight);
-  G._poolLight=poolLight;
-  // מקם את הGroup במיקום הבריכה בעולם
-  grp.position.set(-120,0,130);
-  scene.add(grp);
-  console.log('[pool] נבנתה ב-(-120,0,130), children=',grp.children.length);
-}
+  const cx=-120,cz=130;
   const mk=(geo,col,opts={})=>{
     const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:col,...opts}));
     m.castShadow=true;m.receiveShadow=true;scene.add(m);return m;
@@ -2355,12 +2285,14 @@ function _buildPoolOfRest(){
 // ── עדכון פרק ה׳ בלולאת המשחק ──
 function updCh5(dt){
   if(G.mission<20)return;
-  // fallback: ודא שהבריכה קיימת
-  if(!G._poolGroup&&typeof _buildPoolOfRest==='function') _buildPoolOfRest();
   // fallback: אם mission=21 והכלבים עדיין לא נוצרו — צור אותם עכשיו
   if(G.mission===21&&!G._titanScoutsSpawned){
     _spawnTitanScouts();
+    // ודא שכל הגיסות גלויים
+    G.enemies.forEach(e=>{if(e._titan&&e.mesh)e.mesh.visible=true;});
   }
+  // fallback: ודא שרקס קיים
+  if(G.mission>=20&&G.mission<=24&&!G._reksAlly) _spawnReksAlly();
   updReksAlly(dt);
   _checkCh5Progress();
 
@@ -2512,14 +2444,13 @@ function loadGame(){
     if(G.mission===21&&!G._titanScoutsSpawned){
       _spawnTitanScouts();
     }
-    // שחזר רקס ally אם פרק ה׳
+    // שחזר רקס ally אם פרק ה׳ — ישירות, לא דרך timeout, ומוצמד לשחקן
     if(G.mission>=20&&G.mission<=24&&!G._reksAlly){
       _spawnReksAlly();
-      // הצמד רקס לשחקן בטעינה כדי שיופיע ליד ולא בכיכר
       if(G._reksAlly&&PB){
-        const px=PB.position.x,pz=PB.position.z;
-        G._reksAlly.x=px+3;G._reksAlly.z=pz+3;
-        G._reksAlly.mesh.position.set(px+3,0,pz+3);
+        G._reksAlly.x=PB.position.x+3;
+        G._reksAlly.z=PB.position.z+3;
+        G._reksAlly.mesh.position.set(PB.position.x+3,0,PB.position.z+3);
       }
     }
     // שחזר שטחים שנכבשו
@@ -2627,11 +2558,9 @@ function _devJump(n){
     if(n===21){G._titanScoutsSpawned=false;}
     // אפס ch5 scout kills אם קופצים לפרק ה׳
     if(n>=20){_ch5ScoutKills=0;G._ch5ScoutsDone=false;}
-    // אפס רקס ally כדי שייוצר מחדש
+    // אפס רקס ally כדי שייוצר מחדש ליד השחקן
     if(n>=20&&n<=24){
-      if(G._reksAlly&&G._reksAlly.mesh){
-        try{scene.remove(G._reksAlly.mesh);}catch(_){}
-      }
+      if(G._reksAlly&&G._reksAlly.mesh){try{scene.remove(G._reksAlly.mesh);}catch(_){}}
       G._reksAlly=null;G._reksCollapsing=false;G._reksCollapseT=0;
     }
     // אפס ch6 state אם קופצים לפרק ו׳
