@@ -2087,32 +2087,50 @@ function updTitan(dt){
       spawnPfx(b.x,2,b.z,0xf5c518,32);
       spawnPfx(b.x,2,b.z,0xff4400,24);
       showN('🏆 טיטאן הובס!');
-      // ── רקס: התקף לב — קריסה לאחר כמה שניות דרמטיות ──
-      G._reksCollapsing=false; // לא קורס עדיין
-      // שלב א׳: 3 שניות של שתיקה ואווירה אחרי הניצחון
+      // ── רקס: התקף לב — overlay מלא שלא ניתן לפספס ──
+      G._reksCollapsing=false;
+      // שלב א׳: ניצחון קצר
       setTimeout(()=>{
         showN('רקס עומד בשקט. מסתכל על לוד מלמטה...');
       },2000);
-      // שלב ב׳: 5 שניות — רקס מתחיל לקרוס
+      // שלב ב׳: רקס מתחיל לקרוס + overlay מלא
       setTimeout(()=>{
-        // אפקט מסך — הבהוב אדום
-        const flash=document.createElement('div');
-        flash.style.cssText='position:fixed;inset:0;background:rgba(180,0,0,0.35);z-index:9999;pointer-events:none;transition:opacity 1.8s;';
-        document.body.appendChild(flash);
-        setTimeout(()=>flash.style.opacity='0',200);
-        setTimeout(()=>flash.remove(),2200);
-        showN('💔 רקס: "אני... לא..."');
         G._reksCollapsing=true;
         G._reksCollapseT=0;
-      },5000);
-      // שלב ג׳: 9 שניות — cutscene
+        // overlay מלא — אי אפשר לפספס
+        const ov=document.createElement('div');
+        ov.id='rex-heart-ov';
+        ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0);z-index:8500;pointer-events:none;transition:background 1.2s;';
+        document.body.appendChild(ov);
+        // הבהובים אדומים
+        const fl=document.createElement('div');
+        fl.style.cssText='position:fixed;inset:0;background:rgba(200,0,0,0);z-index:8501;pointer-events:none;transition:background 0.15s;';
+        document.body.appendChild(fl);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0.55)',50);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0)',220);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0.38)',420);
+        setTimeout(()=>fl.style.background='rgba(200,0,0,0)',700);
+        setTimeout(()=>fl.remove(),800);
+        // הכהה המסך
+        setTimeout(()=>ov.style.background='rgba(0,0,0,0.65)',500);
+        // טקסט מרכזי
+        const txt=document.createElement('div');
+        txt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8502;color:#ff3333;font-size:clamp(20px,5vw,30px);font-weight:bold;text-align:center;letter-spacing:2px;text-shadow:0 0 20px #ff0000,0 0 40px #880000;pointer-events:none;opacity:0;transition:opacity 0.5s;font-family:inherit;';
+        txt.innerHTML='💔 רקס...<br><span style="font-size:0.6em;color:#ff8888;letter-spacing:1px;">\"אני... לא...\"</span>';
+        document.body.appendChild(txt);
+        setTimeout(()=>txt.style.opacity='1',600);
+        setTimeout(()=>txt.style.opacity='0',3600);
+        setTimeout(()=>txt.remove(),4100);
+        setTimeout(()=>{const e=document.getElementById('rex-heart-ov');if(e)e.remove();},4600);
+      },4500);
+      // שלב ג׳: cutscene
       setTimeout(()=>{
         showCut('rex_heart_attack',()=>{
           G.mission=24;
           if(MISSIONS[24])MISSIONS[24].unlock();
           updateMissionHUD();updateNavArrow();saveGame();
         });
-      },9000);
+      },8500);
     }
   }
 }
@@ -2142,6 +2160,7 @@ function updReksAlly(dt){
   // לפני mission 21 — עמוד בכיכר, אל תעקוב
   if(G.mission<21)return;
   // מ-mission 21 עד 23 — עקוב אחרי השחקן
+  if(!PB)return;
   const px=PB.position.x,pz=PB.position.z;
   const dx=px+Math.sin(G.yaw+1.2)*3.5-r.x;
   const dz=pz+Math.cos(G.yaw+1.2)*3.5-r.z;
@@ -2269,7 +2288,11 @@ function updCh5(dt){
   // fallback: אם mission=21 והכלבים עדיין לא נוצרו — צור אותם עכשיו
   if(G.mission===21&&!G._titanScoutsSpawned){
     _spawnTitanScouts();
+    // ודא שכל הגיסות גלויים
+    G.enemies.forEach(e=>{if(e._titan&&e.mesh)e.mesh.visible=true;});
   }
+  // fallback: ודא שרקס קיים
+  if(G.mission>=20&&G.mission<=24&&!G._reksAlly) _spawnReksAlly();
   updReksAlly(dt);
   _checkCh5Progress();
 
@@ -2421,6 +2444,15 @@ function loadGame(){
     if(G.mission===21&&!G._titanScoutsSpawned){
       _spawnTitanScouts();
     }
+    // שחזר רקס ally אם פרק ה׳ — ישירות, לא דרך timeout, ומוצמד לשחקן
+    if(G.mission>=20&&G.mission<=24&&!G._reksAlly){
+      _spawnReksAlly();
+      if(G._reksAlly&&PB){
+        G._reksAlly.x=PB.position.x+3;
+        G._reksAlly.z=PB.position.z+3;
+        G._reksAlly.mesh.position.set(PB.position.x+3,0,PB.position.z+3);
+      }
+    }
     // שחזר שטחים שנכבשו
     G.terrCnt=s.terrCnt||0;
     document.getElementById('tc').textContent=G.terrCnt;
@@ -2526,6 +2558,11 @@ function _devJump(n){
     if(n===21){G._titanScoutsSpawned=false;}
     // אפס ch5 scout kills אם קופצים לפרק ה׳
     if(n>=20){_ch5ScoutKills=0;G._ch5ScoutsDone=false;}
+    // אפס רקס ally כדי שייוצר מחדש ליד השחקן
+    if(n>=20&&n<=24){
+      if(G._reksAlly&&G._reksAlly.mesh){try{scene.remove(G._reksAlly.mesh);}catch(_){}}
+      G._reksAlly=null;G._reksCollapsing=false;G._reksCollapseT=0;
+    }
     // אפס ch6 state אם קופצים לפרק ו׳
     if(n>=25){
       G._ch6BaseVisited=false;G._ch6MarketVisited=false;G._ch6PortVisited=false;

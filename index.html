@@ -238,6 +238,11 @@
       style="background:#333;color:#ccc;border:1px solid #555;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px">→ עבור</button>
   </div>
   <div style="margin-top:8px;color:#555;font-size:10px">לחץ P שוב לסגור</div>
+  <div style="margin-top:8px;border-top:1px solid #333;padding-top:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+    <button onclick="if(G){G._ch8TrailReached=false;G._ch8ClearCheck=false;G._ch8WarehouseReached=false;G._ch8WarehouseGuardsSpawned=false;showN('✅ Reset ch8 flags');}" style="background:#3a2a1a;color:#fca;border:1px solid #8a5a2a;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px">🔄 Reset Mission 41-42</button>
+    <button onclick="if(G){G.enemies=G.enemies.filter(e=>e.zone!=='תעשייה'&&e.zone!=='מחסן');showN('✅ Cleared zone enemies');}" style="background:#2a1a1a;color:#faa;border:1px solid #6a3a3a;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px">🗑 Clear Zone Enemies</button>
+    <button onclick="if(typeof setMission==='function'){setMission(41);if(G){G._ch8TrailReached=false;G._ch8ClearCheck=false;}showN('⏪ Back to M41 fresh');}" style="background:#1a2a3a;color:#adf;border:1px solid #3a6a8a;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px">⏪ M41 מחדש</button>
+  </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="story.js"></script>
