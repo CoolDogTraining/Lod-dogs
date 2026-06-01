@@ -8039,6 +8039,8 @@ function _applyWorldState(m){
 
   // ── פרק ה׳ (20+): רקס ally ──
   if(m>=20&&m<=24){
+    // ודא שהבריכה נבנתה
+    if(!G._poolGroup&&typeof _buildPoolOfRest==='function') _buildPoolOfRest();
     if(!G._reksAlly&&typeof _spawnReksAlly==='function'){
       _spawnReksAlly();
       // הצמד רקס לשחקן כדי שיופיע ליד ולא בכיכר
