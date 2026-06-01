@@ -340,7 +340,7 @@ function init(){
   renderer.outputColorSpace = (THREE.SRGBColorSpace !== undefined)
     ? THREE.SRGBColorSpace
     : THREE.LinearEncoding; // fallback לגרסאות ישנות
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,110,320);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,90,260);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
@@ -417,13 +417,12 @@ function buildSky(){
     mesh.position.set(cx,cy,cz);
     // billboard — מסתכל לכיוון מרכז השמים, לא הארץ
     mesh.lookAt(new THREE.Vector3(0,cy,0));
-    mesh._isCloud=true;
     scene.add(mesh);
   });
 
   // שמש
   const sunD=new THREE.Mesh(new THREE.CircleGeometry(4.5,24),new THREE.MeshBasicMaterial({color:0xfffef0,side:THREE.DoubleSide,depthWrite:false}));
-  sunD.position.set(110,62,-185);sunD.lookAt(0,0,0);sunD._isCloud=true;scene.add(sunD);
+  sunD.position.set(110,62,-185);sunD.lookAt(0,0,0);scene.add(sunD);
   [10,18,30].forEach((r,i)=>{
     const h=new THREE.Mesh(new THREE.CircleGeometry(r,24),new THREE.MeshBasicMaterial({color:0xfff5d8,transparent:true,opacity:[.09,.04,.012][i],side:THREE.DoubleSide,depthWrite:false}));
     h.position.set(110,62,-185);h.lookAt(0,0,0);scene.add(h);
@@ -502,9 +501,9 @@ function buildWorld(){
     }
     const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(50,50);
     const roughTex=new THREE.CanvasTexture(tc);roughTex.wrapS=roughTex.wrapT=THREE.RepeatWrapping;roughTex.repeat.set(50,50);
-    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(700,700,1,1),
+    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(400,400,1,1),
       new THREE.MeshStandardMaterial({map:tex,roughness:.98,metalness:0,color:0xffffff}));
-    gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;gnd._isGround=true;scene.add(gnd);
+    gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;scene.add(gnd);
   })();
 
   // === רחובות ראשיים ===
@@ -585,535 +584,7 @@ function buildWorld(){
   addTerr(-52,73,20,'העיר העתיקה');
 
   addTerr(72,96,18,'שכונת גני אביב — בית הכנסת');
-  addTerr(228,-152,50,'אזור תעשייה APEX');
   addStreetDeco();
-  buildIndustrialZone();
-}
-
-// ════════════════════════════════════════════════
-// אזור תעשייה — דרום מזרח לוד (x≈80-130, z≈-30 עד -90)
-// ════════════════════════════════════════════════
-// ════════════════════════════════════════════════
-// אזור תעשייה — APEX — דרום מזרח לוד (x≈130-200, z≈-60 עד -160)
-// ════════════════════════════════════════════════
-let _warehouseInterior=false; // האם השחקן בתוך המחסן
-
-function _mkConcreteTexture(sz,dark){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  const base=dark?'#2a2d2e':'#3a3d3e';
-  tx.fillStyle=base;tx.fillRect(0,0,sz,sz);
-  // אריחי בטון — סדקים ופגמים
-  const tileW=Math.floor(sz/4), tileH=Math.floor(sz/3);
-  for(let ty=0;ty<sz;ty+=tileH){
-    for(let tx2=0;tx2<sz;tx2+=tileW){
-      const v=Math.floor((dark?28:38)+Math.random()*14);
-      tx.fillStyle=`rgb(${v},${v+1},${v})`;
-      tx.fillRect(tx2+1,ty+1,tileW-2,tileH-2);
-    }
-  }
-  // קווי מפריד
-  tx.strokeStyle=dark?'#1a1c1c':'#262828';tx.lineWidth=1.5;
-  for(let ty=0;ty<sz;ty+=tileH){tx.beginPath();tx.moveTo(0,ty);tx.lineTo(sz,ty);tx.stroke();}
-  for(let tx2=0;tx2<sz;tx2+=tileW){tx.beginPath();tx.moveTo(tx2,0);tx.lineTo(tx2,sz);tx.stroke();}
-  // כתמי זיקוק וחלודה
-  for(let i=0;i<60;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz,rr=1+Math.random()*4;
-    const rust=Math.random()<.4;
-    tx.fillStyle=rust?`rgba(90,50,20,${.15+Math.random()*.25})`:`rgba(40,40,42,${.12+Math.random()*.2})`;
-    tx.beginPath();tx.arc(rx,ry,rr,0,Math.PI*2);tx.fill();
-  }
-  // סדקים
-  for(let i=0;i<8;i++){
-    const sx=Math.random()*sz,sy=Math.random()*sz;
-    tx.strokeStyle=`rgba(15,15,15,${.4+Math.random()*.4})`;tx.lineWidth=.6;
-    tx.beginPath();tx.moveTo(sx,sy);
-    let cx2=sx,cy2=sy;
-    for(let j=0;j<4;j++){cx2+=(Math.random()-.5)*20;cy2+=(Math.random()-.5)*18;tx.lineTo(cx2,cy2);}
-    tx.stroke();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-
-function _mkMetalTexture(sz,col){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  const [r,g,b]=col||[70,75,80];
-  tx.fillStyle=`rgb(${Math.min(255,r+20)},${Math.min(255,g+20)},${Math.min(255,b+20)})`;tx.fillRect(0,0,sz,sz);
-  // פסי מתכת אופקיים
-  for(let y=0;y<sz;y+=8){
-    const v=Math.floor(-6+Math.random()*12);
-    tx.fillStyle=`rgba(${r+v},${g+v},${b+v},0.6)`;
-    tx.fillRect(0,y,sz,4+Math.floor(Math.random()*4));
-  }
-  // ריביטים
-  for(let y=12;y<sz;y+=24){
-    for(let x=10;x<sz;x+=20){
-      tx.fillStyle=`rgba(${r-15},${g-15},${b-15},0.9)`;
-      tx.beginPath();tx.arc(x+Math.random()*4-2,y+Math.random()*4-2,2.5,0,Math.PI*2);tx.fill();
-      tx.fillStyle=`rgba(${r+20},${g+20},${b+20},0.5)`;
-      tx.beginPath();tx.arc(x-.8,y-.8,1.2,0,Math.PI*2);tx.fill();
-    }
-  }
-  // שאגות חלודה
-  for(let i=0;i<30;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz;
-    const rw=2+Math.random()*8,rh=.5+Math.random()*2;
-    tx.fillStyle=`rgba(110,55,15,${.1+Math.random()*.25})`;
-    tx.fillRect(rx,ry,rw,rh);
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-
-function _mkRoofTexture(sz){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  tx.fillStyle='#252a28';tx.fillRect(0,0,sz,sz);
-  // פסי מתכת גג
-  for(let y=0;y<sz;y+=12){
-    tx.fillStyle=`rgba(${38+Math.floor(Math.random()*10)},${40+Math.floor(Math.random()*8)},${36+Math.floor(Math.random()*8)},1)`;
-    tx.fillRect(0,y,sz,10);
-    tx.fillStyle='rgba(15,15,14,0.8)';tx.fillRect(0,y+10,sz,2);
-  }
-  // חלודה ו-dirt
-  for(let i=0;i<40;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz;
-    tx.fillStyle=`rgba(80,40,10,${.08+Math.random()*.18})`;
-    tx.beginPath();tx.arc(rx,ry,3+Math.random()*10,0,Math.PI*2);tx.fill();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-
-function _mkAsphaltDark(sz){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  tx.fillStyle='#1c1e1e';tx.fillRect(0,0,sz,sz);
-  for(let i=0;i<1800;i++){
-    const x=Math.random()*sz,y=Math.random()*sz,r=.3+Math.random()*.9;
-    const v=Math.floor(18+Math.random()*20);
-    tx.fillStyle=`rgb(${v},${v},${v})`;
-    tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
-  }
-  for(let i=0;i<20;i++){
-    tx.strokeStyle=`rgba(30,30,30,0.5)`;tx.lineWidth=.8;
-    tx.beginPath();tx.moveTo(Math.random()*sz,Math.random()*sz);
-    tx.lineTo(Math.random()*sz,Math.random()*sz);tx.stroke();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-
-// ════════════════════════════════════════════════
-// אזור תעשייה APEX — x=180-270, z=-90 עד -210
-// מרווח, מורחק מהעיר, ניתן לכניסה למחסן
-// ════════════════════════════════════════════════
-
-function _mkConcreteTexture(sz,dark){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  tx.fillStyle=dark?'#3a3e3e':'#5a5e5c';tx.fillRect(0,0,sz,sz);
-  const tW=Math.floor(sz/4),tH=Math.floor(sz/3);
-  for(let ty=0;ty<sz;ty+=tH) for(let tx2=0;tx2<sz;tx2+=tW){
-    const v=Math.floor((dark?26:36)+Math.random()*16);
-    tx.fillStyle=`rgb(${v},${v+1},${v})`;tx.fillRect(tx2+1,ty+1,tW-2,tH-2);
-  }
-  tx.strokeStyle=dark?'#181a1a':'#242626';tx.lineWidth=1.5;
-  for(let ty=0;ty<sz;ty+=tH){tx.beginPath();tx.moveTo(0,ty);tx.lineTo(sz,ty);tx.stroke();}
-  for(let tx2=0;tx2<sz;tx2+=tW){tx.beginPath();tx.moveTo(tx2,0);tx.lineTo(tx2,sz);tx.stroke();}
-  for(let i=0;i<60;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz,rr=1+Math.random()*4;
-    tx.fillStyle=Math.random()<.4?`rgba(90,50,20,${.12+Math.random()*.22})`:`rgba(38,38,40,${.1+Math.random()*.18})`;
-    tx.beginPath();tx.arc(rx,ry,rr,0,Math.PI*2);tx.fill();
-  }
-  for(let i=0;i<8;i++){
-    let cx=Math.random()*sz,cy=Math.random()*sz;
-    tx.strokeStyle=`rgba(12,12,12,${.35+Math.random()*.4})`;tx.lineWidth=.6;tx.beginPath();tx.moveTo(cx,cy);
-    for(let j=0;j<4;j++){cx+=(Math.random()-.5)*22;cy+=(Math.random()-.5)*20;tx.lineTo(cx,cy);}tx.stroke();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-function _mkMetalTexture(sz,col){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');
-  const [r,g,b]=col||[70,75,80];
-  tx.fillStyle=`rgb(${Math.min(255,r+20)},${Math.min(255,g+20)},${Math.min(255,b+20)})`;tx.fillRect(0,0,sz,sz);
-  for(let y=0;y<sz;y+=8){
-    const v=Math.floor(-6+Math.random()*12);
-    tx.fillStyle=`rgba(${r+v},${g+v},${b+v},0.6)`;tx.fillRect(0,y,sz,4+Math.floor(Math.random()*4));
-  }
-  for(let y=12;y<sz;y+=24) for(let x=10;x<sz;x+=20){
-    tx.fillStyle=`rgba(${r-15},${g-15},${b-15},0.9)`;
-    tx.beginPath();tx.arc(x+(Math.random()*4-2),y+(Math.random()*4-2),2.5,0,Math.PI*2);tx.fill();
-    tx.fillStyle=`rgba(${r+20},${g+20},${b+20},0.5)`;
-    tx.beginPath();tx.arc(x-.8,y-.8,1.2,0,Math.PI*2);tx.fill();
-  }
-  for(let i=0;i<30;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz;
-    tx.fillStyle=`rgba(110,55,15,${.08+Math.random()*.22})`;tx.fillRect(rx,ry,2+Math.random()*8,.5+Math.random()*2);
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-function _mkRoofTexture(sz){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');tx.fillStyle='#222825';tx.fillRect(0,0,sz,sz);
-  for(let y=0;y<sz;y+=12){
-    tx.fillStyle=`rgba(${36+Math.floor(Math.random()*10)},${38+Math.floor(Math.random()*8)},${34+Math.floor(Math.random()*8)},1)`;
-    tx.fillRect(0,y,sz,10);tx.fillStyle='rgba(12,13,11,0.8)';tx.fillRect(0,y+10,sz,2);
-  }
-  for(let i=0;i<40;i++){
-    const rx=Math.random()*sz,ry=Math.random()*sz;
-    tx.fillStyle=`rgba(80,40,10,${.06+Math.random()*.16})`;
-    tx.beginPath();tx.arc(rx,ry,3+Math.random()*10,0,Math.PI*2);tx.fill();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-function _mkAsphaltDark(sz){
-  const c=document.createElement('canvas');c.width=c.height=sz;
-  const tx=c.getContext('2d');tx.fillStyle='#2a2e2e';tx.fillRect(0,0,sz,sz);
-  for(let i=0;i<1800;i++){
-    const x=Math.random()*sz,y=Math.random()*sz;
-    const v=Math.floor(28+Math.random()*28);
-    tx.fillStyle=`rgb(${v},${v},${v})`;tx.beginPath();tx.arc(x,y,.3+Math.random()*.9,0,Math.PI*2);tx.fill();
-  }
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
-}
-
-function buildIndustrialZone(){
-  // === טקסטורות ===
-  const cTex =_mkConcreteTexture(256,false); cTex.repeat.set(3,2);
-  const cTexD=_mkConcreteTexture(256,true);  cTexD.repeat.set(3,2);
-  const mTex =_mkMetalTexture(256,[68,72,76]); mTex.repeat.set(4,2);
-  const mTexR=_mkMetalTexture(256,[78,74,68]); mTexR.repeat.set(3,2);
-  const rTex =_mkRoofTexture(256); rTex.repeat.set(5,3);
-  const aTex =_mkAsphaltDark(256); aTex.repeat.set(10,10);
-
-  const MAT=(tex,col,rough,met)=>{
-    const t2=tex.clone();t2.needsUpdate=true;
-    return new THREE.MeshStandardMaterial({map:t2,color:col||0xffffff,roughness:rough||.88,metalness:met||0});
-  };
-  const MMAT=(tex,col)=>new THREE.MeshStandardMaterial({map:tex,color:col||0xffffff,roughness:.55,metalness:.45});
-  const LM=c=>new THREE.MeshLambertMaterial({color:c});
-
-  // קואורדינטות מרכזיות — מרוחק ומרווח
-  // גבולות: X=180-275, Z=-90 עד -215
-  const IX=228, IZ=-152;  // מרכז האזור
-
-  // ── עזר: בנייה עם/בלי collision ──
-  const iB=(w,h,d,mat,x,z,oy)=>{
-    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    m.position.set(x,oy!==undefined?oy:h/2,z);
-    m.castShadow=m.receiveShadow=true;scene.add(m);blds.push({x,z,w,d});return m;
-  };
-  const iBC=(w,h,d,mat,x,z,oy)=>{
-    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    m.position.set(x,oy!==undefined?oy:h/2,z);
-    m.castShadow=m.receiveShadow=true;scene.add(m);return m;
-  };
-
-  // ══════════════════════════════════════════════
-  // קרקע תעשייתית
-  const floorM=new THREE.MeshStandardMaterial({map:aTex.clone(),roughness:.96,color:0xeeeeee});
-  const fl=new THREE.Mesh(new THREE.PlaneGeometry(100,130),floorM);
-  fl.rotation.x=-Math.PI/2;fl.position.set(IX,.01,IZ);fl.receiveShadow=true;fl._isGround=true;scene.add(fl);
-
-  // כביש גישה מהעיר לאזור (x=215, z=-55 עד z=-90)
-  mkRd(215,-72,10,36,true);   // connector מהעיר לשער
-  // כבישים פנימיים
-  mkRd(IX,-90,10,130,true);    // ציר N-S ראשי
-  mkRd(IX+18,-90,8,130,true);  // ציר N-S שניוני
-  mkRd(IX,-90,90,9,false);     // כביש כניסה E-W
-
-  // ══════════════════════════════════════════════
-  // A: מחסן APEX — WH_X=205, WH_Z=-125
-  // כניסה דרומית פתוחה (בלי קיר דרומי ב-collision)
-  // ══════════════════════════════════════════════
-  const WH_X=205, WH_Z=-125;
-  const WH_W=30, WH_D=22, WH_H=9;
-
-  const wallM=MMAT(mTex.clone(),0xf0e8dc);
-  const roofM=new THREE.MeshStandardMaterial({map:rTex.clone(),roughness:.92,metalness:.12,color:0xc8c4b8});
-
-  // 3 קירות בלבד — צפון, מזרח, מערב (ללא דרום — שם הדלת)
-  // קיר צפוני
-  iBC(WH_W,.2,WH_H,wallM, WH_X, WH_Z-WH_D/2, WH_H/2);
-  // קיר מזרחי
-  iBC(.2,WH_H,WH_D,wallM, WH_X+WH_W/2, WH_Z, WH_H/2);
-  // קיר מערבי
-  iBC(.2,WH_H,WH_D,wallM, WH_X-WH_W/2, WH_Z, WH_H/2);
-
-  // collision box — רק 3 צדדים (לא חוסם כניסה דרומית)
-  // צפון
-  blds.push({x:WH_X, z:WH_Z-WH_D/2, w:WH_W, d:.4});
-  // מזרח
-  blds.push({x:WH_X+WH_W/2, z:WH_Z, w:.4, d:WH_D});
-  // מערב
-  blds.push({x:WH_X-WH_W/2, z:WH_Z, w:.4, d:WH_D});
-
-  // גג
-  const roofL=iBC(WH_W+.4,.35,WH_D/2+.2,roofM.clone(),WH_X,WH_Z-WH_D/4, WH_H+.15);
-  roofL.rotation.z=.28;roofL.position.x+=WH_W*.23;
-  const roofR=iBC(WH_W+.4,.35,WH_D/2+.2,roofM.clone(),WH_X,WH_Z-WH_D/4, WH_H+.15);
-  roofR.rotation.z=-.28;roofR.position.x-=WH_W*.23;
-  // שתי כנפות אחוריות
-  const roofBL=iBC(WH_W+.4,.35,WH_D/2+.2,roofM.clone(),WH_X,WH_Z+WH_D/4, WH_H+.15);
-  roofBL.rotation.z=.28;roofBL.position.x+=WH_W*.23;
-  const roofBR=iBC(WH_W+.4,.35,WH_D/2+.2,roofM.clone(),WH_X,WH_Z+WH_D/4, WH_H+.15);
-  roofBR.rotation.z=-.28;roofBR.position.x-=WH_W*.23;
-
-  // קורות גג
-  const beamM=MMAT(_mkMetalTexture(64,[88,92,98]),0xbbbbbb);
-  for(let bi=-12;bi<=12;bi+=8){
-    const b=new THREE.Mesh(new THREE.CylinderGeometry(.14,.17,WH_H-.5,6),beamM.clone());
-    b.position.set(WH_X+bi,WH_H*.45,WH_Z-WH_D*.4);b.rotation.z=Math.PI/2;scene.add(b);
-  }
-
-  // ── דלת מגלגלת בפתח הדרומי ──
-  // כאשר המשימה לא 42+ — הדלת "סגורה" (ויזואלית בלבד, לא collision)
-  const doorMatW=MMAT(_mkMetalTexture(256,[50,52,55]),0xbbbbbb);
-  // 2 כנפות דלת (שמאל/ימין) — לא חוסמות, רק ויזואל
-  const dL=iBC(WH_W/2-.5,WH_H-.3,.18,doorMatW,WH_X-WH_W/4,WH_Z+WH_D/2-.09, WH_H*.45);
-  const dR=iBC(WH_W/2-.5,WH_H-.3,.18,doorMatW,WH_X+WH_W/4,WH_Z+WH_D/2-.09, WH_H*.45);
-  G._warehouseDoorL=dL; G._warehouseDoorR=dR;
-  // סורגי דלת
-  for(let si=0;si<5;si++){
-    const ds=new THREE.Mesh(new THREE.BoxGeometry(WH_W,.12,.1),LM(0x444444));
-    ds.position.set(WH_X,1.4+si*1.4,WH_Z+WH_D/2-.08);scene.add(ds);
-  }
-  // מסגרת פתח
-  const fmM=LM(0x2a2a2a);
-  [[WH_X-WH_W/2-.1,WH_H/2,WH_Z+WH_D/2,.22,WH_H,.22],
-   [WH_X+WH_W/2+.1,WH_H/2,WH_Z+WH_D/2,.22,WH_H,.22],
-   [WH_X,WH_H+.1,WH_Z+WH_D/2, WH_W+.44,.22,.22]].forEach(([x,y,z,w,h,d])=>{
-    const fm=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),fmM.clone());
-    fm.position.set(x,y,z);scene.add(fm);
-  });
-
-  // שלט APEX + אור
-  const apexM=new THREE.MeshStandardMaterial({color:0x0d001a,emissive:0x330055,roughness:.4});
-  const apexS=new THREE.Mesh(new THREE.BoxGeometry(9,2,.15),apexM);
-  apexS.position.set(WH_X,WH_H+1.2,WH_Z+WH_D/2+.1);scene.add(apexS);
-  const sL=new THREE.PointLight(0x9900ee,2,16);sL.position.set(WH_X,WH_H+2.5,WH_Z+WH_D/2);scene.add(sL);
-
-  // ── פנים מחסן (מינימלי — מה שנראה מבפנים) ──
-  // רצפת מחסן
-  const inFloor=new THREE.Mesh(new THREE.PlaneGeometry(WH_W-.4,WH_D-.4),
-    new THREE.MeshStandardMaterial({map:_mkConcreteTexture(256,true),roughness:.95,color:0xcccccc}));
-  inFloor.rotation.x=-Math.PI/2;inFloor.position.set(WH_X,.02,WH_Z);inFloor._isGround=true;scene.add(inFloor);
-  // תאורת פנים
-  [[WH_X-8,8,WH_Z-6],[WH_X+8,8,WH_Z-6],[WH_X,8,WH_Z+4]].forEach(([lx,ly,lz])=>{
-    const il=new THREE.PointLight(0xffe8b0,1.1,20);il.position.set(lx,ly,lz);scene.add(il);
-    const lb=new THREE.Mesh(new THREE.BoxGeometry(1.2,.3,1.8),new THREE.MeshStandardMaterial({color:0x333333,roughness:.4,metalness:.8}));
-    lb.position.set(lx,ly+.15,lz);scene.add(lb);
-  });
-  // ארגזים בפנים
-  const iCrateM=MMAT(_mkConcreteTexture(128,true),0xbbaa88);
-  [[WH_X-11,WH_Z-8],[WH_X-9,WH_Z-8],[WH_X-11,WH_Z-6],
-   [WH_X+10,WH_Z-7],[WH_X+8,WH_Z-7]].forEach(([cx,cz])=>{
-    const cr=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,1.8),iCrateM.clone());
-    cr.position.set(cx,.9,cz);scene.add(cr);
-  });
-  // לוגו APEX על קיר פנימי
-  const logoM=new THREE.MeshStandardMaterial({color:0x0a001a,emissive:0x550088});
-  const logo=new THREE.Mesh(new THREE.PlaneGeometry(6,2.5),logoM);
-  logo.position.set(WH_X,4.5,WH_Z-WH_D/2+.12);scene.add(logo);
-  // PointLight מסמן נקודת trigger
-  const trigL=new THREE.PointLight(0x8800cc,.8,8);trigL.position.set(WH_X,2,WH_Z-WH_D*.35);scene.add(trigL);
-
-  // שמור trigger
-  G.warehouseEntrance={x:WH_X, z:WH_Z+WH_D/2, r:4};
-  G.warehouseInside  ={x:WH_X, z:WH_Z-WH_D*.35};
-
-  // ══════════════════════════════════════════════
-  // B: מפעל מתכות — 245, -140 (מרווח ימינה)
-  // ══════════════════════════════════════════════
-  const FX=248, FZ=-140;
-  const factM=MMAT(mTexR.clone(),0xe8e0d0);
-  iB(24,11,18,factM,FX,FZ);
-  iBC(25,.5,19,new THREE.MeshStandardMaterial({map:rTex.clone(),roughness:.9,metalness:.15,color:0xb0aca0}),FX,FZ,11.25);
-  // ארובות
-  [[FX-7,FZ-4],[FX+5,FZ+3]].forEach(([cx,cz])=>{
-    const chM=MMAT(_mkConcreteTexture(128,true),0xaaaaaa);
-    const ch=new THREE.Mesh(new THREE.CylinderGeometry(1,1.3,13,10),chM.clone());
-    ch.position.set(cx,6.5,cz);ch.castShadow=true;scene.add(ch);
-    const cap=new THREE.Mesh(new THREE.CylinderGeometry(1.5,1,.8,10),LM(0x333333));
-    cap.position.set(cx,13.4,cz);scene.add(cap);
-    for(let si=0;si<3;si++){
-      const smk=new THREE.Mesh(new THREE.SphereGeometry(1.3+si*.7,8,8),
-        new THREE.MeshBasicMaterial({color:0x888888,transparent:true,opacity:.14,depthWrite:false}));
-      smk.position.set(cx+(Math.random()-.5)*1.5,14.5+si*2,cz+(Math.random()-.5)*1.5);
-      smk._isCloud=true;scene.add(smk);
-    }
-  });
-  // חלונות מפעל
-  for(let wi=0;wi<4;wi++){
-    const wf=new THREE.Mesh(new THREE.BoxGeometry(.12,3,3.5),MMAT(_mkMetalTexture(64,[38,40,42]),0xaaaaaa));
-    wf.position.set(FX-12.06,5,FZ-6+wi*5);scene.add(wf);
-    const wg=new THREE.Mesh(new THREE.BoxGeometry(.07,2.6,3.1),new THREE.MeshStandardMaterial({color:0x334455,transparent:true,opacity:.5,roughness:.1}));
-    wg.position.set(FX-12.1,5,FZ-6+wi*5);scene.add(wg);
-  }
-  // ספוט ניצוצות
-  const spkL=new THREE.PointLight(0xff7700,1.5,10);spkL.position.set(FX-4,6,FZ+3);scene.add(spkL);
-  G._indSparkLight=spkL; G._indSparkT=0;
-
-  // ══════════════════════════════════════════════
-  // C: תא שמירה + שער כניסה — x=195, z=-90
-  // ══════════════════════════════════════════════
-  const GBX=195, GBZ=-97;
-  iB(9,5,8,MMAT(cTex.clone(),0xe8e4dc),GBX,GBZ);
-  iBC(9.5,.3,8.5,roofM.clone(),GBX,GBZ,5.15);
-  // חלון
-  const gw=new THREE.Mesh(new THREE.BoxGeometry(.1,1.6,1.8),new THREE.MeshStandardMaterial({color:0x1a3322,transparent:true,opacity:.6}));
-  gw.position.set(GBX-4.55,3.2,GBZ-.5);scene.add(gw);
-  const GATE_X=215, GATE_Z=-90;
-  // עמודי שער
-  [[GATE_X-6,GATE_Z],[GATE_X+6,GATE_Z]].forEach(([gx,gz])=>{
-    const gp=new THREE.Mesh(new THREE.BoxGeometry(1.4,7,1),MMAT(cTexD.clone(),0xbbbbbb));
-    gp.position.set(gx,3.5,gz);scene.add(gp);
-    const gc=new THREE.Mesh(new THREE.BoxGeometry(1.7,.5,1.3),LM(0x666666));
-    gc.position.set(gx,7.25,gz);scene.add(gc);
-  });
-  const bar=new THREE.Mesh(new THREE.BoxGeometry(11.6,.25,.25),LM(0xdd2200));
-  bar.position.set(GATE_X,5,GATE_Z);scene.add(bar);
-  const bar2=new THREE.Mesh(new THREE.BoxGeometry(11.6,.25,.25),LM(0xffffff));
-  bar2.position.set(GATE_X,4.72,GATE_Z);scene.add(bar2);
-  // שלט WARNING
-  const warn=new THREE.Mesh(new THREE.BoxGeometry(4.5,1.4,.1),
-    new THREE.MeshStandardMaterial({color:0x110000,emissive:0x330000}));
-  warn.position.set(GATE_X,6.5,GATE_Z);scene.add(warn);
-
-  // ══════════════════════════════════════════════
-  // D: מכולות — שתי שורות
-  // ══════════════════════════════════════════════
-  [
-    [206,-158,0x2a4a2a],[215,-158,0x3a2a2a],[224,-158,0x2a2a4a],[233,-158,0x4a3a1a],[242,-158,0x1a3a3a],
-    [209,-170,0x3a1a3a],[220,-170,0x1a4a2a],[231,-170,0x4a4a1a],
-  ].forEach(([cx,cz,col])=>{
-    const r=(col>>16)&0xff,g=(col>>8)&0xff,b=col&0xff;
-    const cM=MMAT(_mkMetalTexture(256,[r+40,g+40,b+40]),col);
-    iB(9,4.5,4.5,cM,cx,cz);
-    for(let ci=0;ci<3;ci++){
-      const cs=new THREE.Mesh(new THREE.BoxGeometry(.2,4.5,.2),LM(0x1a1a1a));
-      cs.position.set(cx-3.5+ci*3.5,2.25,cz);scene.add(cs);
-    }
-  });
-
-  // ══════════════════════════════════════════════
-  // E: מיכלי דלק — אשכול
-  // ══════════════════════════════════════════════
-  [[258,-110,6,11],[258,-127,5,9],[264,-118,4.5,8],[270,-110,4,7]].forEach(([tx,tz,tr,th])=>{
-    const tM=MMAT(_mkMetalTexture(256,[100,96,82]),0xddd0b0);
-    const tank=new THREE.Mesh(new THREE.CylinderGeometry(tr,tr,th,14),tM.clone());
-    tank.position.set(tx,th/2,tz);tank.castShadow=true;scene.add(tank);
-    blds.push({x:tx,z:tz,w:tr*2+1,d:tr*2+1});
-    const dom=new THREE.Mesh(new THREE.SphereGeometry(tr+.2,14,7,0,Math.PI*2,0,Math.PI/2),tM.clone());
-    dom.position.set(tx,th,tz);scene.add(dom);
-    [th*.28,th*.58].forEach(sy=>{
-      const st=new THREE.Mesh(new THREE.CylinderGeometry(tr+.05,tr+.05,.4,14,1,true),LM(0xcc3300));
-      st.position.set(tx,sy,tz);scene.add(st);
-    });
-  });
-  // צינורות
-  const pM=new THREE.MeshStandardMaterial({color:0x888880,roughness:.5,metalness:.6});
-  const pp=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,12,8),pM);
-  pp.rotation.z=Math.PI/2;pp.position.set(264,-118,4);scene.add(pp);
-
-  // ══════════════════════════════════════════════
-  // F: חניית משאיות + קרון רכבת נטוש
-  // ══════════════════════════════════════════════
-  const pkM=new THREE.MeshStandardMaterial({map:aTex.clone(),roughness:.97,color:0xcccccc});
-  const pk=new THREE.Mesh(new THREE.PlaneGeometry(38,24),pkM);
-  pk.rotation.x=-Math.PI/2;pk.position.set(220,-.01,-195);pk.receiveShadow=true;pk._isGround=true;scene.add(pk);
-  for(let ci=0;ci<5;ci++){
-    const cl=new THREE.Mesh(new THREE.PlaneGeometry(.14,24),new THREE.MeshLambertMaterial({color:0xffffff}));
-    cl.rotation.x=-Math.PI/2;cl.position.set(202+ci*7,.015,-195);scene.add(cl);
-  }
-  // קרון רכבת
-  const trM=MMAT(_mkMetalTexture(256,[85,78,70]),0xccbbaa);
-  const train=new THREE.Mesh(new THREE.BoxGeometry(30,4.5,4.5),trM);
-  train.position.set(245,2.25,-200);train.castShadow=train.receiveShadow=true;scene.add(train);
-  blds.push({x:245,z:-200,w:30,d:5});
-  for(let ti=0;ti<5;ti++){
-    const wh=new THREE.Mesh(new THREE.CylinderGeometry(.95,.95,.65,10),LM(0x181818));
-    wh.rotation.z=Math.PI/2;wh.position.set(231+ti*5,1,-201.6);scene.add(wh);
-    const wh2=wh.clone();wh2.position.z=-198.4;scene.add(wh2);
-  }
-
-  // ══════════════════════════════════════════════
-  // G: גדר היקפית — X=180-275, Z=-90 עד -215
-  // ══════════════════════════════════════════════
-  const fPM=MMAT(_mkMetalTexture(64,[75,80,85]),0xcccccc);
-  const fWM=LM(0x6677889);
-  const FENCE=[
-    [180,-90, 275,-90],   // צפון
-    [275,-90, 275,-215],  // מזרח
-    [275,-215,180,-215],  // דרום
-    [180,-215,180,-90],   // מערב
-  ];
-  FENCE.forEach(([x1,z1,x2,z2])=>{
-    const len=Math.sqrt((x2-x1)**2+(z2-z1)**2);
-    const steps=Math.floor(len/6);
-    for(let fi=0;fi<=steps;fi++){
-      const t=fi/steps;
-      const fx=x1+(x2-x1)*t,fz=z1+(z2-z1)*t;
-      const fp=new THREE.Mesh(new THREE.CylinderGeometry(.13,.16,3.4,6),fPM.clone());
-      fp.position.set(fx,1.7,fz);scene.add(fp);
-      const sp=new THREE.Mesh(new THREE.ConeGeometry(.15,.45,4),LM(0x445566));
-      sp.position.set(fx,3.55,fz);scene.add(sp);
-    }
-    [1,1.9,2.8].forEach(fh=>{
-      const fw=new THREE.Mesh(new THREE.BoxGeometry(len,.05,.05),LM(0x667788));
-      fw.position.set((x1+x2)/2,fh,(z1+z2)/2);fw.rotation.y=Math.atan2(x2-x1,z2-z1);scene.add(fw);
-    });
-  });
-
-  // ══════════════════════════════════════════════
-  // H: תאורה — 10 עמודים
-  // ══════════════════════════════════════════════
-  [[205,-96],[228,-96],[255,-96],[275,-110],[275,-145],[275,-180],
-   [228,-180],[195,-145],[205,-160],[248,-160]].forEach(([lx,lz])=>{
-    const lpM=MMAT(_mkMetalTexture(64,[85,88,94]),0xcccccc);
-    const lp=new THREE.Mesh(new THREE.CylinderGeometry(.11,.15,9,8),lpM.clone());
-    lp.position.set(lx,4.5,lz);scene.add(lp);
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(3,.13,.13),lpM.clone());
-    arm.position.set(lx+1.5,9.05,lz);scene.add(arm);
-    const lh=new THREE.Mesh(new THREE.BoxGeometry(1,.5,1.6),new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.4,metalness:.8}));
-    lh.position.set(lx+3,8.8,lz);scene.add(lh);
-    const pl=new THREE.PointLight(0xffe090,.95,32);pl.position.set(lx+3,8.5,lz);scene.add(pl);
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(.5,6,6),
-      new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:.22,depthWrite:false}));
-    glow.position.set(lx+3,8.5,lz);scene.add(glow);
-  });
-
-  // ══════════════════════════════════════════════
-  // I: פרופס — חביות, ארגזים
-  // ══════════════════════════════════════════════
-  const brM=MMAT(_mkMetalTexture(128,[90,60,30]),0xcc9955);
-  [[207,-115],[209,-115],[208,-117],[212,-115],[214,-115],
-   [230,-108],[232,-108],[231,-110]].forEach(([bx,bz])=>{
-    const b=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,1.25,10),brM.clone());
-    b.position.set(bx,.625,bz);scene.add(b);
-    const rg=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.14,10),LM(0x2a2a2a));
-    rg.position.set(bx,.55,bz);scene.add(rg);
-  });
-  const crM=MMAT(_mkConcreteTexture(128,false),0xccbb88);
-  [[218,-110,0],[219.6,-110,0],[218,-111.7,0],[218,-110,1.5],[219.6,-110,1.5]].forEach(([cx,cz,cy])=>{
-    const cr=new THREE.Mesh(new THREE.BoxGeometry(1.7,1.7,1.7),crM.clone());
-    cr.position.set(cx,.85+cy,cz);scene.add(cr);
-  });
-
-  // ══════════════════════════════════════════════
-  // J: שלטי אזהרה
-  // ══════════════════════════════════════════════
-  [[188,-91],[222,-91],[268,-100],[268,-155]].forEach(([sx,sz])=>{
-    const sp=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,2.8,6),LM(0x888888));
-    sp.position.set(sx,1.4,sz);scene.add(sp);
-    const sb=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.1,.06),
-      new THREE.MeshStandardMaterial({color:0xffaa00,emissive:0x332200}));
-    sb.position.set(sx,3,sz);scene.add(sb);
-  });
-
-  // ══════════════════════════════════════════════
-  G.indZoneCenter={x:IX, z:IZ};
-  G.warehousePos ={x:WH_X, z:WH_Z};
 }
 
 // טקסטורת אספלט גלובלית
@@ -1369,7 +840,7 @@ function bldHouse(x,z,h){
   blds.push({x,z,w:9,d:9});
 }
 function bldPark(x,z){
-  const pg=new THREE.Mesh(new THREE.PlaneGeometry(40,35),new THREE.MeshLambertMaterial({color:0x3d8a2a}));pg.rotation.x=-Math.PI/2;pg.position.set(x,.07,z);pg._isGround=true;scene.add(pg);
+  const pg=new THREE.Mesh(new THREE.PlaneGeometry(40,35),new THREE.MeshLambertMaterial({color:0x3d8a2a}));pg.rotation.x=-Math.PI/2;pg.position.set(x,.07,z);scene.add(pg);
   for(let i=0;i<7;i++)bldTree(x+(Math.random()-.5)*32,z+(Math.random()-.5)*26);
   mkB(2.5,.35,.8,0x5c3317,x-5,.2,z-7);
 }
@@ -1383,7 +854,7 @@ function buildDogBase(){
 
   // רצפת חצר — quad אחד
   const yard=new THREE.Mesh(new THREE.PlaneGeometry(22,18),new THREE.MeshLambertMaterial({color:0xd4b896}));
-  yard.rotation.x=-Math.PI/2;yard.position.set(X,.06,Z);yard._isGround=true;scene.add(yard);
+  yard.rotation.x=-Math.PI/2;yard.position.set(X,.06,Z);scene.add(yard);
 
   // בניין — שני קוביות (גוף+גג)
   const body=mkB(12,4,7,0xf0ddb0,X,2,Z-4);
@@ -3461,7 +2932,6 @@ function addCityGuard(x,_floorY,waypoints,spd){
 }
 
 function enterCityHall(){
-  _lodStaticObjs=null; // reset LOD cache on scene switch
   G.paused=true;
   fadeOut(()=>{
     if(!cityScene)buildCityScene();
@@ -4230,7 +3700,6 @@ function addGuard(sc,waypoints,x,y,z,spd,arr){
 // ENTER / EXIT MOSQUE
 // ════════════════════════════════════════════════
 function enterMosque(){
-  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!mosqueScene)buildMosqueScene();
@@ -4626,8 +4095,8 @@ function mAtk(){
   } else {doAtk();}
 }function mE(){
   if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
-  // סמן eKeyFrame בכל המשימות — מאפשר doInteract גם לפני חידוש checkNear
-  G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);
+  // פרק ז׳ — אינטראקציה עם חפצים
+  if(G.mission>=33&&G.mission<=47){G._eKeyFrame=true;setTimeout(()=>{G._eKeyFrame=false;},200);return;}
   if(G.near)doInteract();
 }function mJmp(){if(G.onGround){G.velY=8;G.onGround=false;}}function mTab(){switchDog();}
 
@@ -4820,7 +4289,7 @@ function loop(){
     updHUD();
     return;
   }
-  if(!G.paused&&!G.dlgOpen&&!G.cutOpen&&!G._grabPaused){
+  if(!G.paused&&!G.dlgOpen&&!G.cutOpen){
     try{updPlayer(dt);}catch(e){console.error('updPlayer:',e);}
     try{updEnemies(dt);}catch(e){console.error('updEnemies:',e);}
     try{updPickups(dt);}catch(e){}
@@ -4920,8 +4389,8 @@ function updPlayer(dt){
   if(PB.position.y<=_gndY){PB.position.y=_gndY;G.velY=0;G.onGround=true;}
   // תנועה עם collision — X וZ נבדקים בנפרד (sliding לאורך קירות)
   // pruning: בודקים רק בניינים בטווח 20 יחידות מהשחקן
-  const nx=Math.max(-280,Math.min(280,PB.position.x+G.vx*dt));
-  const nz=Math.max(-280,Math.min(280,PB.position.z+G.vz*dt));
+  const nx=Math.max(-175,Math.min(175,PB.position.x+G.vx*dt));
+  const nz=Math.max(-175,Math.min(175,PB.position.z+G.vz*dt));
   let blkX=false,blkZ=false;
   const px_=PB.position.x,pz_=PB.position.z;
   for(const b of blds){
@@ -4959,7 +4428,7 @@ function updPlayer(dt){
   const _atkCooldown=G.dog==='zippo'?0.28:0.5;
   if(G.keys['KeyF']&&G.atkCD<=0){doAtk();G.atkCD=_atkCooldown;}
   if(G.keys['KeyQ']){G.keys['KeyQ']=false;_useSpecialSkill();}
-  if(G.keys['KeyE']){G.keys['KeyE']=false;checkNear();if(G.near)doInteract();}
+  if(G.keys['KeyE']){G.keys['KeyE']=false;if(G.near)doInteract();}
   if(G.keys['Tab']){G.keys['Tab']=false;switchDog();}
   dog.stam=Math.min(100,dog.stam+15*dt);
   if(!G._frameCount||G._frameCount%3===0)checkNear();
@@ -5057,7 +4526,7 @@ function doAtk(){
           }
           if(G.mission===3&&G.enemiesKilled>=3){showN(`✅ הכנעת 3/3 אויבים! עוברים לשלב הבא!`);setTimeout(()=>setMission(4),1200);}
           else if(G.mission===3) showN(`⚔️ הכנעת ${G.enemiesKilled}/3 אויבים`);
-          if(!e._titan&&!e._isSuperSoldier&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+          if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
         }
       }
     });
@@ -5114,68 +4583,26 @@ function doAtk(){
 }
 
 // ════════════════════════════════════════════════
-// ════════════════════════════════════════════════
-// LOD — Level of Detail v2: קל + מהיר + לא מסתיר קרקע
-// אסטרטגיה: Shadow culling בלבד (ללא visibility culling לסטטיקה),
-//             visibility culling רק לאויבים ו-NPCs,
-//             matrixAutoUpdate=false לאובייקטים רחוקים.
+// LOD — Level of Detail: ביצועים טובים יותר
 // ════════════════════════════════════════════════
 let _lodFrame=0;
-let _lodStaticObjs=null;   // נאסף פעם אחת
-let _lodShadowObjs=null;   // רק אובייקטים שמטילים צל
-
-function _initLODStatics(){
-  _lodStaticObjs=[];
-  _lodShadowObjs=[];
-  const _tmpV=new THREE.Vector3();
-  scene.traverse(obj=>{
-    if(!obj.isMesh||obj===PB||obj.parent===PB)return;
-    if(obj._isCloud||obj._isGround){
-      // עננים וקרקע — תמיד visible, אף פעם לא בrculling
-      obj.visible=true;
-      if(obj._isGround){obj.receiveShadow=true;obj.castShadow=false;}
-      return;
-    }
-    // שמור world-position כ-cache (סטטי — לא זז)
-    obj.getWorldPosition(_tmpV);
-    obj._lodX=_tmpV.x;
-    obj._lodZ=_tmpV.z;
-    _lodStaticObjs.push(obj);
-    if(obj.castShadow)_lodShadowObjs.push(obj);
-  });
-}
-
 function _updLOD(){
   _lodFrame++;
-  if(!PB)return;
-  const px=PB.position.x, pz=PB.position.z;
-
-  // ── כל frame: AI throttle לפי מרחק ──
-  G.enemies.forEach(e=>{
-    if(!e.mesh)return;
-    const dx=e.mesh.position.x-px, dz=e.mesh.position.z-pz;
-    const d2=dx*dx+dz*dz;
-    e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
+  if(_lodFrame%45!==0||!PB)return; // כל ~45 frames (~0.75s)
+  const px=PB.position.x,pz=PB.position.z;
+  // Shadow culling: כבה צללים על אובייקטים רחוקים
+  scene.traverse(obj=>{
+    if(!obj.isMesh)return;
+    const d=Math.sqrt((obj.position.x-px)**2+(obj.position.z-pz)**2);
+    const near=d<55;
+    obj.castShadow=near&&obj._canShadow!==false;
+    obj.receiveShadow=d<75;
   });
-
-  // ── כל 45 frames (~0.75s): shadow culling בלבד ──
-  // visibility culling לסטטיקה הוסר — גורם לקרקע להיעלם
-  if(_lodFrame%45!==0)return;
-  if(!_lodStaticObjs)_initLODStatics();
-
-  _lodShadowObjs.forEach(obj=>{
-    if(obj._isCloud||obj._isGround)return;
-    const dx=obj._lodX-px, dz=obj._lodZ-pz;
-    const d2=dx*dx+dz*dz;
-    const near=d2<3600;   // <60 יחידות
-    obj.castShadow   = near && obj._canShadow!==false;
-    obj.receiveShadow= d2<6400;  // <80
-    // matrixAutoUpdate: כבה לאובייקטים רחוקים שלא זזים
-    if(d2>19600){        // >140
-      obj.matrixAutoUpdate=false;
-    } else if(!obj.matrixAutoUpdate){
-      obj.matrixAutoUpdate=true;
-    }
+  // AI LOD: אויבים רחוקים מדלגים על חישובים
+  G.enemies.forEach(e=>{
+    if(!e.mesh||!e.mesh.visible)return;
+    const d=Math.sqrt((e.mesh.position.x-px)**2+(e.mesh.position.z-pz)**2);
+    e._lodSkip=1;
   });
 }
 
@@ -5193,7 +4620,6 @@ const _ZONES=[
   {x:50,  z:90,  r:28, name:'רמת אשכול'},
   {x:-50, z:-100,r:28, name:'שכונת הגשר'},
   {x:80,  z:-80, r:22, name:'כיכר העירייה'},
-  {x:228, z:-152, r:60, name:'אזור תעשייה APEX'},
 ];
 let _lastZone='',_zoneToastTimer=null;
 
@@ -5258,7 +4684,7 @@ function _colinStunAttack(){
         updateMissionHUD();
         if(G.mission===3&&G.enemiesKilled>=3){showN('\u2705 \u05d4\u05db\u05e0\u05e2\u05ea 3/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd! \u05e2\u05d5\u05d1\u05e8\u05d9\u05dd \u05dc\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0!');setTimeout(()=>setMission(4),1200);}
         else if(G.mission===3)showN(`\u26d4 \u05d4\u05db\u05e0\u05e2\u05ea ${G.enemiesKilled}/3 \u05d0\u05d5\u05d9\u05d1\u05d9\u05dd`);
-        if(!e._titan&&!e._isSuperSoldier&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
+        if(!e._titan&&G.mission!==3)setTimeout(()=>_respawnEnemy(e),4000+Math.random()*6000);
       } else {
         if(e.bar)e.bar.material.color.setHex(0xffff00);
       }
@@ -5966,11 +5392,6 @@ function drawMM(){
   ctx.fillStyle='#e8791a';ctx.beginPath();ctx.arc(cx+40*sc,cy,5,0,Math.PI*2);ctx.fill();
   // בית כנסת
   ctx.fillStyle='#5588ff';ctx.beginPath();ctx.arc(cx+72*sc,cy+96*sc,4,0,Math.PI*2);ctx.fill();
-  // אזור תעשייה — x=130-205, z=-65 עד -165
-  ctx.fillStyle='rgba(75,85,108,0.7)';ctx.fillRect(cx+180*sc,cy+(-215)*sc,95*sc,125*sc);
-  ctx.strokeStyle='#aabbdd';ctx.lineWidth=1.2;ctx.strokeRect(cx+180*sc,cy+(-215)*sc,95*sc,125*sc);
-  // שלט APEX
-  ctx.fillStyle='#cc44ff';ctx.beginPath();ctx.arc(cx+205*sc,cy+(-125)*sc,4,0,Math.PI*2);ctx.fill();
   // בריכת הנחת (פרק ה׳)
   ctx.fillStyle='#00aaff';ctx.beginPath();ctx.arc(cx-120*sc,cy+130*sc,4,0,Math.PI*2);ctx.fill();
   // שטחים
@@ -7503,7 +6924,6 @@ function _spawnShadowInLab(){
 }
 
 function enterLab(){
-  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!labScene)buildLabScene();
@@ -8041,11 +7461,6 @@ function _applyWorldState(m){
   if(m>=20){
     if(!G._reksAlly&&typeof _spawnReksAlly==='function'){
       _spawnReksAlly();
-      if(G._reksAlly&&PB){
-        G._reksAlly.x=PB.position.x+3;
-        G._reksAlly.z=PB.position.z+3;
-        G._reksAlly.mesh.position.set(PB.position.x+3,0,PB.position.z+3);
-      }
     }
     // titan scouts
     if(m===21&&!G._titanScoutsSpawned&&typeof _spawnTitanScouts==='function'){
@@ -9520,7 +8935,6 @@ function buildHospScene(){
 // enterHosp / exitHosp
 // ════════════════════════════════════════════════
 function enterHosp(){
-  _lodStaticObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!hospScene)buildHospScene();
@@ -10872,345 +10286,12 @@ function mkZ18Model(){
 }
 
 // ════════════════════════════════════════════════
-// _triggerZ18GrabScene — אנימציה סינמטית: Z-18 אוחז במומו
-// ════════════════════════════════════════════════
-function _triggerZ18GrabScene(){
-  // 1. בנה Z-18 ומומו-dummy בבסיס
-  const z18mesh=mkZ18Model();
-  z18mesh.position.set(108,0,22);
-  z18mesh.rotation.y=Math.PI; // פונה אל הבסיס
-  scene.add(z18mesh);
-  G._z18GrabMesh=z18mesh;
-
-  // מומו dummy — כדור ורוד שמייצג את מומו נישאת
-  const momoDummy=new THREE.Group();
-  const mBody=new THREE.Mesh(new THREE.SphereGeometry(0.35,8,8),
-    new THREE.MeshLambertMaterial({color:0xd4a0c8,emissive:0x3a1a30}));
-  mBody.position.y=0.35;momoDummy.add(mBody);
-  // אוזניים
-  [-1,1].forEach(s=>{
-    const ear=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.06,0.22,6),
-      new THREE.MeshLambertMaterial({color:0xc090b8}));
-    ear.position.set(s*0.2,0.65,0);ear.rotation.z=s*0.3;momoDummy.add(ear);
-  });
-  // זנב
-  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.03,0.3,6),
-    new THREE.MeshLambertMaterial({color:0xc090b8}));
-  tail.position.set(0,0.25,-0.4);tail.rotation.x=0.8;momoDummy.add(tail);
-
-  momoDummy.position.set(108,0,22);
-  scene.add(momoDummy);
-  G._momoDummy=momoDummy;
-
-  // 2. אפקטי פתיחה — רעידה + אור אדום
-  haptic([80,20,80,20,80]);
-  const grabLight=new THREE.PointLight(0xff0044,0,12);
-  grabLight.position.set(108,3,22);
-  scene.add(grabLight);G._grabLight=grabLight;
-
-  // נעל את השחקן
-  G.paused=true;
-
-  // 3. אנימציה — שלבים
-  let t=0;
-  const BASE_Y_MOMO=0;
-  const GRAB_DUR=3200; // ms סה"כ
-
-  // שלב א: Z-18 נוחת (0-600ms) — אור מהבהב, רעידת מצלמה
-  let flashCount=0;
-  const flashInt=setInterval(()=>{
-    flashCount++;
-    grabLight.intensity= flashCount%2===0 ? 4 : 0;
-    // רעידת camera קטנה
-    if(camera){
-      camera.position.x+=( Math.random()-.5)*0.15;
-      camera.position.z+=( Math.random()-.5)*0.15;
-    }
-    if(flashCount>=8) clearInterval(flashInt);
-  },75);
-
-  // שלב ב (600ms): Z-18 מרים את מומו — הפנל הצדדי מופיע
-  setTimeout(()=>{
-    grabLight.intensity=3;
-    haptic([120,30,60]);
-
-    // הפנל הסינמטי הצדדי — "תמונה בתמונה"
-    _showGrabPanel();
-
-    // אנימציה: מומו עולה לאוויר
-    let liftT=0;
-    const liftInt=setInterval(()=>{
-      liftT+=16;
-      const prog=Math.min(liftT/600,1);
-      const eased=1-Math.pow(1-prog,3);
-      momoDummy.position.y=eased*1.6; // מומו עולה 1.6 יחידות
-      // z18 מרים יד — rotate כתף
-      if(z18mesh.rotation){
-        z18mesh.rotation.x=eased*(-0.15);
-      }
-      // אור פולס
-      grabLight.intensity=3+Math.sin(liftT*0.02)*1.2;
-      if(liftT>=600) clearInterval(liftInt);
-    },16);
-
-    showN('😱 Z-18 אחז במומו! זיפו — איפה אתה?!');
-  },600);
-
-  // שלב ג (1800ms): מומו נישאת — particles ורודים
-  setTimeout(()=>{
-    for(let i=0;i<10;i++){
-      spawnPfx(108+(Math.random()-.5)*3,1.5+Math.random(),22+(Math.random()-.5)*3,0xff0066,3);
-    }
-    haptic([50,20,100,20,50]);
-    showN('💔 מומו: "זיפו—!"');
-  },1800);
-
-  // שלב ד (2600ms): Z-18 נסוג — מומו נופלת
-  setTimeout(()=>{
-    // מומו נופלת בחזרה
-    let dropT=0;
-    const dropInt=setInterval(()=>{
-      dropT+=16;
-      const prog=Math.min(dropT/400,1);
-      momoDummy.position.y=(1-prog)*1.6;
-      if(dropT>=400){
-        clearInterval(dropInt);
-        // פגיעת נחיתה
-        spawnPfx(108,0.3,22,0xffaa00,6);
-        haptic(40);
-      }
-    },16);
-    // Z-18 נסוג אחורה
-    let retT=0;
-    const retInt=setInterval(()=>{
-      retT+=16;
-      z18mesh.position.z-=0.1;
-      if(retT>=500) clearInterval(retInt);
-    },16);
-  },2600);
-
-  // שלב ה (3200ms): סיום — פנל נסגר, כנס לcutscene ואז mission 46
-  setTimeout(()=>{
-    _closeGrabPanel();
-    grabLight.intensity=0;
-    scene.remove(z18mesh);
-    scene.remove(momoDummy);
-    if(G._grabLight){scene.remove(G._grabLight);G._grabLight=null;}
-    G.paused=false;
-
-    showCut('ch8_zippo_returns',()=>{
-      setMission(46);
-      buildZ18();
-    });
-  },GRAB_DUR);
-}
-
-// פנל סינמטי צדדי — מציג את האנימציה
-let _grabPanelEl=null;
-function _showGrabPanel(){
-  if(_grabPanelEl)return;
-  // עצור את המשחק — כמו התקף הלב של רקס
-  G._grabPaused=true;
-
-  const el=document.createElement('div');
-  el.id='grab-panel';
-  el.style.cssText=`
-    position:fixed;inset:0;background:rgba(5,0,12,0.94);
-    z-index:9000;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;
-    font-family:inherit;
-  `;
-
-  // CSS אנימציה
-  if(!document.getElementById('grab-panel-style')){
-    const s=document.createElement('style');
-    s.id='grab-panel-style';
-    s.textContent=`
-      @keyframes grab-in{from{opacity:0;transform:scale(0.92);}to{opacity:1;transform:scale(1);}}
-      @keyframes grab-pulse-border{0%,100%{box-shadow:0 0 28px #cc006699,inset 0 0 40px rgba(150,0,60,0.12);}50%{box-shadow:0 0 50px #ff008888,inset 0 0 60px rgba(200,0,80,0.18);}}
-      #grab-panel{animation:grab-in 0.45s ease-out forwards;}
-      @keyframes grab-title-flash{0%,100%{opacity:1;}50%{opacity:0.6;}}
-      #grab-title{animation:grab-title-flash 1.1s ease-in-out infinite;}
-    `;
-    document.head.appendChild(s);
-  }
-
-  // כותרת
-  const title=document.createElement('div');
-  title.id='grab-title';
-  title.style.cssText='color:#ff2266;font-size:clamp(18px,4vw,26px);font-weight:bold;letter-spacing:3px;text-align:center;margin-bottom:18px;text-shadow:0 0 16px #ff0055;';
-  title.textContent='💔 Z-18 תופס את מומו!';
-  el.appendChild(title);
-
-  // Canvas לאנימציה
-  const cvs=document.createElement('canvas');
-  const cvsSize=Math.min(window.innerWidth*.7,340);
-  cvs.width=340;cvs.height=280;
-  cvs.style.cssText=`width:${cvsSize}px;height:${Math.round(cvsSize*280/340)}px;border-radius:8px;border:2px solid #cc0066;box-shadow:0 0 30px #cc006655;`;
-  el.appendChild(cvs);
-
-  // תיאור
-  const desc=document.createElement('div');
-  desc.id='grab-panel-desc';
-  desc.style.cssText='color:#ffaacc;font-size:clamp(12px,2.5vw,16px);text-align:center;margin-top:16px;line-height:1.6;max-width:320px;text-shadow:0 0 8px #ff006644;';
-  desc.textContent='Z-18 פורץ לבסיס';
-  el.appendChild(desc);
-
-  // כפתור המשך — מופיע אחרי 3 שניות
-  const cont=document.createElement('div');
-  cont.style.cssText='color:#ff6699;font-size:13px;margin-top:20px;opacity:0;transition:opacity 0.5s;cursor:pointer;border:1px solid #cc0066;padding:8px 20px;border-radius:6px;';
-  cont.textContent='הבן / הביני (הקש/י להמשיך)';
-  el.appendChild(cont);
-  setTimeout(()=>cont.style.opacity='1',3000);
-  cont.onclick=()=>_closeGrabPanel();
-
-  document.body.appendChild(el);
-  _grabPanelEl=el;
-
-  // אנימציה על canvas
-  const ctx=cvs.getContext('2d');
-  const W=340,H=280;
-  let animT=0;
-  const descTexts=[
-    'Z-18 פורץ לבסיס',
-    '💔 מומו נתפסת!',
-    'Z-18 אוחז בה בכוח',
-    'זיפו — בוא מהר!'
-  ];
-  let descIdx=0;
-
-  G._grabPanelAnim=setInterval(()=>{
-    animT+=16;
-    const t=animT/1000;
-    ctx.clearRect(0,0,W,H);
-
-    // רקע
-    ctx.fillStyle='#050008';
-    ctx.fillRect(0,0,W,H);
-    const grad=ctx.createRadialGradient(W/2,H/2,10,W/2,H/2,130);
-    grad.addColorStop(0,'rgba(180,0,60,0.25)');
-    grad.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
-
-    // אפקט וינייט
-    const vig=ctx.createRadialGradient(W/2,H/2,60,W/2,H/2,160);
-    vig.addColorStop(0,'rgba(0,0,0,0)');
-    vig.addColorStop(1,'rgba(0,0,20,0.7)');
-    ctx.fillStyle=vig;ctx.fillRect(0,0,W,H);
-
-    // מומו (ורוד, שמאל) — מרקדת / נישאת
-    const grabProg=animT>800?Math.min((animT-800)/900,1):0;
-    const momoX=90+(grabProg*30);
-    const momoY=140+Math.sin(t*4)*(grabProg>0.5?2:5)-(grabProg*28);
-    const momoRot=grabProg*0.4;
-
-    ctx.save();
-    ctx.translate(momoX,momoY);
-    ctx.rotate(momoRot);
-    // גוף מומו
-    ctx.fillStyle='#d4a0c8';
-    ctx.beginPath();ctx.ellipse(0,0,22,16,0,0,Math.PI*2);ctx.fill();
-    // ראש
-    ctx.fillStyle='#e0b0d4';
-    ctx.beginPath();ctx.arc(0,-20,16,0,Math.PI*2);ctx.fill();
-    // אוזניים
-    ctx.fillStyle='#c090b8';
-    ctx.beginPath();ctx.ellipse(-10,-34,5,9,-.4,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(10,-34,5,9,.4,0,Math.PI*2);ctx.fill();
-    // עיניים — פחד
-    const eyeOpen=grabProg>0.3?0.6+Math.sin(t*8)*0.4:1;
-    ctx.fillStyle='#ff88aa';
-    ctx.beginPath();ctx.ellipse(-6,-22,3.5,3.5*eyeOpen,0,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(6,-22,3.5,3.5*eyeOpen,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#220011';
-    ctx.beginPath();ctx.arc(-6,-22,1.5,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(6,-22,1.5,0,Math.PI*2);ctx.fill();
-    // רגליים
-    ctx.fillStyle='#c090b8';
-    ctx.beginPath();ctx.ellipse(-8,14,5,10,-.2,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(8,14,5,10,.2,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-
-    // Z-18 (ימין)
-    const z18X=220;const z18Y=135;
-    // גוף Z-18
-    ctx.fillStyle='#0a0012';
-    ctx.beginPath();ctx.ellipse(z18X,z18Y,28,22,0,0,Math.PI*2);ctx.fill();
-    // ראש
-    ctx.fillStyle='#120018';
-    ctx.beginPath();ctx.arc(z18X,z18Y-30,20,0,Math.PI*2);ctx.fill();
-    // עיניים זוהרות
-    const eyeG=0.75+Math.sin(t*5)*0.25;
-    const eyeSize=3.5+Math.sin(t*3)*0.5;
-    ctx.fillStyle=`rgba(255,0,80,${eyeG})`;
-    ctx.beginPath();ctx.arc(z18X-8,z18Y-32,eyeSize,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(z18X+8,z18Y-32,eyeSize,0,Math.PI*2);ctx.fill();
-    // הילה אדומה
-    ctx.strokeStyle=`rgba(220,0,90,${0.25+Math.sin(t*2)*0.15})`;
-    ctx.lineWidth=4;ctx.beginPath();ctx.arc(z18X,z18Y-5,32,0,Math.PI*2);ctx.stroke();
-
-    // יד Z-18 אוחזת
-    if(grabProg>0){
-      const armEndX=momoX+20;
-      const armEndY=momoY-5;
-      const armStartX=z18X-20;
-      const armStartY=z18Y+5;
-      ctx.strokeStyle=`rgba(18,0,30,${Math.min(1,grabProg*1.5)})`;
-      ctx.lineWidth=9;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(armStartX,armStartY);ctx.lineTo(armEndX,armEndY);ctx.stroke();
-      // "טפרים"
-      if(grabProg>0.5){
-        const gp=(grabProg-0.5)*2;
-        ctx.strokeStyle=`rgba(200,0,50,${gp*0.8})`;
-        ctx.lineWidth=2;
-        for(let i=-2;i<=2;i++){
-          ctx.beginPath();ctx.moveTo(armEndX,armEndY);ctx.lineTo(armEndX+i*5,armEndY-10*gp);ctx.stroke();
-        }
-      }
-    }
-
-    // particles חרדה
-    if(grabProg>0.3&&Math.random()>0.5){
-      ctx.fillStyle=`rgba(255,0,80,${Math.random()*0.6})`;
-      const px2=momoX+(Math.random()-.5)*40;
-      const py2=momoY+(Math.random()-.5)*35;
-      ctx.beginPath();ctx.arc(px2,py2,Math.random()*4+1,0,Math.PI*2);ctx.fill();
-    }
-    // ניצוצות שחורים של Z-18
-    if(Math.random()>0.7){
-      ctx.fillStyle=`rgba(150,0,60,${Math.random()*0.5})`;
-      const px2=z18X+(Math.random()-.5)*50;
-      const py2=z18Y+(Math.random()-.5)*45;
-      ctx.beginPath();ctx.arc(px2,py2,Math.random()*3+1,0,Math.PI*2);ctx.fill();
-    }
-
-    // עדכן תיאור
-    const newDescIdx=Math.min(Math.floor(animT/1000),descTexts.length-1);
-    if(newDescIdx!==descIdx){
-      descIdx=newDescIdx;
-      const d=document.getElementById('grab-panel-desc');
-      if(d)d.textContent=descTexts[descIdx];
-    }
-  },16);
-}
-
-function _closeGrabPanel(){
-  if(G._grabPanelAnim){clearInterval(G._grabPanelAnim);G._grabPanelAnim=null;}
-  if(_grabPanelEl){
-    _grabPanelEl.style.transition='opacity 0.45s';
-    _grabPanelEl.style.opacity='0';
-    setTimeout(()=>{if(_grabPanelEl){_grabPanelEl.remove();_grabPanelEl=null;}},450);
-  }
-  G._grabPaused=false;
-}
-
-// ════════════════════════════════════════════════
 // buildZ18 — בניית Z-18 בעולם
 // ════════════════════════════════════════════════
 function buildZ18(){
   if(_z18Enemy)return;
   const mesh=mkZ18Model();
-  mesh.position.set(105,0,15);  // ליד הכניסה לבסיס
+  mesh.position.set(10,0,-38);
   scene.add(mesh);
   const bar=hpBar(mesh,2.8,4.0);
   bar.material.color.setHex(0xcc0066);
@@ -11236,7 +10317,7 @@ function updZ18(dt){
   if(!_z18Enemy||_z18Enemy.dead||G.mission!==46)return;
   const b=_z18Enemy;
   const px=PB.position.x,pz=PB.position.z;
-  b.mesh.position.y=0; // keep grounded — בבסיס
+  b.mesh.position.y=0; // keep grounded
   const dd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
   const dog=G.dogs[G.dog];
 
@@ -11369,13 +10450,6 @@ function updZ18(dt){
 function updCh8(dt){
   if(G.mission<40||G.mission>47)return;
   const px=PB.position.x,pz=PB.position.z;
-  // ── אנימציית ניצוצות מפעל ──
-  if(G._indSparkLight){
-    G._indSparkT=(G._indSparkT||0)+dt;
-    const flicker=Math.sin(G._indSparkT*18)*.5+.5;
-    G._indSparkLight.intensity=flicker*2.2*(Math.random()>.85?2:1);
-    if(Math.random()>.97)G._indSparkLight.color.setHex(Math.random()>.5?0xff6600:0xffaa00);
-  }
 
   // ── Mission 40: עדויות NPC ──
   if(G.mission===40){
@@ -11437,103 +10511,66 @@ function updCh8(dt){
       ip.style.display='none';
   }
 
-  // ── Mission 41: אזור תעשייה APEX — קרב חיילי על ──
+  // ── Mission 41: עקבות לאזור תעשייה — קרב ──
   if(G.mission===41){
+    // הסתר אינדיקטורים של עדים שנשארו
     if(G._ch8Witnesses&&!G._ch8WitnessesHidden){
       G._ch8WitnessesHidden=true;
       G._ch8Witnesses.forEach(w=>{if(w.ind)w.ind.visible=false;});
     }
-    const inZone = px>178 && px<280 && pz<-86 && pz>-220;
-
-    // ── reset אם נשמר מצב שבור מגרסה קודמת ──
-    if(inZone && G._ch8TrailReached && !G._ch8ClearCheck){
-      // נלחמנו כבר? בדוק אם יש אויבי תעשייה בכלל
-      const existEnemies = G.enemies.filter(e=>e.zone==='תעשייה').length;
-      if(existEnemies===0){
-        // אין אויבים — כנראה save ישן. ספון מחדש
-        G._ch8TrailReached=false;
-      }
-    }
-
-    // ── ספון אויבים בכניסה לזון ──
-    if(inZone && !G._ch8TrailReached){
+    const dist=d2(px,pz,80,-45);
+    if(dist<8&&!G._ch8TrailReached){
       G._ch8TrailReached=true;
-      G._ch8ClearCheck=true;
-      G._ch8Advancing42=false;
-      showN('🏭 מומו: "הריח מוביל לאזור התעשייה. מישהו כאן."');
-      [[208,-110],[225,-115],[240,-108],[215,-130]].forEach(([sx,sz])=>{
-        const mesh=mkSuperSoldier(0x1a1020);
-        mesh.position.set(sx,0,sz);scene.add(mesh);
-        const bar=hpBar(mesh,1.8,2.8);
-        G.enemies.push({mesh,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
-          alert:22,atk:SUPER_ATK,atkT:0,bar,
-          homeX:sx,homeZ:sz,patAng:Math.random()*Math.PI*2,patT:2,state:'patrol',
-          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה',
-          _chargeT:0,_chargeReady:false,_chargeActive:false,
-          _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
+      showN('🏭 מומו: \\"פה. הריח ממשיך פנימה.\\"');
+      // ספון 3 שומרים
+      [[85,-40],[80,-50],[90,-48]].forEach(([sx,sz])=>{
+        const eg=mkEnemy(0x1a0a0a,1);eg.position.set(sx,0,sz);scene.add(eg);
+        const bar=hpBar(eg,1.4,2.3);
+        G.enemies.push({mesh:eg,hp:70,mhp:70,spd:3.8,alert:16,atk:2.6,atkT:0,bar,
+          homeX:sx,homeZ:sz,patAng:0,patT:0,state:'patrol',
+          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'תעשייה'});
       });
+      // בדוק ניקוי כל frame במקום setInterval
+      G._ch8ClearCheck=true;
     }
-
-    // ── בדוק ניקוי ──
-    if(G._ch8TrailReached){
-      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible&&e.zone==='תעשייה').length;
-      if(alive===0&&!G._ch8Advancing42){
-        G._ch8Advancing42=true;
-        G._ch8ClearCheck=false;
-        setTimeout(()=>{if(G.mission===41)setMission(42);},1200);
-      }
+    // בדוק ניקוי אויבי תעשייה
+    if(G._ch8ClearCheck&&G._ch8TrailReached){
+      const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='תעשייה').length;
+      if(alive===0){G._ch8ClearCheck=false;setTimeout(()=>setMission(42),1500);}
     }
   }
 
-  // ── Mission 42: מחסן APEX — כנס ומצא ראיות ──
+  // ── Mission 42: מחסן — גילוי APEX ──
   if(G.mission===42){
-    const wPos=G.warehousePos||{x:205,z:-125};
-    const doorZ=wPos.z+11;
-    const distDoor=d2(px,pz,wPos.x,doorZ);
-    if(distDoor<30&&!G._ch8WarehouseGuardsSpawned){
-      G._ch8WarehouseGuardsSpawned=true;
-      [[wPos.x-8,doorZ+4],[wPos.x+9,doorZ+4],[wPos.x,wPos.z-6]].forEach(([sx,sz])=>{
-        const mesh=mkSuperSoldier(0x0d0820);
-        mesh.position.set(sx,0,sz);scene.add(mesh);
-        const bar=hpBar(mesh,1.8,2.8);
-        G.enemies.push({mesh,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
-          alert:18,atk:SUPER_ATK,atkT:0,bar,
-          homeX:sx,homeZ:sz,patAng:0,patT:0,state:'patrol',
-          lastSeenX:0,lastSeenZ:0,searchT:0,zone:'מחסן',
-          _chargeT:0,_chargeReady:false,_chargeActive:false,
-          _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
-      });
-    }
-    // trigger כניסה למחסן — zone-based
-    const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
-    if(insideWH&&!G._ch8WarehouseReached){
+    const dist=d2(px,pz,92,-38);
+    if(dist<6&&!G._ch8WarehouseReached){
       G._ch8WarehouseReached=true;
       showCut('ch8_warehouse',()=>{
         showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
-        setTimeout(()=>{if(G.mission===42)setMission(43);},2500);
+        setTimeout(()=>setMission(43),2500);
       });
     }
   }
 
-  // ── Mission 43: חזרה לבסיס האמיתי ──
+  // ── Mission 43: חזרה לבסיס ──
   if(G.mission===43){
-    const dist=d2(px,pz,105,25);
-    if(dist<10&&!G._ch8HomeReached){
+    const dist=d2(px,pz,0,5);
+    if(dist<6&&!G._ch8HomeReached){
       G._ch8HomeReached=true;
       showCut('ch8_they_know',()=>setMission(44));
     }
   }
 
-  // ── Mission 44: Z-18 מופיע ליד הבסיס ──
+  // ── Mission 44: Z-18 מופיע לראשונה (ויזואלי בלבד) ──
   if(G.mission===44){
     forceDog('zippo','זיפו יוצא לסיור');
-    const dist=d2(px,pz,105,10);
-    if(dist<10&&!G._ch8Z18FirstSeen){
+    const dist=d2(px,pz,5,-22);
+    if(dist<8&&!G._ch8Z18FirstSeen){
       G._ch8Z18FirstSeen=true;
-      // בנה Z-18 preview — עומד מרחוק מחוץ לבסיס
+      // בנה Z-18 preview — עומד מרחוק
       if(!G._z18Preview){
         const pm=mkZ18Model();
-        pm.position.set(105,-0.1,-8);
+        pm.position.set(5,-0.1,-42);
         scene.add(pm);G._z18Preview=pm;
       }
       showCut('ch8_z18_first',()=>{
@@ -11544,37 +10581,43 @@ function updCh8(dt){
     }
   }
 
-  // ── Mission 45: קרב בבסיס ללא זיפו + grab מומו ──
+  // ── Mission 45: קרב ללא זיפו + grab מומו ──
   if(G.mission===45){
     if(!G._ch8Wave1Done){
-      // ספון גל חיילי APEX שתוקפים את הבסיס
-      forceDog('colin','קולין ומומו מגנים על הבסיס');
+      // ספון גל חיילים — קולין ומומו בלבד
+      forceDog('colin','קולין ומומו נלחמים לבד — זיפו ב\\"שבר\\"');
       if(!G._ch8WaveSpawned){
         G._ch8WaveSpawned=true;
-        // אויבים תוקפים מכל כיוון אל הבסיס
-        [[95,40],[115,40],[100,8],[110,8],[88,25],[122,25]].forEach(([sx,sz])=>{
-          const mesh=mkSuperSoldier(0x0d0d20);
-          mesh.position.set(sx,0,sz);scene.add(mesh);
-          const bar=hpBar(mesh,1.8,2.8);
-          G.enemies.push({mesh,hp:SUPER_HP,mhp:SUPER_HP,spd:SUPER_SPD,
-            alert:20,atk:SUPER_ATK,atkT:0,bar,
+        [[5,-26],[12,-30],[0,-32],[8,-22]].forEach(([sx,sz])=>{
+          const eg=mkEnemy(0x1a1a2e,1);eg.position.set(sx,0,sz);scene.add(eg);
+          const bar=hpBar(eg,1.4,2.3);
+          G.enemies.push({mesh:eg,hp:80,mhp:80,spd:4,alert:18,atk:2.6,atkT:0,bar,
             homeX:sx,homeZ:sz,patAng:0,patT:0,state:'chase',
-            lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'ch8wave',
-            _chargeT:0,_chargeReady:false,_chargeActive:false,
-            _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
+            lastSeenX:px,lastSeenZ:pz,searchT:12,zone:'ch8wave'});
         });
-        showN('⚠️ APEX תוקפים את הבסיס! הגן על הבסיס!');
-        haptic([100,30,100]);
       }
       // בדוק ניקוי
       const alive=G.enemies.filter(e=>e.hp>0&&e.mesh.visible&&e.zone==='ch8wave').length;
-      if(alive===0&&G._ch8WaveSpawned&&!G._ch8GrabTriggered){
+      if(alive===0&&G._ch8WaveSpawned){
         G._ch8Wave1Done=true;
-        G._ch8GrabTriggered=true;
-        // Z-18 מופיע בבסיס ואוחז במומו — אנימציה סינמטית
+        // Z-18 מופיע ואוחז במומו
         setTimeout(()=>{
-          _triggerZ18GrabScene();
-        },800);
+          if(!G._ch8GrabTriggered){
+            G._ch8GrabTriggered=true;
+            // בנה Z-18 grab scene
+            if(!G._z18Preview){
+              const pm=mkZ18Model();
+              pm.position.set(8,-0.1,-33);
+              scene.add(pm);G._z18Preview=pm;
+            }
+            // פעם מיידית
+            showCut('ch8_zippo_returns',()=>{
+              if(G._z18Preview){scene.remove(G._z18Preview);G._z18Preview=null;}
+              setMission(46);
+              buildZ18();
+            });
+          }
+        },1000);
       }
     }
   }
