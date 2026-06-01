@@ -1608,116 +1608,390 @@ function _radialSpike(R,colY,colZ,a,spikeLen,spikeR,mat,g){
 // ── מודל טיטאן — גרסה מהירה למובייל (~18 meshes) ──
 function mkTitan(sz){
   const g=new THREE.Group();
-  const fur  =new THREE.MeshLambertMaterial({color:0x0c0906,emissive:0x080503});
-  const accent=new THREE.MeshLambertMaterial({color:0xa02020,emissive:0x500a0a});
-  const eyM  =new THREE.MeshLambertMaterial({color:0xff5500,emissive:0xff2200});
-  const fangM=new THREE.MeshLambertMaterial({color:0xf0e0b0,emissive:0x1c1808});
+  // ── חומרים ──
+  const fur  =new THREE.MeshLambertMaterial({color:0x0c0906,emissive:0x050302});
+  const muscle=new THREE.MeshLambertMaterial({color:0x180e06,emissive:0x060200});
+  const sTan =new THREE.MeshLambertMaterial({color:0x3c1a08,emissive:0x0e0400});   // לחיים
+  const sRed =new THREE.MeshLambertMaterial({color:0xa02020,emissive:0x500a0a});   // צלקות אדומות-חיות
+  const eyOuter=new THREE.MeshLambertMaterial({color:0x100000,emissive:0x060000});
+  const eyIris =new THREE.MeshLambertMaterial({color:0xff5500,emissive:0xff2200}); // כתום-אש
+  const eyPup  =new THREE.MeshLambertMaterial({color:0x000000});
+  const eyHl   =new THREE.MeshLambertMaterial({color:0xffffff,emissive:0xcccccc});
+  const ns    =new THREE.MeshLambertMaterial({color:0x060202});
+  const fangM =new THREE.MeshLambertMaterial({color:0xf0e0b0,emissive:0x1c1808}); // שנהב
+  const bloodM=new THREE.MeshLambertMaterial({color:0xc06060,emissive:0x3a1010}); // צבע דם בקצה ניב
+  const tongue=new THREE.MeshLambertMaterial({color:0x8a1c1c,emissive:0x280808});
   const armorM=new THREE.MeshLambertMaterial({color:0x121008,emissive:0x060500});
   const spikeM=new THREE.MeshLambertMaterial({color:0x302818,emissive:0x0c0a06});
   const chainM=new THREE.MeshLambertMaterial({color:0x2c2c2c,emissive:0x0e0e0e});
 
-  // גוף ראשי
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.9*sz,.7*sz,1.8*sz),fur);
-  body.position.y=.95*sz; g.add(body);
-  // חזה
-  const chest=new THREE.Mesh(new THREE.BoxGeometry(.85*sz,.65*sz,.6*sz),fur);
-  chest.position.set(0,.95*sz,.92*sz); g.add(chest);
-  // שריון גב
-  const armor=new THREE.Mesh(new THREE.BoxGeometry(.9*sz,.18*sz,1.4*sz),armorM);
-  armor.position.set(0,1.32*sz,0); g.add(armor);
-  // קוצי שריון (3)
-  [-0.4,0,0.4].forEach(oz=>{
-    const spk=new THREE.Mesh(new THREE.ConeGeometry(.08*sz,.38*sz,4),spikeM);
-    spk.position.set(0,1.54*sz,oz*sz); g.add(spk);
-  });
-  // קולר
-  const collar=new THREE.Mesh(new THREE.CylinderGeometry(.46*sz,.46*sz,.24*sz,10),chainM);
-  collar.position.set(0,1.3*sz,.84*sz); g.add(collar);
-  // ראש
-  const head=new THREE.Mesh(new THREE.BoxGeometry(.96*sz,.78*sz,.88*sz),fur);
-  head.position.set(0,1.7*sz,1.28*sz); head.rotation.x=.28; g.add(head);
-  // לסת תחתונה
-  const jaw=new THREE.Mesh(new THREE.BoxGeometry(.72*sz,.22*sz,.6*sz),fur);
-  jaw.position.set(0,1.32*sz,1.62*sz); jaw.rotation.x=.24; g.add(jaw);
-  // עיניים (2)
+  // ══════════════════════════════════
+  //  גוף
+  // ══════════════════════════════════
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.86*sz,.64*sz,1.76*sz),fur);
+  body.position.y=.92*sz;g.add(body);
+
+  // חזה בולט
+  const chest=new THREE.Mesh(new THREE.BoxGeometry(.82*sz,.62*sz,.62*sz),fur);
+  chest.position.set(0,.92*sz,.9*sz);g.add(chest);
+
+  // שרירי ירכיים בצדדים
   [-1,1].forEach(s=>{
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.16*sz,6,5),eyM);
-    eye.position.set(s*.28*sz,1.78*sz,1.68*sz); g.add(eye);
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.54*sz,.92*sz),muscle);
+    fl.position.set(s*.52*sz,.96*sz,.1*sz);g.add(fl);
   });
-  // ניבים גדולים (2)
+
+  // ══════════════════════════════════
+  //  שריון גב — 3 לוחות עם קוצים מעליהם
+  // ══════════════════════════════════
+  [-0.42,-0.04,0.38].forEach(oz=>{
+    const plateY=1.28*sz, plateZ=oz*sz;
+    const plate=new THREE.Mesh(new THREE.BoxGeometry(.92*sz,.14*sz,.38*sz),armorM);
+    plate.position.set(0,plateY,plateZ);g.add(plate);
+    // שפה מורמת
+    [-1,1].forEach(sx=>{
+      const ridge=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.1*sz,.34*sz),spikeM);
+      ridge.position.set(sx*.49*sz,plateY+.11*sz,plateZ);g.add(ridge);
+    });
+    // קוצים — tip of cone is UP, base is DOWN (no rotation needed — default)
+    [-1,0,1].forEach(spx=>{
+      const spk=new THREE.Mesh(new THREE.ConeGeometry(.07*sz,.34*sz,5),spikeM);
+      // מרכז הקונוס ב־plateY+.07 (חצי גובה לוח) + .17 (חצי גובה קוץ)
+      spk.position.set(spx*.27*sz, plateY+.24*sz, plateZ);
+      g.add(spk); // tip points in default +Y ✓
+    });
+  });
+
+  // ══════════════════════════════════
+  //  צוואר שרירי
+  // ══════════════════════════════════
+  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.33*sz,.43*sz,.54*sz,10),fur);
+  nk.position.set(0,1.28*sz,.84*sz);nk.rotation.x=-.35;g.add(nk);
+  // כתפיים
   [-1,1].forEach(s=>{
-    const f=new THREE.Mesh(new THREE.ConeGeometry(.1*sz,.44*sz,5),fangM);
-    f.position.set(s*.16*sz,1.3*sz,1.76*sz); f.rotation.x=Math.PI; g.add(f);
+    const sh=new THREE.Mesh(new THREE.SphereGeometry(.32*sz,7,5),fur);
+    sh.scale.set(1,.74,1.22);sh.position.set(s*.52*sz,1.14*sz,.46*sz);g.add(sh);
   });
-  // צלקת X על הפנים
-  const sc=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.56*sz,.1*sz),accent);
-  sc.position.set(.28*sz,1.62*sz,1.7*sz); sc.rotation.z=.44; g.add(sc);
-  // 4 רגליים (כל רגל = 1 mesh)
-  [[.34,.46,.58],[-.34,.46,.58],[.34,.46,-.6],[-.34,.46,-.6]].forEach(([lx,ly,lz])=>{
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(.28*sz,.92*sz,.28*sz),fur);
-    leg.position.set(lx*sz,ly*sz,lz*sz); g.add(leg);
-    // טפר
-    const cl=new THREE.Mesh(new THREE.ConeGeometry(.06*sz,.24*sz,4),spikeM);
-    cl.position.set(lx*sz,.08*sz,lz*sz+.16*sz); cl.rotation.x=Math.PI*.6; g.add(cl);
+
+  // ══════════════════════════════════
+  //  ראש — תנוחת תקיפה (נמוך קדימה)
+  // ══════════════════════════════════
+  const hG=new THREE.Group();
+  hG.position.set(0,1.62*sz,1.26*sz);hG.rotation.x=.28;g.add(hG);
+
+  // גולגולת רחבה ומרובעת
+  const skull=new THREE.Mesh(new THREE.BoxGeometry(.94*sz,.72*sz,.82*sz),fur);hG.add(skull);
+
+  // מצח כבד
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(.98*sz,.22*sz,.36*sz),fur);
+  brow.position.set(0,.38*sz,.36*sz);hG.add(brow);
+
+  // קמטי עצבנות מתחת למצח (V-shape)
+  [-1,1].forEach(s=>{
+    const wr=new THREE.Mesh(new THREE.BoxGeometry(.09*sz,.3*sz,.09*sz),sTan);
+    wr.position.set(s*.19*sz,.24*sz,.5*sz);wr.rotation.z=s*.65;hG.add(wr);
   });
-  // זנב
-  const tail=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.14*sz,.38*sz),fur);
-  tail.position.set(0,.96*sz,-.98*sz); g.add(tail);
+
+  // לחיים שריריות בולטות
+  [-1,1].forEach(s=>{
+    const jw=new THREE.Mesh(new THREE.BoxGeometry(.34*sz,.54*sz,.64*sz),sTan);
+    jw.position.set(s*.34*sz,-.1*sz,.06*sz);hG.add(jw);
+    const cb=new THREE.Mesh(new THREE.SphereGeometry(.15*sz,6,5),muscle);
+    cb.scale.set(1,.6,1.2);cb.position.set(s*.4*sz,.12*sz,.24*sz);hG.add(cb);
+  });
+
+  // ══════════════════════════════════
+  //  חרטום + פה + שיניים
+  // ══════════════════════════════════
+  // לסת עליונה
+  const jawUp=new THREE.Mesh(new THREE.BoxGeometry(.58*sz,.3*sz,.54*sz),fur);
+  jawUp.position.set(0,-.06*sz,.46*sz);hG.add(jawUp);
+  const lipUp=new THREE.Mesh(new THREE.BoxGeometry(.56*sz,.1*sz,.52*sz),fur);
+  lipUp.position.set(0,-.24*sz,.46*sz);hG.add(lipUp);
+
+  // לסת תחתונה — פתוחה
+  const jawLo=new THREE.Mesh(new THREE.BoxGeometry(.54*sz,.2*sz,.48*sz),fur);
+  jawLo.position.set(0,-.42*sz,.44*sz);jawLo.rotation.x=.24;hG.add(jawLo);
+  const lipLo=new THREE.Mesh(new THREE.BoxGeometry(.52*sz,.1*sz,.46*sz),fur);
+  lipLo.position.set(0,-.56*sz,.44*sz);lipLo.rotation.x=.24;hG.add(lipLo);
+
+  // לשון — גלויה
+  const tng=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.07*sz,.32*sz),tongue);
+  tng.position.set(0,-.5*sz,.52*sz);tng.rotation.x=.18;hG.add(tng);
+
+  // ── ניבים עליונים (tip points DOWN = rotation.x=PI) ──
+  [-1,1].forEach(s=>{
+    // ניב ראשי — ענק
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.095*sz,.42*sz,6),fangM);
+    f.position.set(s*.17*sz,-.16*sz,.7*sz);f.rotation.x=Math.PI;hG.add(f);
+    // קצה דם
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.11*sz,5),bloodM);
+    tip.position.set(0,-.22*sz,0);f.add(tip); // relative to fang center
+  });
+  // ── ניבים תחתונים (tip points UP = no rotation) ──
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.078*sz,.34*sz,6),fangM);
+    f.position.set(s*.17*sz,-.54*sz,.66*sz);hG.add(f); // default tip +Y ✓
+    const tip=new THREE.Mesh(new THREE.ConeGeometry(.032*sz,.09*sz,5),bloodM);
+    tip.position.set(0,.18*sz,0);f.add(tip);
+  });
+  // שיניים קטנות — שורה עליונה
+  [-2,-1,0,1,2].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.046*sz,.2*sz,4),fangM);
+    t.position.set(ti*.085*sz,-.2*sz,.72*sz);t.rotation.x=Math.PI;hG.add(t);
+  });
+  // שיניים קטנות — שורה תחתונה
+  [-2,-1,0,1,2].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.16*sz,4),fangM);
+    t.position.set(ti*.085*sz,-.52*sz,.68*sz);hG.add(t);
+  });
+
+  // אף שטוח
+  const nose=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.18*sz,.14*sz),ns);
+  nose.position.set(0,.04*sz,.7*sz);hG.add(nose);
+  [-1,1].forEach(s=>{
+    const nr=new THREE.Mesh(new THREE.SphereGeometry(.066*sz,5,4),ns);
+    nr.scale.set(1,.55,.7);nr.position.set(s*.09*sz,.04*sz,.76*sz);hG.add(nr);
+  });
+
+  // ══════════════════════════════════
+  //  צלקות — רחבות וגלויות
+  // ══════════════════════════════════
+  // צלקת X ראשית על הלסת
+  const sc1=new THREE.Mesh(new THREE.BoxGeometry(.13*sz,.54*sz,.1*sz),sRed);
+  sc1.position.set(.31*sz,-.04*sz,.38*sz);sc1.rotation.z=.44;hG.add(sc1);
+  const sc1b=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.4*sz,.1*sz),sRed);
+  sc1b.position.set(.19*sz,-.16*sz,.40*sz);sc1b.rotation.z=-.32;hG.add(sc1b);
+  // צלקת מצח — אופקית
+  const sc2=new THREE.Mesh(new THREE.BoxGeometry(.46*sz,.11*sz,.1*sz),sRed);
+  sc2.position.set(-.05*sz,.38*sz,.4*sz);sc2.rotation.z=-.16;hG.add(sc2);
+  // צלקת על הגשר
+  const sc3=new THREE.Mesh(new THREE.BoxGeometry(.09*sz,.3*sz,.09*sz),sRed);
+  sc3.position.set(.13*sz,-.04*sz,.62*sz);sc3.rotation.z=.22;hG.add(sc3);
+  // דמעת מתחת לעין — "קרב ישן"
+  [-1,1].forEach(s=>{
+    const tear=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.24*sz,.07*sz),sRed);
+    tear.position.set(s*.28*sz,-.02*sz,.48*sz);tear.rotation.z=s*.18;hG.add(tear);
+  });
+
+  // ══════════════════════════════════
+  //  עיניים — כתום-אש עם אישון מאונך
+  // ══════════════════════════════════
+  [-1,1].forEach(s=>{
+    const socket=new THREE.Mesh(new THREE.SphereGeometry(.18*sz,9,8),eyOuter);
+    socket.position.set(s*.3*sz,.16*sz,.42*sz);hG.add(socket);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.135*sz,8,7),eyIris);
+    iris.position.set(s*.3*sz,.16*sz,.46*sz);hG.add(iris);
+    const pup=new THREE.Mesh(new THREE.BoxGeometry(.046*sz,.15*sz,.07*sz),eyPup);
+    pup.position.set(s*.3*sz,.16*sz,.54*sz);hG.add(pup);
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.03*sz,4,4),eyHl);
+    hl.position.set(s*.025,.05*sz,.12*sz);iris.add(hl);
+    // טבעת זוהר סביב העין
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.16*sz,.022*sz,5,9),eyIris);
+    ring.rotation.x=Math.PI/2;ring.position.set(s*.3*sz,.16*sz,.38*sz);hG.add(ring);
+  });
+
+  // אוזניים קרועות
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.28*sz,.18*sz),fur);
+    ear.position.set(s*.44*sz,.44*sz,-.08*sz);ear.rotation.z=s*.24;hG.add(ear);
+    const torn=new THREE.Mesh(new THREE.ConeGeometry(.1*sz,.2*sz,4),sTan);
+    torn.position.set(s*.44*sz,.68*sz,-.08*sz);torn.rotation.z=s*.38;hG.add(torn);
+    const notch=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.11*sz,.13*sz),sRed);
+    notch.position.set(s*.54*sz,.52*sz,-.08*sz);hG.add(notch);
+  });
+
+  // ══════════════════════════════════
+  //  4 רגליים — עמודים
+  // ══════════════════════════════════
+  [[.32,.92,.56],[-.32,.92,.56],[.32,.92,-.58],[-.32,.92,-.58]].forEach(([lx,ly,lz])=>{
+    const lg=new THREE.Group();lg.position.set(lx*sz,ly*sz,lz*sz);g.add(lg);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.3*sz,.62*sz,.3*sz),fur);up.position.y=-.31*sz;lg.add(up);
+    const kn=new THREE.Mesh(new THREE.SphereGeometry(.18*sz,6,5),fur);kn.position.y=-.64*sz;lg.add(kn);
+    const lo=new THREE.Mesh(new THREE.BoxGeometry(.25*sz,.52*sz,.25*sz),fur);lo.position.y=-.94*sz;lg.add(lo);
+    const pw=new THREE.Mesh(new THREE.BoxGeometry(.4*sz,.17*sz,.44*sz),fur);pw.position.set(0,-1.22*sz,.07*sz);lg.add(pw);
+    // טפרים — 4 לכף
+    [-1.4,-.46,.46,1.4].forEach(cx=>{
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.055*sz,.22*sz,4),spikeM);
+      cl.rotation.x=Math.PI*.65;cl.position.set(cx*.09*sz,-1.28*sz,.22*sz);lg.add(cl);
+    });
+  });
+
+  // ══════════════════════════════════
+  //  זנב קצר
+  // ══════════════════════════════════
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(.1*sz,.06*sz,.3*sz,6),fur);
+  tail.position.set(0,.94*sz,-.96*sz);tail.rotation.x=.44;g.add(tail);
+
+  // ══════════════════════════════════
+  //  קולר ספייק מסיבי
+  // ══════════════════════════════════
+  const collarY=1.28*sz, collarZ=.84*sz, collarR=.44*sz;
+  const collar=new THREE.Mesh(new THREE.CylinderGeometry(collarR-.02*sz,collarR-.02*sz,.22*sz,16),
+    new THREE.MeshLambertMaterial({color:0x120e06,emissive:0x060402}));
+  collar.position.set(0,collarY,collarZ);g.add(collar);
+  // 12 קוצים מסביב — חיצוניים, orientation נכונה
+  for(let i=0;i<12;i++){
+    _radialSpike(collarR+.01*sz, collarY, collarZ, (i/12)*Math.PI*2, .44*sz, .075*sz, spikeM, g);
+  }
+
+  // ══════════════════════════════════
+  //  שרשרת — TorusGeometry לטבעות אמיתיות
+  // ══════════════════════════════════
+  // 2 שרשראות שמשתלשלות מהקולר
+  [-.18*sz,.18*sz].forEach(cx=>{
+    for(let i=0;i<6;i++){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(.092*sz,.026*sz,5,8),chainM);
+      ring.position.set(cx, collarY-.1*sz-i*.17*sz, collarZ+.06*sz);
+      ring.rotation.x=(i%2===0)?0:Math.PI*.5;
+      g.add(ring);
+    }
+  });
+
+  // ══════════════════════════════════
+  //  צלקות גוף — רחבות
+  // ══════════════════════════════════
+  // כתף שמאל
+  const bs1=new THREE.Mesh(new THREE.BoxGeometry(.13*sz,.46*sz,.12*sz),sRed);
+  bs1.position.set(.46*sz,1.06*sz,.28*sz);bs1.rotation.z=.42;g.add(bs1);
+  // ירך ימין
+  const bs2=new THREE.Mesh(new THREE.BoxGeometry(.11*sz,.42*sz,.11*sz),sRed);
+  bs2.position.set(-.44*sz,.98*sz,-.08*sz);bs2.rotation.z=-.36;g.add(bs2);
+  // חזה — פצע קרב
+  const bs3=new THREE.Mesh(new THREE.BoxGeometry(.42*sz,.12*sz,.1*sz),sRed);
+  bs3.position.set(0,.84*sz,1.08*sz);bs3.rotation.z=.28;g.add(bs3);
 
   g.position.y=.15*sz;
   return g;
 }
 
-// ── מודל כלב גיסות טיטאן — גרסה מהירה (~10 meshes) ──
+// ── מודל כלב גיסות טיטאן ──
 function mkTitanScout(sz){
   const g=new THREE.Group();
-  const fur  =new THREE.MeshLambertMaterial({color:0x100e0a,emissive:0x050402});
+  const fur   =new THREE.MeshLambertMaterial({color:0x100e0a,emissive:0x040302});
+  const sTan  =new THREE.MeshLambertMaterial({color:0x2e1208,emissive:0x080300});
+  const sRed  =new THREE.MeshLambertMaterial({color:0x882020,emissive:0x300808});
+  const eyM   =new THREE.MeshLambertMaterial({color:0xdd8800,emissive:0xaa5500});
+  const eyHl  =new THREE.MeshLambertMaterial({color:0xffffff,emissive:0x999999});
+  const ns    =new THREE.MeshLambertMaterial({color:0x050202});
+  const fangM =new THREE.MeshLambertMaterial({color:0xd8c89a,emissive:0x100e06});
   const armorM=new THREE.MeshLambertMaterial({color:0x0e1208,emissive:0x040604});
-  const eyM  =new THREE.MeshLambertMaterial({color:0xdd8800,emissive:0xaa5500});
-  const fangM=new THREE.MeshLambertMaterial({color:0xd8c89a,emissive:0x100e06});
   const spikeM=new THREE.MeshLambertMaterial({color:0x242014,emissive:0x080604});
-  const sRed =new THREE.MeshLambertMaterial({color:0x882020,emissive:0x300808});
 
   // גוף
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.66*sz,.56*sz,1.4*sz),fur);
-  body.position.y=.78*sz; g.add(body);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.64*sz,.54*sz,1.38*sz),fur);
+  body.position.y=.78*sz;g.add(body);
   // אפוד שריון
-  const vest=new THREE.Mesh(new THREE.BoxGeometry(.7*sz,.52*sz,.56*sz),armorM);
-  vest.position.set(0,.82*sz,.42*sz); g.add(vest);
-  // קוץ על האפוד
-  const spk=new THREE.Mesh(new THREE.ConeGeometry(.07*sz,.24*sz,4),spikeM);
-  spk.position.set(0,1.0*sz,.68*sz); g.add(spk);
-  // ראש
-  const head=new THREE.Mesh(new THREE.BoxGeometry(.74*sz,.66*sz,.72*sz),fur);
-  head.position.set(0,1.32*sz,.92*sz); head.rotation.x=.26; g.add(head);
-  // לסת
-  const jaw=new THREE.Mesh(new THREE.BoxGeometry(.58*sz,.2*sz,.5*sz),fur);
-  jaw.position.set(0,1.04*sz,1.22*sz); jaw.rotation.x=.2; g.add(jaw);
-  // עיניים (2)
+  const vest=new THREE.Mesh(new THREE.BoxGeometry(.68*sz,.5*sz,.58*sz),armorM);
+  vest.position.set(0,.82*sz,.4*sz);g.add(vest);
   [-1,1].forEach(s=>{
-    const eye=new THREE.Mesh(new THREE.SphereGeometry(.1*sz,6,5),eyM);
-    eye.position.set(s*.24*sz,1.38*sz,1.26*sz); g.add(eye);
+    const pk=new THREE.Mesh(new THREE.BoxGeometry(.14*sz,.13*sz,.07*sz),
+      new THREE.MeshLambertMaterial({color:0x080e08}));
+    pk.position.set(s*.2*sz,.72*sz,.66*sz);g.add(pk);
   });
-  // ניבים (2)
+  // קוץ מרכזי על האפוד
+  const vstSpk=new THREE.Mesh(new THREE.ConeGeometry(.06*sz,.22*sz,5),spikeM);
+  vstSpk.position.set(0,.98*sz,.68*sz);g.add(vstSpk); // tip +Y ✓
+
+  // צוואר
+  const nk=new THREE.Mesh(new THREE.CylinderGeometry(.19*sz,.24*sz,.32*sz,7),fur);
+  nk.position.set(0,1.0*sz,.58*sz);nk.rotation.x=-.3;g.add(nk);
+
+  // ראש — נמוך קדימה
+  const hG=new THREE.Group();
+  hG.position.set(0,1.28*sz,.9*sz);hG.rotation.x=.26;g.add(hG);
+  const skull=new THREE.Mesh(new THREE.BoxGeometry(.72*sz,.62*sz,.68*sz),fur);hG.add(skull);
+  const brow=new THREE.Mesh(new THREE.BoxGeometry(.74*sz,.18*sz,.28*sz),fur);
+  brow.position.set(0,.36*sz,.3*sz);hG.add(brow);
   [-1,1].forEach(s=>{
-    const f=new THREE.Mesh(new THREE.ConeGeometry(.076*sz,.32*sz,4),fangM);
-    f.position.set(s*.14*sz,1.02*sz,1.38*sz); f.rotation.x=Math.PI; g.add(f);
+    const wr=new THREE.Mesh(new THREE.BoxGeometry(.07*sz,.24*sz,.07*sz),sTan);
+    wr.position.set(s*.17*sz,.24*sz,.44*sz);wr.rotation.z=s*.6;hG.add(wr);
   });
+  [-1,1].forEach(s=>{
+    const jw=new THREE.Mesh(new THREE.BoxGeometry(.24*sz,.42*sz,.54*sz),sTan);
+    jw.position.set(s*.3*sz,-.1*sz,.04*sz);hG.add(jw);
+  });
+
+  // חרטום + שיניים
+  const jawUp=new THREE.Mesh(new THREE.BoxGeometry(.48*sz,.26*sz,.46*sz),fur);
+  jawUp.position.set(0,-.06*sz,.38*sz);hG.add(jawUp);
+  const jawLo=new THREE.Mesh(new THREE.BoxGeometry(.44*sz,.18*sz,.42*sz),fur);
+  jawLo.position.set(0,-.36*sz,.38*sz);jawLo.rotation.x=.2;hG.add(jawLo);
+
+  // ניבים עליונים (tip DOWN)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.072*sz,.3*sz,5),fangM);
+    f.position.set(s*.14*sz,-.14*sz,.6*sz);f.rotation.x=Math.PI;hG.add(f);
+  });
+  // ניבים תחתונים (tip UP)
+  [-1,1].forEach(s=>{
+    const f=new THREE.Mesh(new THREE.ConeGeometry(.058*sz,.24*sz,5),fangM);
+    f.position.set(s*.14*sz,-.44*sz,.56*sz);hG.add(f);
+  });
+  // שיניים קטנות
+  [-1,0,1].forEach(ti=>{
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.15*sz,4),fangM);
+    t.position.set(ti*.1*sz,-.16*sz,.62*sz);t.rotation.x=Math.PI;hG.add(t);
+    const tb=new THREE.Mesh(new THREE.ConeGeometry(.03*sz,.12*sz,4),fangM);
+    tb.position.set(ti*.1*sz,-.42*sz,.58*sz);hG.add(tb);
+  });
+
+  const nose=new THREE.Mesh(new THREE.SphereGeometry(.07*sz,6,5),ns);
+  nose.scale.set(1,.64,.74);nose.position.set(0,.04*sz,.58*sz);hG.add(nose);
+
   // צלקת
-  const sc=new THREE.Mesh(new THREE.BoxGeometry(.09*sz,.4*sz,.08*sz),sRed);
-  sc.position.set(.2*sz,1.26*sz,1.28*sz); sc.rotation.z=.34; g.add(sc);
-  // 4 רגליים
-  [[.3,.42,.56],[-.3,.42,.56],[.3,.42,-.58],[-.3,.42,-.58]].forEach(([lx,ly,lz])=>{
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(.24*sz,.84*sz,.24*sz),fur);
-    leg.position.set(lx*sz,ly*sz,lz*sz); g.add(leg);
+  const sc=new THREE.Mesh(new THREE.BoxGeometry(.1*sz,.38*sz,.08*sz),sRed);
+  sc.position.set(.22*sz,-.02*sz,.3*sz);sc.rotation.z=.34;hG.add(sc);
+
+  // עיניים ענבר
+  [-1,1].forEach(s=>{
+    const eye=new THREE.Mesh(new THREE.SphereGeometry(.1*sz,7,6),eyM);
+    eye.position.set(s*.25*sz,.14*sz,.36*sz);hG.add(eye);
+    const pup=new THREE.Mesh(new THREE.BoxGeometry(.032*sz,.1*sz,.06*sz),
+      new THREE.MeshLambertMaterial({color:0x000000}));
+    pup.position.set(s*.25*sz,.14*sz,.42*sz);hG.add(pup);
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.022*sz,4,4),eyHl);
+    hl.position.set(s*.022,.04*sz,.12*sz);eye.add(hl);
   });
+
+  // אוזניים
+  [-1,1].forEach(s=>{
+    const ear=new THREE.Mesh(new THREE.BoxGeometry(.12*sz,.22*sz,.14*sz),fur);
+    ear.position.set(s*.37*sz,.36*sz,-.05*sz);ear.rotation.z=s*.22;hG.add(ear);
+  });
+
+  // קסדה טקטית
+  const helm=new THREE.Mesh(new THREE.SphereGeometry(.4*sz,8,6,0,Math.PI*2,0,Math.PI*.54),armorM);
+  helm.scale.set(1,.88,.92);helm.position.set(0,.32*sz,0);hG.add(helm);
+
+  // רגליים
+  [[.24,.78,.4],[-.24,.78,.4],[.24,.78,-.44],[-.24,.78,-.44]].forEach(([lx,ly,lz])=>{
+    const lg=new THREE.Group();lg.position.set(lx*sz,ly*sz,lz*sz);g.add(lg);
+    const up=new THREE.Mesh(new THREE.BoxGeometry(.2*sz,.46*sz,.2*sz),fur);up.position.y=-.23*sz;lg.add(up);
+    const lo=new THREE.Mesh(new THREE.BoxGeometry(.16*sz,.38*sz,.16*sz),fur);lo.position.y=-.64*sz;lg.add(lo);
+    const pw=new THREE.Mesh(new THREE.BoxGeometry(.26*sz,.12*sz,.3*sz),fur);pw.position.set(0,-.88*sz,.03*sz);lg.add(pw);
+    [-1,1].forEach(cx=>{
+      const cl=new THREE.Mesh(new THREE.ConeGeometry(.038*sz,.13*sz,4),spikeM);
+      cl.rotation.x=Math.PI*.62;cl.position.set(cx*.08*sz,-.93*sz,.13*sz);lg.add(cl);
+    });
+  });
+
+  // קולר ספייק — orientation נכונה
+  const cY=1.0*sz, cZ=.58*sz, cR=.3*sz;
+  const collar=new THREE.Mesh(new THREE.CylinderGeometry(cR,cR,.14*sz,12),
+    new THREE.MeshLambertMaterial({color:0x150a04,emissive:0x040100}));
+  collar.position.set(0,cY,cZ);g.add(collar);
+  for(let i=0;i<8;i++){
+    _radialSpike(cR+.01*sz, cY, cZ, (i/8)*Math.PI*2, .26*sz, .05*sz, spikeM, g);
+  }
+
+  // זנב
+  const tl=new THREE.Mesh(new THREE.CylinderGeometry(.05*sz,.04*sz,.24*sz,5),fur);
+  tl.position.set(0,.78*sz,-.72*sz);tl.rotation.x=.5;g.add(tl);
 
   g.position.y=.13*sz;
   return g;
 }
-
-
-
 // ── spawn טיטאן הבוס ──
 function _spawnTitanBoss(frozen){
   if(G._titanEnemy&&G._titanEnemy.mesh)return;

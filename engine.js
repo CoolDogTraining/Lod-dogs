@@ -340,7 +340,7 @@ function init(){
   renderer.outputColorSpace = (THREE.SRGBColorSpace !== undefined)
     ? THREE.SRGBColorSpace
     : THREE.LinearEncoding; // fallback לגרסאות ישנות
-  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,110,320);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x4a90d0);scene.fog=new THREE.Fog(0x88bbdd,60,180);
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
@@ -5032,7 +5032,7 @@ function _initLODStatics(){
     obj._lodX=_tmpV.x;
     obj._lodZ=_tmpV.z;
     _lodStaticObjs.push(obj);
-    if(obj.castShadow)_lodShadowObjs.push(obj);
+    _lodShadowObjs.push(obj); // כל mesh סטטי — לvisibility culling + shadow
   });
 }
 
@@ -5049,8 +5049,7 @@ function _updLOD(){
     e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
   });
 
-  // ── כל 45 frames (~0.75s): shadow culling בלבד ──
-  // visibility culling לסטטיקה הוסר — גורם לקרקע להיעלם
+  // ── כל 45 frames (~0.75s): visibility + shadow culling ──
   if(_lodFrame%45!==0)return;
   if(!_lodStaticObjs)_initLODStatics();
 
@@ -5058,10 +5057,13 @@ function _updLOD(){
     if(obj._isCloud||obj._isGround)return;
     const dx=obj._lodX-px, dz=obj._lodZ-pz;
     const d2=dx*dx+dz*dz;
+    // visibility culling — מסתיר אובייקטים מעבר ל-fog (>190 יח')
+    // מספיק גדול כדי לא לחתוך דברים שרואים, קטן מספיק לחסוך GPU
+    obj.visible = d2 < 36100;  // 190*190
+    if(!obj.visible)return;
     const near=d2<3600;   // <60 יחידות
     obj.castShadow   = near && obj._canShadow!==false;
     obj.receiveShadow= d2<6400;  // <80
-    // matrixAutoUpdate נשאר true תמיד — כיבוי גורם לבאגי רינדור
   });
 }
 
