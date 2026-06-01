@@ -5061,12 +5061,7 @@ function _updLOD(){
     const near=d2<3600;   // <60 יחידות
     obj.castShadow   = near && obj._canShadow!==false;
     obj.receiveShadow= d2<6400;  // <80
-    // matrixAutoUpdate: כבה לאובייקטים רחוקים שלא זזים
-    if(d2>19600){        // >140
-      obj.matrixAutoUpdate=false;
-    } else if(!obj.matrixAutoUpdate){
-      obj.matrixAutoUpdate=true;
-    }
+    // matrixAutoUpdate נשאר true תמיד — כיבוי גורם לבאגי רינדור
   });
 }
 
