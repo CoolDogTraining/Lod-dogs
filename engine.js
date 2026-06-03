@@ -57,6 +57,7 @@ const G={
   _ch6FactoryVisited:false,
   _ch6FireDone:false,
   _bigFireRunning:false,
+  _fireIntervalDead:false,
   _ch8ZippoForced:false,
 };
 
@@ -5021,8 +5022,10 @@ function _initLODStatics(){
   const _dynRoots=new Set();
   const _markDyn=(arr)=>arr.forEach(e=>{if(e.mesh)_dynRoots.add(e.mesh);});
   _markDyn(G.enemies);_markDyn(G.bosses);_markDyn(G.npcs);
+  // סמן PB ואת כל ה-subtree שלו כדינמי (כולל dogModel ו-meshes פנימיים)
+  if(PB)_dynRoots.add(PB);
   scene.traverse(obj=>{
-    if(!obj.isMesh||obj===PB||obj.parent===PB)return;
+    if(!obj.isMesh)return;
     // דלג על meshes דינמיים ועל כל ילדיהם
     let p=obj;while(p){if(_dynRoots.has(p))return;p=p.parent;}
     if(obj._isCloud||obj._isGround){
@@ -8145,6 +8148,7 @@ function _buildBurntRuins(BX,BZ){
 function _startBigFire(){
   if(G._bigFireRunning)return;
   G._bigFireRunning=true;
+  G._fireIntervalDead=false;
   const BX=25,BZ=-125;
   const bld=G._labBldMeshes||{};
   const mat=G._labBldMat||{};
@@ -8312,6 +8316,7 @@ function _startBigFire(){
     // ── סוף — שאריות שרופות + cutscene ──
     if(_t>=10.5&&!_done){
       _done=true;clearInterval(fireInterval);
+      G._fireIntervalDead=true;
       fireLights.forEach(l=>scene.remove(l));scene.remove(smokeL);
       innerGlow.visible=false;outerGlow.visible=false;
       // הסתר את שברי הבניין המפורקים
@@ -11364,6 +11369,7 @@ function updCh8(dt){
           _chargeT:0,_chargeReady:false,_chargeActive:false,
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
+      _lodStaticObjs=null; // רענן LOD אחרי spawn חיילים חדשים
     }
 
     // ── בדוק ניקוי ──
@@ -11395,6 +11401,7 @@ function updCh8(dt){
           _chargeT:0,_chargeReady:false,_chargeActive:false,
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
+      _lodStaticObjs=null; // רענן LOD אחרי spawn שומרי מחסן
     }
     // trigger כניסה למחסן — zone-based
     const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
@@ -11455,6 +11462,7 @@ function updCh8(dt){
             _chargeT:0,_chargeReady:false,_chargeActive:false,
             _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
         });
+        _lodStaticObjs=null; // רענן LOD אחרי spawn גל תקיפה
         showN('⚠️ APEX תוקפים את הבסיס! הגן על הבסיס!');
         haptic([100,30,100]);
       }

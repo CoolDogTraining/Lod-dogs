@@ -638,8 +638,7 @@ const MISSIONS=[
    hint:'ליד בסיס כלבי לוד',
    targetFn:()=>({x:105,z:10}),
    unlock:()=>{
-     forceDog('zippo','זיפו יוצא לסיור');
-     setTimeout(()=>showCut('ch8_z18_first',()=>{}),1200);
+     // forceDog ו-cutscene מנוהלים ע"י updCh8 — אין לעשות כאן כלום
    }},
 
   // 45 — קרב ללא זיפו + Z-18 אוחז במומו — בבסיס
