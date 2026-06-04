@@ -8152,8 +8152,6 @@ function _startBigFire(){
   const BX=25,BZ=-125;
   const bld=G._labBldMeshes||{};
   const mat=G._labBldMat||{};
-  const bld=G._labBldMeshes||{};
-  const mat=G._labBldMat||{};
 
   // ── 4 אורות אש ממוקמים סביב הבניין ──
   const fireLights=[];
