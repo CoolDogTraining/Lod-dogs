@@ -5026,8 +5026,8 @@ function _initLODStatics(){
   if(PB)_dynRoots.add(PB);
   scene.traverse(obj=>{
     if(!obj.isMesh)return;
-    // דלג על meshes דינמיים ועל כל ילדיהם
-    let p=obj;while(p){if(_dynRoots.has(p))return;p=p.parent;}
+    // דלג על meshes דינמיים ועל כל ילדיהם, וגם על _lodExempt
+    let p=obj;while(p){if(_dynRoots.has(p)||p._lodExempt)return;p=p.parent;}
     if(obj._isCloud||obj._isGround){
       obj.visible=true;
       if(obj._isGround){obj.receiveShadow=true;obj.castShadow=false;}
@@ -8165,6 +8165,7 @@ function _startBigFire(){
   const mkGlow=(r,col,op)=>{
     const m=new THREE.Mesh(new THREE.SphereGeometry(r,12,8),
       new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op,depthWrite:false}));
+    m._lodExempt=true; // לא תגע בו LOD
     scene.add(m);return m;
   };
   const innerGlow=mkGlow(8,0xff4400,0);   // זוהר כתום פנימי
@@ -8318,7 +8319,8 @@ function _startBigFire(){
       _done=true;clearInterval(fireInterval);
       G._fireIntervalDead=true;
       fireLights.forEach(l=>scene.remove(l));scene.remove(smokeL);
-      innerGlow.visible=false;outerGlow.visible=false;
+      scene.remove(innerGlow);scene.remove(outerGlow);
+      innerGlow.geometry.dispose();outerGlow.geometry.dispose();
       // הסתר את שברי הבניין המפורקים
       Object.values(bld).forEach(m=>{if(m&&m.visible!==undefined)m.visible=false;});
       // ── שאריות שרופות סטטיות ──
@@ -10768,6 +10770,7 @@ function mkZ18Model(){
   g._darkFlameT=0;
 
   g.castShadow=true;
+  g._lodExempt=true; // פטור מ-LOD — Z18 תמיד נראה
   return g;
 }
 
