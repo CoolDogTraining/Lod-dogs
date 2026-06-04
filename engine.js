@@ -8152,6 +8152,8 @@ function _startBigFire(){
   const BX=25,BZ=-125;
   const bld=G._labBldMeshes||{};
   const mat=G._labBldMat||{};
+  const bld=G._labBldMeshes||{};
+  const mat=G._labBldMat||{};
 
   // ── 4 אורות אש ממוקמים סביב הבניין ──
   const fireLights=[];
@@ -10617,13 +10619,13 @@ function updCh7(dt){
 // ════════════════════════════════════════════════
 function mkZ18Model(){
   const S=1.18; // גדול מזיפו ב-18%
-  const BK=new THREE.MeshLambertMaterial({color:0x04040a,emissive:0x080510});
-  const DK=new THREE.MeshLambertMaterial({color:0x020208,emissive:0x040308});
-  const ROSE=new THREE.MeshLambertMaterial({color:0x2a0a1e,emissive:0x1a0612}); // ורוד-כהה
-  const ROSEHI=new THREE.MeshLambertMaterial({color:0x3a0a28,emissive:0x280818}); // הדגשות ורוד
-  const AR=new THREE.MeshLambertMaterial({color:0x0e0818,emissive:0x0a0512}); // שריון כהה
-  const EY=new THREE.MeshBasicMaterial({color:0xcc0055}); // עיניים ארגמן-ורוד
-  const EYG=new THREE.MeshBasicMaterial({color:0xff2266,transparent:true,opacity:0.7});
+  const BK=new THREE.MeshLambertMaterial({color:0x18141e,emissive:0x100c16});
+  const DK=new THREE.MeshLambertMaterial({color:0x0e0a14,emissive:0x090712});
+  const ROSE=new THREE.MeshLambertMaterial({color:0x5a1a3e,emissive:0x3a0f28}); // ורוד-כהה — בהיר יותר
+  const ROSEHI=new THREE.MeshLambertMaterial({color:0x7a2050,emissive:0x500f36}); // הדגשות ורוד — בהיר יותר
+  const AR=new THREE.MeshLambertMaterial({color:0x221630,emissive:0x160f22}); // שריון כהה
+  const EY=new THREE.MeshBasicMaterial({color:0xff1166}); // עיניים ארגמן-ורוד
+  const EYG=new THREE.MeshBasicMaterial({color:0xff3377,transparent:true,opacity:0.85});
 
   const g=new THREE.Group();
   const _m=(geo,mat,x,y,z,rx,ry,rz)=>{
@@ -10758,8 +10760,11 @@ function mkZ18Model(){
   g._tail=tG;
 
   // ── הילה ורודה-כהה — PointLight ──
-  const aura=new THREE.PointLight(0xcc0066,3.5,10);
+  const aura=new THREE.PointLight(0xcc0066,6.0,14);
   aura.position.set(0,1.2*S,0);g.add(aura);g._aura=aura;
+  // אור fill — מאיר את הגוף מלמטה כדי שיהיה נראה
+  const fill=new THREE.PointLight(0x330022,3.0,8);
+  fill.position.set(0,0.5*S,0.5*S);g.add(fill);
 
   // ── Dark Flame particles (placeholder — animated in updZ18) ──
   g._darkFlameT=0;
@@ -10898,6 +10903,7 @@ function _triggerZ18GrabScene(){
     showCut('ch8_zippo_returns',()=>{
       setMission(46);
       buildZ18();
+      _lodStaticObjs=null; // רענן LOD — Z18 חדש ב-scene
     });
   },GRAB_DUR);
 }
@@ -11124,6 +11130,8 @@ function buildZ18(){
     _hitT:0,_hitCD:0
   };
   G._z18Enemy=_z18Enemy;
+  // הוסף ל-G.bosses כדי ש-LOD לא יסתיר את המודל
+  G.bosses.push(_z18Enemy);
 }
 
 // ════════════════════════════════════════════════
