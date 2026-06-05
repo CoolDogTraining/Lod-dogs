@@ -5054,7 +5054,9 @@ function _updLOD(){
     e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
   });
 
-  // ── כל 45 frames (~0.75s): visibility + shadow culling ──
+  // ── כל 45 frames (~0.75s): shadow culling בלבד ──
+  // visibility culling הוסר — גרם להסתרת אובייקטים דינמיים (אש, Z18, SuperSoldiers)
+  // Three.js עושה frustum culling אוטומטית
   if(_lodFrame%45!==0)return;
   if(!_lodStaticObjs)_initLODStatics();
 
@@ -5062,10 +5064,6 @@ function _updLOD(){
     if(obj._isCloud||obj._isGround)return;
     const dx=obj._lodX-px, dz=obj._lodZ-pz;
     const d2=dx*dx+dz*dz;
-    // visibility culling — מסתיר אובייקטים מעבר ל-fog (>190 יח')
-    // מספיק גדול כדי לא לחתוך דברים שרואים, קטן מספיק לחסוך GPU
-    obj.visible = d2 < 36100;  // 190*190
-    if(!obj.visible)return;
     const near=d2<3600;   // <60 יחידות
     obj.castShadow   = near && obj._canShadow!==false;
     obj.receiveShadow= d2<6400;  // <80
