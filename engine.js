@@ -64,6 +64,9 @@ const G={
 let scene,camera,renderer,clock,mmCtx;
 let PB,dogModel,dogTail,dogLegs=[];
 const blds=[];
+// Zone Groups — כל אזור עטוף ב-Group. _updLOD מציג רק zones קרובים לשחקן.
+const _zoneGroups=[];  // [{group, cx, cz, r}]
+let _currentZoneGroup=null; // ה-Group הפעיל כרגע ב-buildWorld
 
 // ════════════════════════════════════════════════
 // SKILLS STATE — כישורים ייחודיים לכל כלב
@@ -347,7 +350,11 @@ function init(){
   camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,300);
   clock=new THREE.Clock();
   mmCtx=document.getElementById('mm').getContext('2d');
-  buildLights();buildSky();buildWorld();_initLampPool();buildCityHall();buildLabExterior();buildHospitalExterior();buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
+  buildLights();buildSky();buildWorld();_initLampPool();
+  _buildZoned(buildCityHall,    80,  -80, 100); // עיריית לוד
+  _buildZoned(buildLabExterior, 25, -125,  90); // מעבדה
+  _buildZoned(buildHospitalExterior, 62, -118, 90); // בית חולים
+  buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
   buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();
   _buildPoolOfRest();
   setupInput();
@@ -471,6 +478,21 @@ function d2sq(ax,az,bx,bz){return (ax-bx)**2+(az-bz)**2;}
 
 // ════════════════════════════════════════════════
 // WORLD — compact Lod (~150x150 units)
+// ════════════════════════════════════════════════
+// ZONE GROUP HELPERS — visibility streaming לפי מרחק
+// ════════════════════════════════════════════════
+// _buildZoned: מריץ פונקציית בנייה בתוך Group. Group מוסתר/מוצג לפי מרחק שחקן.
+function _buildZoned(buildFn, cx, cz, r){
+  const g=new THREE.Group();
+  scene.add(g);
+  _zoneGroups.push({group:g, cx, cz, r});
+  // Monkey-patch זמני של scene.add כדי לנתב ל-group
+  const origAdd=scene.add.bind(scene);
+  scene.add=function(obj){ g.add(obj); };
+  try{ buildFn(); } finally{ scene.add=origAdd; }
+}
+
+// ════════════════════════════════════════════════
 // לוד אמיתית: רחוב הרצל E-W, שדרות ירושלים N-S
 // צפון: רמת אשכול | דרום: גני אביב | מערב: תחנה | מזרח: עיר עתיקה
 // ════════════════════════════════════════════════
@@ -547,36 +569,36 @@ function buildWorld(){
   // בלוק [x=40..80, z=-100..-50]
   bldBlock(60,-75,14,11,8);
 
-  // === רמת אשכול — צפון ===
-  // כבישים N-S ב-x=-40,0,40 (רוחב 12) → לא לבנות בטווח x=[-46..46] סביב כל ציר
-  // בין כבישים: x ≈ -60 (בין -80 ל--40), x ≈ -20 (בין -40 ל-0), x ≈ 20 (0 ל-40), x ≈ 60 (40 ל-80)
-  for(let bx=-80;bx<=80;bx+=48)for(let bz=-100;bz>=-160;bz-=48){
-    // הימנע מבנייה על כבישים N-S (x=-40,0,40 ±8) ומכביש E-W (z=-50 ±8)
-    if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
-    if(Math.abs(bz+50)<10)continue;
-    bldHouse(bx,bz,4+Math.random()*2.5);
-  }
+  // === רמת אשכול — צפון (zone: מרכז 0,-130, r=110) ===
+  _buildZoned(()=>{
+    for(let bx=-80;bx<=80;bx+=48)for(let bz=-100;bz>=-160;bz-=48){
+      if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
+      if(Math.abs(bz+50)<10)continue;
+      bldHouse(bx,bz,4+Math.random()*2.5);
+    }
+  }, 0, -130, 110);
 
-  // === גני אביב — דרום ===
-  for(let bx=-80;bx<=80;bx+=48)for(let bz=85;bz<=155;bz+=48){
-    if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
-    // הימנע מכביש E-W z=50 ±8
-    if(Math.abs(bz-50)<10)continue;
-    // פנה מקום לבית הכנסת ב-(72,96) ולשדרה ב-x=72
-    if(Math.abs(bx-64)<22&&Math.abs(bz-96)<28)continue;
-    if(Math.abs(bx-64)<14&&Math.abs(bz-80)<14)continue;
-    bldHouse(bx,bz,3.5+Math.random()*2);}
+  // === גני אביב — דרום (zone: מרכז 0,120, r=100) ===
+  _buildZoned(()=>{
+    for(let bx=-80;bx<=80;bx+=48)for(let bz=85;bz<=155;bz+=48){
+      if(Math.abs(bx)<16||Math.abs(bx+40)<16||Math.abs(bx-40)<16)continue;
+      if(Math.abs(bz-50)<10)continue;
+      if(Math.abs(bx-64)<22&&Math.abs(bz-96)<28)continue;
+      if(Math.abs(bx-64)<14&&Math.abs(bz-80)<14)continue;
+      bldHouse(bx,bz,3.5+Math.random()*2);
+    }
+  }, 0, 120, 100);
 
-  // === מקומות מפתח ===
-  bldPark(80,-22);          // גן ציבורי — מזרח מרכז
-  bldMarket(-80,55);        // שוק לוד — SW
-  bldStation(-5,-155);      // תחנת רכבת — מערב/דרום
-  bldMosque(-55,75);        // מסגד ג'מעה — עיר עתיקה
-  bldSynagogue(72,96);    // בית כנסת גדול — גני אביב דרום-מזרח
+  // === מקומות מפתח — עטופים ב-Zone Groups ===
+  _buildZoned(()=>bldPark(80,-22),          80, -22, 80);
+  _buildZoned(()=>bldMarket(-80,55),       -80,  55, 90);
+  _buildZoned(()=>bldStation(-5,-155),      -5,-155, 90);
+  _buildZoned(()=>bldMosque(-55,75),       -55,  75, 90);
+  _buildZoned(()=>bldSynagogue(72,96),      72,  96, 90);
   mkRd(72,71,12,60,true); // שדרות בית הכנסת — N-S כניסה
-  bldBigMosque();           // המסגד הגדול — פרק ב׳
-  buildDogBase();            // בסיס כלבי לוד — פרק ו׳
-  bldBallsSquare(40,0);    // כיכר הכדורים — צומת רחוב הרצל/הדקל
+  _buildZoned(bldBigMosque,                -30,  30, 80);
+  buildDogBase();            // בסיס כלבי לוד — פרק ו׳ (קטן, לא צריך zone)
+  bldBallsSquare(40,0);    // כיכר הכדורים — תמיד במרכז
 
   // שטחי כיבוש
   addTerr(40,0,18,'כיכר הכדורים');
@@ -590,7 +612,10 @@ function buildWorld(){
   addTerr(72,96,18,'שכונת גני אביב — בית הכנסת');
   addTerr(228,-152,50,'אזור תעשייה APEX');
   addStreetDeco();
-  buildIndustrialZone();
+
+  // ── Zone wrapping — פונקציות בנייה גדולות עטופות ב-Zone Groups ──
+  // כל zone מוצג/מוסתר לפי מרחק השחקן ב-_updLOD
+  _buildZoned(buildIndustrialZone, 228, -152, 160); // אזור תעשייה — רחוק ורב-meshes
 }
 
 function _mkConcreteTexture(sz,dark){
@@ -5054,11 +5079,17 @@ function _updLOD(){
     e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
   });
 
-  // ── כל 45 frames (~0.75s): shadow culling בלבד ──
-  // visibility culling הוסר — גרם להסתרת אובייקטים דינמיים (אש, Z18, SuperSoldiers)
-  // Three.js עושה frustum culling אוטומטית
+  // ── כל 45 frames (~0.75s): shadow culling + zone group visibility ──
+  // visibility culling על objects בודדים הוסר — גרם להסתרת Z18/אש/SuperSoldiers
+  // במקום: מציגים/מסתירים Groups שלמים לפי מרחק מרכז ה-zone
   if(_lodFrame%45!==0)return;
   if(!_lodStaticObjs)_initLODStatics();
+
+  // Zone Groups — הצג רק zones שהשחקן קרוב אליהם
+  _zoneGroups.forEach(z=>{
+    const dx=z.cx-px, dz=z.cz-pz;
+    z.group.visible = (dx*dx+dz*dz) < z.r*z.r;
+  });
 
   _lodShadowObjs.forEach(obj=>{
     if(obj._isCloud||obj._isGround)return;
