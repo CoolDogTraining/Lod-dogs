@@ -596,7 +596,7 @@ function buildWorld(){
   _buildZoned(()=>bldMosque(-55,75),       -55,  75, 90);
   _buildZoned(()=>bldSynagogue(72,96),      72,  96, 90);
   mkRd(72,71,12,60,true); // שדרות בית הכנסת — N-S כניסה
-  _buildZoned(bldBigMosque,                -30,  30, 80);
+  _buildZoned(bldBigMosque,                -65, -100, 100); // מסגד גדול — מיקום אמיתי
   buildDogBase();            // בסיס כלבי לוד — פרק ו׳ (קטן, לא צריך zone)
   bldBallsSquare(40,0);    // כיכר הכדורים — תמיד במרכז
 
@@ -7764,8 +7764,10 @@ function updCh3Entities(dt){
       gd.patrol=(gd.patrol||0)+dt;
       gd.mesh.rotation.y+=dt*.4;
       const dd=d2(gd.x,gd.z,px,pz);
-      if(dd<3&&G.atkCD<=0){
-        const dmg=15*(1+G.mission*.02);dmgPlayer(dmg);G.atkCD=1.2;
+      if(!gd._atkT)gd._atkT=0;
+      gd._atkT=Math.max(0,gd._atkT-dt);
+      if(dd<3&&gd._atkT<=0){
+        const dmg=15*(1+G.mission*.02);dmgPlayer(dmg);gd._atkT=1.4;
       }
       // ניתן להכנעה
       if(dd<3.5&&G.atkCD<=0){
@@ -7789,9 +7791,11 @@ function updCh3Entities(dt){
       // פלטו מאיץ
       b._spd=1.8;
     }
-    // תקיפת שחקן
-    if(dd<3&&G.atkCD<=0){
-      const dmg=b.phase===2?28:18;dmgPlayer(dmg);G.atkCD=1.0;haptic([40,20]);
+    // תקיפת שחקן — cooldown נפרד לפלטו
+    if(!b._atkT)b._atkT=0;
+    b._atkT=Math.max(0,b._atkT-dt);
+    if(dd<3&&b._atkT<=0){
+      const dmg=b.phase===2?28:18;dmgPlayer(dmg);b._atkT=1.0;haptic([40,20]);
     }
     // השחקן תוקף
     if(dd<4&&G.atkCD<=0){
@@ -10024,15 +10028,12 @@ const SHAFIYA_X=62, SHAFIYA_Z=-118;
 // בניית חייל-על (Super Soldier)
 // ────────────────────────────────────────────────
 function mkSuperSoldier(col){
-  // ── סגנון זיפו על סטרואידים — כלב שחור שריר עם שיפורי מעבדה ──
+  // גרסה מופחתת — ~15 meshes במקום 49 (למניעת WebGL overflow)
   const c=col||0x0d0d12;
   const BK=new THREE.MeshLambertMaterial({color:c,emissive:0x050508});
   const DK=new THREE.MeshLambertMaterial({color:0x080810,emissive:0x020205});
-  const MT=new THREE.MeshLambertMaterial({color:0x1a1a28,emissive:0x060608});
-  const SC=new THREE.MeshLambertMaterial({color:0x2a1820,emissive:0x080405}); // צלקות
-  const EY=new THREE.MeshBasicMaterial({color:0xff0000}); // עיניים אדומות
-  const EYG=new THREE.MeshBasicMaterial({color:0xff4400}); // זוהר עין
-  const IMPL=new THREE.MeshLambertMaterial({color:0x222240,emissive:0x080818}); // שתלים
+  const EY=new THREE.MeshBasicMaterial({color:0xff0000});
+  const IMPL=new THREE.MeshLambertMaterial({color:0x222240,emissive:0x080818});
 
   const g=new THREE.Group();
   const _m=(geo,mat,x,y,z,rx,ry,rz)=>{
@@ -10042,121 +10043,49 @@ function mkSuperSoldier(col){
     m.castShadow=true;g.add(m);return m;
   };
 
-  // ── גוף — קופסתי, שריר, נמוך קדימה ──
-  _m(new THREE.BoxGeometry(0.72,0.68,1.2), BK, 0,0.62,0.05);
-  // חזה רחב
-  _m(new THREE.BoxGeometry(0.8,0.5,0.55), BK, 0,0.72,0.5);
-  // אחורי גדול
-  _m(new THREE.BoxGeometry(0.68,0.52,0.42), DK, 0,0.58,-0.48);
-  // בטן — צלעות מוכרות
-  _m(new THREE.BoxGeometry(0.62,0.3,0.38), MT, 0,0.4,0.28);
-  // צלעות נראות — קווים על הגוף
-  [-0.14,0,0.14].forEach(oy=>{
-    _m(new THREE.BoxGeometry(0.66,0.06,0.06),SC,0,0.42+oy,0.22);
-  });
-
-  // ── צוואר שריר ──
-  _m(new THREE.BoxGeometry(0.44,0.38,0.44), BK, 0,1.1,0.38);
-  // ציוד מעבדה על הצוואר — קולר מתכתי
-  _m(new THREE.BoxGeometry(0.52,0.12,0.52), IMPL, 0,1.22,0.38);
-  // LED על הקולר
-  const led=_m(new THREE.BoxGeometry(0.1,0.06,0.06),new THREE.MeshBasicMaterial({color:0xff2200}),0,1.22,0.65);
+  // גוף ראשי — קופסתי ושריר
+  _m(new THREE.BoxGeometry(0.72,0.68,1.2), BK, 0,0.62,0);
+  // חזה
+  _m(new THREE.BoxGeometry(0.8,0.5,0.5), BK, 0,0.72,0.45);
+  // צוואר
+  _m(new THREE.BoxGeometry(0.44,0.35,0.44), BK, 0,1.1,0.35);
+  // קולר מתכתי
+  const led=_m(new THREE.BoxGeometry(0.52,0.1,0.52), IMPL, 0,1.22,0.35);
   g._led=led;
 
-  // ── ראש — כמו זיפו אבל גדול ומשופר ──
+  // ראש
   const hG=new THREE.Group();
-  hG.position.set(0,1.38,0.62);hG.rotation.x=0.14;g.add(hG);
-  // גולגולת
-  const sk=_mInG(new THREE.BoxGeometry(0.56,0.52,0.62),BK,hG,0,0,0);
-  // לחיים ושרירי לסת
-  _mInG(new THREE.BoxGeometry(0.18,0.28,0.32),DK,hG,-0.26,-0.04,0.08);
-  _mInG(new THREE.BoxGeometry(0.18,0.28,0.32),DK,hG,0.26,-0.04,0.08);
-  // מצח שופע קדימה
-  _mInG(new THREE.BoxGeometry(0.48,0.2,0.24),BK,hG,0,0.22,0.22);
-  // לוט — מוארך
-  _mInG(new THREE.BoxGeometry(0.3,0.22,0.38),MT,hG,0,-0.14,0.28);
-  // אף שחור
-  const ns=_mInG(new THREE.Mesh?new THREE.SphereGeometry(0.1,8,8):new THREE.SphereGeometry(0.1,8,8),DK,hG,0,0.02,0.34);
-  _mInG(new THREE.BoxGeometry(0.22,0.04,0.05),DK,hG,0,-0.1,0.33);
+  hG.position.set(0,1.38,0.58);hG.rotation.x=0.14;g.add(hG);
+  const sk=new THREE.Mesh(new THREE.BoxGeometry(0.56,0.52,0.58),BK);
+  sk.castShadow=true;hG.add(sk);
+  // לוט
+  const sn=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.2,0.32),DK);
+  sn.position.set(0,-0.12,0.26);hG.add(sn);
 
-  // ── עיניים אדומות זוהרות ──
+  // עיניים אדומות
   [-1,1].forEach(sd=>{
-    const eG=new THREE.Group();
-    eG.position.set(sd*0.16,0.1,0.28);hG.add(eG);
-    // בסיס עין
-    const eyeBase=new THREE.Mesh(new THREE.SphereGeometry(0.082,10,10),
-      new THREE.MeshLambertMaterial({color:0x0a0005,emissive:0x050003}));
-    eyeBase.castShadow=true;eG.add(eyeBase);
-    // אישון אדום
-    const pupil=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8),EY);
-    pupil.position.z=0.055;eG.add(pupil);
-    // זוהר
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(0.065,8,8),EYG);
-    glow.position.z=0.044;eG.add(glow);
-    if(sd===-1)g._eyeL=pupil;else g._eyeR=pupil;
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6),EY);
+    p.position.set(sd*0.16,0.08,0.28);hG.add(p);
+    if(sd===-1)g._eyeL=p;else g._eyeR=p;
   });
 
-  // ── אוזניים — שטוחות לאחור כמו זיפו בזעם ──
+  // כתפיים + זרועות (מפושטות)
   [-1,1].forEach(sd=>{
-    const eG=new THREE.Group();
-    eG.position.set(sd*0.24,0.22,-0.12);
-    eG.rotation.z=sd*0.25;eG.rotation.x=-0.6;hG.add(eG);
-    _mInG(new THREE.BoxGeometry(0.14,0.28,0.1),BK,eG,0,0.14,0);
-  });
-
-  // ── שתל מעבדה על הגולגולת — אלמנט sci-fi ──
-  _mInG(new THREE.BoxGeometry(0.18,0.08,0.22),IMPL,hG,0,0.3,-0.1);
-  _mInG(new THREE.BoxGeometry(0.06,0.12,0.06),IMPL,hG,-0.06,0.38,-0.08);
-  _mInG(new THREE.BoxGeometry(0.06,0.12,0.06),IMPL,hG,0.06,0.38,-0.08);
-  // LED אדום על הגולגולת
-  _mInG(new THREE.Mesh?
-    new THREE.BoxGeometry(0.04,0.04,0.04):new THREE.BoxGeometry(0.04,0.04,0.04),
-    new THREE.MeshBasicMaterial({color:0xff0000}),hG,0,0.46,-0.06);
-
-  // ── כתפיים — מאסיביות ── 
-  [-1,1].forEach(sd=>{
-    // כתף
-    _m(new THREE.BoxGeometry(0.32,0.32,0.5),BK,sd*0.54,0.82,0.28);
-    // זרוע קדמית
-    _m(new THREE.BoxGeometry(0.24,0.52,0.22),DK,sd*0.6,0.52,0.35);
+    _m(new THREE.BoxGeometry(0.28,0.7,0.22), DK, sd*0.56,0.62,0.38);
     // רגל קדמית
-    _m(new THREE.BoxGeometry(0.2,0.48,0.2),MT,sd*0.56,0.14,0.42);
-    // כפה עם טפרים
-    _m(new THREE.BoxGeometry(0.22,0.16,0.26),BK,sd*0.54,-0.08,0.48);
-    [-0.08,0,0.08].forEach(cx=>{
-      _m(new THREE.BoxGeometry(0.04,0.12,0.04),DK,sd*0.54+cx,-0.2,0.56);
-    });
-    // שתל כתף — ברגים מוארים
-    _m(new THREE.BoxGeometry(0.28,0.14,0.18),IMPL,sd*0.56,0.9,0.22);
-    _m(new THREE.CylinderGeometry(0.03,0.03,0.1,6),IMPL,sd*0.6,0.88,0.22);
+    _m(new THREE.BoxGeometry(0.22,0.44,0.22), BK, sd*0.52,0.2,-0.3);
   });
 
-  // ── רגליים אחוריות — עבות ──
+  // רגליים אחוריות
   [-1,1].forEach(sd=>{
-    _m(new THREE.BoxGeometry(0.28,0.44,0.3),BK,sd*0.28,-0.02,-0.3);
-    _m(new THREE.BoxGeometry(0.24,0.32,0.28),DK,sd*0.26,-0.38,-0.22);
-    // כף רגל
-    _m(new THREE.BoxGeometry(0.24,0.14,0.36),BK,sd*0.25,-0.6,-0.14);
-    [-0.08,0,0.08].forEach(cx=>{
-      _m(new THREE.BoxGeometry(0.04,0.1,0.04),DK,sd*0.25+cx,-0.68,-0.02);
-    });
+    _m(new THREE.BoxGeometry(0.26,0.52,0.28), BK, sd*0.26,0.08,-0.28);
   });
 
-  // ── זנב קצר ושריר ──
-  const tG=new THREE.Group();tG.position.set(0,0.72,-0.62);tG.rotation.x=0.6;g.add(tG);
-  new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.07,0.28,8),BK);
-  const t1=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.07,0.28,8),BK);
-  t1.position.y=0.14;t1.castShadow=true;tG.add(t1);
+  // זנב
+  const tG=new THREE.Group();tG.position.set(0,0.72,-0.6);tG.rotation.x=0.6;g.add(tG);
+  const t1=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.06,0.25,6),BK);
+  t1.position.y=0.12;t1.castShadow=true;tG.add(t1);
   g._tail=tG;
-
-  // ── צלקות ניסוי על הגוף ──
-  [[0.28,0.65,0.58],[-0.3,0.45,0.52],[0.1,0.38,0.6]].forEach(([sx,sy,sz])=>{
-    if(isNaN(sx))return;
-    _m(new THREE.BoxGeometry(0.04,0.35,0.04),SC,sx,sy,sz);
-  });
-  [[-0.28,0.65,0.58],[0.1,0.38,0.6]].forEach(([sx,sy,sz])=>{
-    _m(new THREE.BoxGeometry(0.04,0.35,0.04),SC,sx,sy,sz);
-  });
 
   g.castShadow=true;
   return g;

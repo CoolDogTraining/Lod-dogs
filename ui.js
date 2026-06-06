@@ -2096,11 +2096,7 @@ function updTitan(dt){
       setTimeout(()=>{
         G._reksCollapsing=true;
         G._reksCollapseT=0;
-        // overlay מלא — אי אפשר לפספס
-        const ov=document.createElement('div');
-        ov.id='rex-heart-ov';
-        ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0);z-index:8500;pointer-events:none;transition:background 1.2s;';
-        document.body.appendChild(ov);
+        // הבהובים אדומים בלבד — ללא החשכת מסך
         // הבהובים אדומים
         const fl=document.createElement('div');
         fl.style.cssText='position:fixed;inset:0;background:rgba(200,0,0,0);z-index:8501;pointer-events:none;transition:background 0.15s;';
@@ -2110,8 +2106,6 @@ function updTitan(dt){
         setTimeout(()=>fl.style.background='rgba(200,0,0,0.38)',420);
         setTimeout(()=>fl.style.background='rgba(200,0,0,0)',700);
         setTimeout(()=>fl.remove(),800);
-        // הכהה המסך
-        setTimeout(()=>ov.style.background='rgba(0,0,0,0.65)',500);
         // טקסט מרכזי
         const txt=document.createElement('div');
         txt.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:8502;color:#ff3333;font-size:clamp(20px,5vw,30px);font-weight:bold;text-align:center;letter-spacing:2px;text-shadow:0 0 20px #ff0000,0 0 40px #880000;pointer-events:none;opacity:0;transition:opacity 0.5s;font-family:inherit;';
@@ -2120,7 +2114,6 @@ function updTitan(dt){
         setTimeout(()=>txt.style.opacity='1',600);
         setTimeout(()=>txt.style.opacity='0',3600);
         setTimeout(()=>txt.remove(),4100);
-        setTimeout(()=>{const e=document.getElementById('rex-heart-ov');if(e)e.remove();},4600);
       },4500);
       // שלב ג׳: cutscene
       setTimeout(()=>{
