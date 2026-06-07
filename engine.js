@@ -8067,15 +8067,16 @@ function _buildZippoLighter(){
 function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
-  const bm=dogModel&&dogModel._bipedalMode;
-  // בקרב Z18 (bipedalMode): מצית ביד ימין קדמית — offset קבוע
-  const off = bm
-    ? new THREE.Vector3(.42, .72, .55)
-    : new THREE.Vector3(.38, .58, .45);
-  off.applyQuaternion(PB.quaternion);
-  _zippoLighterMesh.position.copy(PB.position).add(off);
-  _zippoLighterMesh.rotation.y=PB.rotation.y-0.3;
-  _zippoLighterMesh.rotation.z = bm ? 0.2 : 0; // מוטה כלפי Z18
+  // כף יד קדמית ימין: dogLegs[0] — x=+0.135, z=+0.36, paw at y≈-0.21 מהמודל
+  // במצב דו-רגלי מחובר ל-dogLegs[0].paw בעולם
+  if(dogLegs&&dogLegs[0]&&dogLegs[0].paw){
+    const pawPos=new THREE.Vector3();
+    dogLegs[0].paw.getWorldPosition(pawPos);
+    _zippoLighterMesh.position.copy(pawPos);
+    _zippoLighterMesh.rotation.y=PB.rotation.y+0.1;
+    _zippoLighterMesh.rotation.z=0.15;
+    _zippoLighterMesh.rotation.x=-0.3;
+  }
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
     _zippoLighterMesh._flame.position.y=.21+Math.sin(t*11)*.006;
@@ -8121,15 +8122,15 @@ function _buildDeodorant(){
 
 function _updateDeodorant(){
   if(!_deodorantMesh||!_deodorantMesh.visible||!PB)return;
-  const bm=dogModel&&dogModel._bipedalMode;
-  // ביד שמאל — offset הפוך מהמצית, קצת קדימה
-  const off = bm
-    ? new THREE.Vector3(-.42, .65, .55)
-    : new THREE.Vector3(-.38, .55, .42);
-  off.applyQuaternion(PB.quaternion);
-  _deodorantMesh.position.copy(PB.position).add(off);
-  _deodorantMesh.rotation.y=PB.rotation.y+0.3;
-  _deodorantMesh.rotation.z = bm ? -0.3 : 0.5; // מוטה — כאילו מחזיק ומרסס
+  // כף יד קדמית שמאל: dogLegs[1] — x=-0.135, z=+0.36
+  if(dogLegs&&dogLegs[1]&&dogLegs[1].paw){
+    const pawPos=new THREE.Vector3();
+    dogLegs[1].paw.getWorldPosition(pawPos);
+    _deodorantMesh.position.copy(pawPos);
+    _deodorantMesh.rotation.y=PB.rotation.y-0.1;
+    _deodorantMesh.rotation.z=-0.15;
+    _deodorantMesh.rotation.x=-0.5; // מוטה קדימה — כאילו מרסס
+  }
 }
 
 function _showZ18WeaponMode(){
@@ -8137,20 +8138,6 @@ function _showZ18WeaponMode(){
   if(!_deodorantMesh)_buildDeodorant();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
   if(_deodorantMesh)_deodorantMesh.visible=true;
-  // הצג כפתור F במובייל
-  if(isMob){
-    let fb=document.getElementById('fire-btn-mob');
-    if(!fb){
-      fb=document.createElement('div');
-      fb.id='fire-btn-mob';
-      fb.className='ab';
-      fb.textContent='🔥';
-      fb.style.cssText='background:rgba(255,80,0,0.85);border:2px solid #ff4400;font-size:22px;';
-      fb.ontouchstart=()=>mF();
-      document.getElementById('abs').appendChild(fb);
-    }
-    fb.style.display='flex';
-  }
   // מצב דו-רגלי
   if(dogModel&&G.dog==='zippo'&&!dogModel._bipedalMode){
     dogModel._bipedalMode=true;
@@ -8165,9 +8152,6 @@ function _showZ18WeaponMode(){
 function _hideZ18WeaponMode(){
   if(_zippoLighterMesh)_zippoLighterMesh.visible=false;
   if(_deodorantMesh)_deodorantMesh.visible=false;
-  // הסתר כפתור F במובייל
-  const fb=document.getElementById('fire-btn-mob');
-  if(fb)fb.style.display='none';
   if(dogModel&&dogModel._bipedalMode){
     dogModel._bipedalMode=false;
     dogModel.rotation.x=0;
@@ -11285,92 +11269,70 @@ function updZ18(dt){
       const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
       b.hp-=dmg;sHit();haptic(28);
       flash(b.mesh.children[0]);
-      // פרצי אש — גלאם קטן לכיוון Z18
+      // גל אש לכיוון Z18
       const ang=Math.atan2(b.mesh.position.x-PB.position.x, b.mesh.position.z-PB.position.z);
-      for(let i=0;i<10;i++){
-        const spread=(Math.random()-.5)*0.5;
-        const dist=0.8+Math.random()*2.5;
+      for(let i=0;i<18;i++){
+        const spread=(Math.random()-.5)*0.6;
+        const dist=0.6+Math.random()*3.5;
         spawnPfx(
           PB.position.x+Math.sin(ang+spread)*dist,
-          0.6+Math.random()*1.2,
+          0.5+Math.random()*1.4,
           PB.position.z+Math.cos(ang+spread)*dist,
-          Math.random()>.4?0xff5500:0xffaa00, 2.5);
+          Math.random()>.4?0xff5500:0xffaa00, 3.5);
       }
-      // ניצוצות לבן-כתום
-      for(let i=0;i<5;i++)
+      // ניצוצות לבן-צהוב
+      for(let i=0;i<6;i++)
         spawnPfx(b.mesh.position.x+(Math.random()-.5)*1.5,
           1.0+Math.random(),b.mesh.position.z+(Math.random()-.5)*1.5,
-          Math.random()>.5?0xffdd00:0xffffff,1.5);
-      // אור אש קצר
-      const fl=new THREE.PointLight(0xff5500,10,6);
-      fl.position.copy(PB.position).y+=1.0;
+          Math.random()>.5?0xffdd00:0xffffff, 2);
+      // אור אש — מהמצית
+      const fl=new THREE.PointLight(0xff5500,14,7);
+      fl.position.copy(PB.position).y+=0.8;
       scene.add(fl);
-      setTimeout(()=>scene.remove(fl),140);
-      // צלקת כוויה על Z18 — הילה כתומה רגעית
+      let _flt=0;
+      const _flI=setInterval(()=>{_flt+=16;fl.intensity=Math.max(0,14-(_flt/200)*14)*(0.8+Math.random()*0.4);if(_flt>=200){clearInterval(_flI);scene.remove(fl);}},16);
+      // המצית מבזיקה
+      if(_zippoLighterMesh){
+        if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=9;
+        if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(2.2);
+        setTimeout(()=>{if(_zippoLighterMesh){if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=2.2;if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(1);}},200);
+      }
+      // כוויה על Z18
       if(b.mesh._aura){b.mesh._aura.color.setHex(0xff6600);setTimeout(()=>{if(!b.dead&&b.mesh._aura)b.mesh._aura.color.setHex(0xcc0066);},300);}
       showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg),'#ff5500');
       b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
     }
 
-    // ── F — מצית × דאודורנט: להבה ענקית (Metal Gear Flamethrower) ──
+    // ── כל 5 שניות: להבה ענקית אוטומטית (בלי לחצן נפרד) ──
     if(!b._flameCD)b._flameCD=0;
     b._flameCD=Math.max(0,b._flameCD-dt);
-    if((G.keys['KeyF']||G._z18FireMob)&&b._flameCD<=0&&dd<9){
-      G.keys['KeyF']=false;G._z18FireMob=false;
-      b._flameCD=5.0; // cooldown 5 שניות
+    if(b._flameCD<=0&&dd<9&&G.dog==='zippo'){
+      b._flameCD=5.0;
       haptic([80,30,120,30,80]);
-      showN('🔥 מצית × דאודורנט — להבת זיפו!');
-
-      // מצית נדלקת — גדלה
+      showN('🔥 להבת זיפו!');
       if(_zippoLighterMesh){
         _zippoLighterMesh.scale.setScalar(4.5);
-        if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=12;
-        if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(3.5);
-        setTimeout(()=>{
-          if(_zippoLighterMesh){
-            _zippoLighterMesh.scale.setScalar(1.8);
-            if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=2.2;
-            if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(1);
-          }
-        },600);
+        if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=18;
+        if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(4);
+        setTimeout(()=>{if(_zippoLighterMesh){_zippoLighterMesh.scale.setScalar(1.8);if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=2.2;if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(1);}},700);
       }
-
-      // גל להבה — cone של particles
-      const ang=Math.atan2(
-        b.mesh.position.x-PB.position.x,
-        b.mesh.position.z-PB.position.z);
-      for(let i=0;i<24;i++){
-        const spread=(Math.random()-.5)*0.7;
-        const dist=1.5+Math.random()*5;
-        spawnPfx(
-          PB.position.x+Math.sin(ang+spread)*dist,
-          0.4+Math.random()*1.5,
-          PB.position.z+Math.cos(ang+spread)*dist,
-          Math.random()>.4?0xff5500:0xffaa00, 4);
+      const ang2=Math.atan2(b.mesh.position.x-PB.position.x, b.mesh.position.z-PB.position.z);
+      for(let i=0;i<36;i++){
+        const spread=(Math.random()-.5)*0.8;
+        const dist=1.5+Math.random()*6;
+        spawnPfx(PB.position.x+Math.sin(ang2+spread)*dist,0.3+Math.random()*2,PB.position.z+Math.cos(ang2+spread)*dist,Math.random()>.4?0xff5500:0xffaa00,5);
       }
-
-      // אור להבה זמני
-      const flameL=new THREE.PointLight(0xff5500,18,10);
-      flameL.position.copy(PB.position).y+=0.8;
-      scene.add(flameL);
-      let _fT=0;
-      const _fI=setInterval(()=>{
-        _fT+=16;
-        flameL.intensity=Math.max(0,18-(_fT/600)*18)*(0.7+Math.random()*0.6);
-        if(_fT>=600){clearInterval(_fI);scene.remove(flameL);}
-      },16);
-
-      // נזק גדול אם Z18 בטווח
-      if(dd<8){
+      const bigL=new THREE.PointLight(0xff5500,28,14);
+      bigL.position.copy(PB.position).y+=1;scene.add(bigL);
+      let _bT=0;const _bI=setInterval(()=>{_bT+=16;bigL.intensity=Math.max(0,28-(_bT/800)*28)*(0.7+Math.random()*0.6);if(_bT>=800){clearInterval(_bI);scene.remove(bigL);}},16);
+      if(dd<9){
         const flameDmg=Math.round(dog.pow*55*(1+dog.lv*.12));
-        b.hp-=flameDmg;
-        b._hitT=0.8;b._hitCD=0.8;
+        b.hp-=flameDmg;b._hitT=0.8;b._hitCD=0.8;
         flash(b.mesh.children[0]);
-        showDmg(b.mesh.position.x,2.5,b.mesh.position.z,Math.round(flameDmg),'#ff5500');
+        showDmg(b.mesh.position.x,2.5,b.mesh.position.z,Math.round(flameDmg),'#ff4400');
         haptic([100,40,80]);
         if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
-        // אפקט כוויה על Z18
         if(b.mesh._aura)b.mesh._aura.color.setHex(0xff5500);
         setTimeout(()=>{if(!b.dead&&b.mesh._aura)b.mesh._aura.color.setHex(0xcc0066);},800);
       }
