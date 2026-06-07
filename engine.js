@@ -8088,27 +8088,55 @@ function _updateZippoLighter(){
     _zippoLighterMesh._flameLight.intensity=1.8+Math.sin(t*15)*.8;
 }
 
-function _showZippoLighter(){
+let _deodorantMesh=null;
+
+function _buildDeodorant(){
+  if(!scene||_deodorantMesh)return;
+  const g=new THREE.Group();
+  // גוף פחית — אלומיניום כחול-לבן
+  const bodyM=new THREE.MeshStandardMaterial({color:0x1a4a8a,roughness:.35,metalness:.75,emissive:new THREE.Color(0x040c18)});
+  const capM =new THREE.MeshStandardMaterial({color:0xddeeff,roughness:.25,metalness:.5});
+  const labelM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.6});
+  // פחית ראשית
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.22,10),bodyM);
+  body.castShadow=true;g.add(body);
+  // פס לבן עליון
+  const stripe=new THREE.Mesh(new THREE.CylinderGeometry(.056,.056,.05,10),labelM);
+  stripe.position.y=.07;g.add(stripe);
+  // כיסוי עליון
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(.042,.055,.04,10),capM);
+  cap.position.y=.13;g.add(cap);
+  // חרטום ריסוס
+  const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(.012,.018,.06,8),capM);
+  nozzle.position.y=.17;g.add(nozzle);
+  // כפתור לחיצה
+  const btn=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.025,8),
+    new THREE.MeshStandardMaterial({color:0xff4400,roughness:.4,emissive:new THREE.Color(0x220800)}));
+  btn.position.y=.22;g.add(btn);
+  g.scale.setScalar(1.8);
+  g.visible=false;
+  scene.add(g);
+  _deodorantMesh=g;
+}
+
+function _updateDeodorant(){
+  if(!_deodorantMesh||!_deodorantMesh.visible||!PB)return;
+  // ביד שמאל — offset הפוך מהמצית
+  const off=new THREE.Vector3(-.38,.55,.42);
+  off.applyQuaternion(PB.quaternion);
+  _deodorantMesh.position.copy(PB.position).add(off);
+  _deodorantMesh.rotation.y=PB.rotation.y+0.3;
+  _deodorantMesh.rotation.z=0.5; // מוחזק בצד
+}
+
+function _showZ18WeaponMode(){
   if(!_zippoLighterMesh)_buildZippoLighter();
+  if(!_deodorantMesh)_buildDeodorant();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
+  if(_deodorantMesh)_deodorantMesh.visible=true;
+  // מצב דו-רגלי
   if(dogModel&&G.dog==='zippo'&&!dogModel._bipedalMode){
     dogModel._bipedalMode=true;
-    // יוצרים wrapper פנימי שמסובב את כל תוכן הכלב
-    // dogModel.rotation.y=Math.PI כבר קיים ונשאר — לא נוגעים בו
-    // מעבירים את כל הילדים ל-wrapper
-    const wrap=new THREE.Group();
-    // הגוף שכוב: ראש ב-z=+0.5,y=1.08 → רוצים ראש למעלה
-    // סיבוב -π/2 על X: (x,y,z)→(x,z,-y)
-    // ראש (0,1.08,0.5)→(0,0.5,-1.08) — לא טוב
-    // סיבוב +π/2 על X: (x,y,z)→(x,-z,y)  
-    // ראש (0,1.08,0.5)→(0,-0.5,1.08) — לא טוב
-    // הבעיה: הראש גבוה ב-Y (1.08) ורחוק ב-Z (0.5)
-    // רוצים: ראש → גבוה ב-Y. כלומר הציר Y הגבוה ישאר Y.
-    // הפתרון: לא לסובב — אלא **לבנות תנוחה ידנית**:
-    // נזיז את הגוף ואת כל החלקים ב-offset כדי שהרגליים האחוריות יהיו בתחתית
-    // הכלב גבוה ~1.6 (מרגליים עד ראש ב-Z). נרים את PB ב-0.5 ונסובב רק את הרגליים הקדמיות
-    dogModel._bipedalMode=true;
-    // הרמת PB
     dogModel._bipedalYOffset=0.5;
     PB.position.y+=0.5;
     if(dogLegs[0])dogLegs[0].node.rotation.x=-1.3;
@@ -8116,8 +8144,10 @@ function _showZippoLighter(){
     dogModel.rotation.x=0.6;
   }
 }
-function _hideZippoLighter(){
+
+function _hideZ18WeaponMode(){
   if(_zippoLighterMesh)_zippoLighterMesh.visible=false;
+  if(_deodorantMesh)_deodorantMesh.visible=false;
   if(dogModel&&dogModel._bipedalMode){
     dogModel._bipedalMode=false;
     dogModel.rotation.x=0;
@@ -8127,6 +8157,10 @@ function _hideZippoLighter(){
     if(dogLegs[1])dogLegs[1].node.rotation.x=0;
   }
 }
+
+// aliases לתאימות לאחור — mission 32 (שריפה)
+const _showZippoLighter=_showZ18WeaponMode;
+const _hideZippoLighter=_hideZ18WeaponMode;
 
 // ════════════════════════════════════════════════
 // CH6 UPDATE — פרק ו׳: "צל" (missions 25-32)
@@ -8436,6 +8470,7 @@ function updCh6(dt){
     const nearFire=d2(px,pz,25,-125)<9;
     // עדכן מצית זיפו — מוצג מעל הקרקע ליד הכלב
     if(typeof _updateZippoLighter==='function')_updateZippoLighter(dt);
+    if(typeof _updateDeodorant==='function')_updateDeodorant();
     if(nearFire){
       G._fireNearActive=true;
       // הדגש: רק זיפו יכול להצית
@@ -10786,10 +10821,10 @@ function _triggerZ18GrabScene(){
   const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1.2,PB.position.z);
   G.paused=true;
 
-  // יעדי מצלמה סינמטיים
-  const cam1=new THREE.Vector3(SCENE_X-8, 4.5, SCENE_Z-5);   // פתיחה — רחב
-  const cam2=new THREE.Vector3(SCENE_X-4, 3.2, SCENE_Z-3);   // zoom in לאחיזה
-  const camLook=new THREE.Vector3(SCENE_X-0.8, 1.8, SCENE_Z+1.5);
+  // יעדי מצלמה סינמטיים — קרוב מהצד לראות צוואר+אחיזה
+  const cam1=new THREE.Vector3(SCENE_X+6, 3.0, SCENE_Z-2);   // פתיחה — ימין+מול
+  const cam2=new THREE.Vector3(SCENE_X+3, 2.2, SCENE_Z-1.5); // zoom in — ממש קרוב לאחיזה
+  const camLook=new THREE.Vector3(SCENE_X-0.5, 1.4, SCENE_Z+2.0); // מסתכל על גובה צוואר
   let _camPhase=0; // 0=לסצנה, 1=zoom, 2=חזור
 
   // ticker מצלמה — רץ גם כשpaused
@@ -10821,10 +10856,14 @@ function _triggerZ18GrabScene(){
     const _lI=setInterval(()=>{
       _lT+=16;
       const p=Math.min(_lT/500,1), e=1-Math.pow(1-p,2);
-      z18mesh.rotation.x = e*0.2;
-      z18mesh.position.z = (SCENE_Z+5) - e*3.2; // מתקדם לעבר מומו
-      momoDummy.position.y = e*1.7;
-      momoDummy.position.x = SCENE_X-1.5+e*1.4;
+      // Z18 מתכופף ומושיט יד לצוואר
+      z18mesh.rotation.x = e*0.35;
+      z18mesh.position.z = (SCENE_Z+5) - e*3.8; // מתקדם בחדות
+      z18mesh.position.y = e*0.3; // מתרומם מעט
+      // מומו נמשכת לעבר Z18 ועולה לגובה צוואר
+      momoDummy.position.y = e*1.2;          // גובה צוואר
+      momoDummy.position.x = SCENE_X-1.5+e*2.2; // נמשכת ימינה
+      momoDummy.rotation.z = e*0.4;           // נוטה בצד
       grabLight.intensity = 4+Math.sin(_lT*0.025)*1.8;
       if(_lT>=500)clearInterval(_lI);
     },16);
@@ -11303,6 +11342,7 @@ function updZ18(dt){
       if(b.mesh._aura)b.mesh._aura.intensity=0;
       if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=0;
       if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=0;
+      _hideZ18WeaponMode(); // הסתר מצית + דאודורנט
       sCapture();haptic([120,50,100,30,120]);
       addXP(400);G.score+=3000;G.coins+=200;updCoins();
       for(let i=0;i<16;i++)spawnPfx(
@@ -11541,10 +11581,11 @@ function updCh8(dt){
 
   // ── Mission 46: קרב Z-18 ──
   if(G.mission===46){
-    // הצג טיפ קרב רק פעם אחת
+    // הצג נשקי זיפו פעם אחת
     if(!G._z18FightTipShown){
       G._z18FightTipShown=true;
-      setTimeout(()=>showN('🔥 F = ניצוצות | Q = מצית×דאודורנט (5s cooldown)'),1200);
+      _showZ18WeaponMode();
+      setTimeout(()=>showN('🔥 F = ניצוצות זיפו | Q = מצית×דאודורנט (5s cooldown)'),1200);
     }
     updZ18(dt);
   }
