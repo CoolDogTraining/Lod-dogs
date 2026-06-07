@@ -10824,10 +10824,10 @@ function _triggerZ18GrabScene(){
   G._cinemaMode=true;
   G.paused=true;
 
-  // יעדי מצלמה סינמטיים — קרוב מהצד לראות צוואר+אחיזה
-  const cam1=new THREE.Vector3(SCENE_X+6, 3.0, SCENE_Z-2);   // פתיחה — ימין+מול
-  const cam2=new THREE.Vector3(SCENE_X+3, 2.2, SCENE_Z-1.5); // zoom in — ממש קרוב
-  const camLook=new THREE.Vector3(SCENE_X-0.5, 1.4, SCENE_Z+2.0); // גובה צוואר
+  // יעדי מצלמה סינמטיים — מהצד הפתוח (Z+) לראות צוואר+אחיזה ללא חסימת הבניין
+  const cam1=new THREE.Vector3(SCENE_X-8, 3.5, SCENE_Z+10);  // פתיחה — מהצד הדרומי-פתוח
+  const cam2=new THREE.Vector3(SCENE_X-4, 2.5, SCENE_Z+7);   // zoom in — קרוב מהצד
+  const camLook=new THREE.Vector3(SCENE_X+0.5, 1.6, SCENE_Z+1.5); // גובה צוואר מומו
   let _camPhase=0; // 0=פתיחה, 1=zoom in
 
   // קבע מצלמה מיידית לנקודת פתיחה — אין lerp ראשוני שמרצד
