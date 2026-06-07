@@ -4539,6 +4539,8 @@ function mAtk(){
       sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     }
   } else {doAtk();}
+}function mF(){
+  G._z18FireMob=true;setTimeout(()=>{G._z18FireMob=false;},200);
 }function mE(){
   if(G.mission===32&&!G._ch6FireDone&&G._fireNearActive){G._fireKeyMob=true;return;}
   // סמן eKeyFrame בכל המשימות — מאפשר doInteract גם לפני חידוש checkNear
@@ -8134,6 +8136,20 @@ function _showZ18WeaponMode(){
   if(!_deodorantMesh)_buildDeodorant();
   if(_zippoLighterMesh)_zippoLighterMesh.visible=true;
   if(_deodorantMesh)_deodorantMesh.visible=true;
+  // הצג כפתור F במובייל
+  if(isMob){
+    let fb=document.getElementById('fire-btn-mob');
+    if(!fb){
+      fb=document.createElement('div');
+      fb.id='fire-btn-mob';
+      fb.className='ab';
+      fb.textContent='🔥';
+      fb.style.cssText='background:rgba(255,80,0,0.85);border:2px solid #ff4400;font-size:22px;';
+      fb.ontouchstart=()=>mF();
+      document.getElementById('abs').appendChild(fb);
+    }
+    fb.style.display='flex';
+  }
   // מצב דו-רגלי
   if(dogModel&&G.dog==='zippo'&&!dogModel._bipedalMode){
     dogModel._bipedalMode=true;
@@ -8148,6 +8164,9 @@ function _showZ18WeaponMode(){
 function _hideZ18WeaponMode(){
   if(_zippoLighterMesh)_zippoLighterMesh.visible=false;
   if(_deodorantMesh)_deodorantMesh.visible=false;
+  // הסתר כפתור F במובייל
+  const fb=document.getElementById('fire-btn-mob');
+  if(fb)fb.style.display='none';
   if(dogModel&&dogModel._bipedalMode){
     dogModel._bipedalMode=false;
     dogModel.rotation.x=0;
@@ -10824,10 +10843,10 @@ function _triggerZ18GrabScene(){
   G._cinemaMode=true;
   G.paused=true;
 
-  // יעדי מצלמה סינמטיים — מהצד הפתוח (Z+) לראות צוואר+אחיזה ללא חסימת הבניין
-  const cam1=new THREE.Vector3(SCENE_X-8, 3.5, SCENE_Z+10);  // פתיחה — מהצד הדרומי-פתוח
-  const cam2=new THREE.Vector3(SCENE_X-4, 2.5, SCENE_Z+7);   // zoom in — קרוב מהצד
-  const camLook=new THREE.Vector3(SCENE_X+0.5, 1.6, SCENE_Z+1.5); // גובה צוואר מומו
+  // יעדי מצלמה סינמטיים — מלפנים ומהצד, נמוך וקרוב — רואים ישירות Z18+מומו
+  const cam1=new THREE.Vector3(SCENE_X+3, 2.2, SCENE_Z+9);   // פתיחה — מלפנים-ימין
+  const cam2=new THREE.Vector3(SCENE_X+1, 1.6, SCENE_Z+6);   // zoom in — ממש קרוב
+  const camLook=new THREE.Vector3(SCENE_X+0.5, 1.8, SCENE_Z+1.8); // גובה צוואר מומו
   let _camPhase=0; // 0=פתיחה, 1=zoom in
 
   // קבע מצלמה מיידית לנקודת פתיחה — אין lerp ראשוני שמרצד
@@ -11286,11 +11305,11 @@ function updZ18(dt){
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
     }
 
-    // ── Q — מצית × דאודורנט: להבה ענקית (Metal Gear Flamethrower) ──
+    // ── F — מצית × דאודורנט: להבה ענקית (Metal Gear Flamethrower) ──
     if(!b._flameCD)b._flameCD=0;
     b._flameCD=Math.max(0,b._flameCD-dt);
-    if(G.keys['KeyQ']&&b._flameCD<=0&&dd<9){
-      G.keys['KeyQ']=false;
+    if((G.keys['KeyF']||G._z18FireMob)&&b._flameCD<=0&&dd<9){
+      G.keys['KeyF']=false;G._z18FireMob=false;
       b._flameCD=5.0; // cooldown 5 שניות
       haptic([80,30,120,30,80]);
       showN('🔥 מצית × דאודורנט — להבת זיפו!');
