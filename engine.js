@@ -3521,7 +3521,7 @@ function updCityHall(dt){
     }
     if(dd<3.5&&b._atkT<=0){dmgPlayer(b.phase===2?26:16);b._atkT=1.0;haptic([40,20]);}
     if(!b._hitCD)b._hitCD=0;b._hitCD=Math.max(0,b._hitCD-dt);
-    if(dd<5.5&&G.atkCD<=0&&b._hitT<=0&&b._hitCD<=0){
+    if(dd<5.5&&G._atkFrame&&b._hitT<=0&&b._hitCD<=0){
       const dmg=Math.round(dog.pow*11*(1+dog.lv*.1));b.hp-=dmg;sHit();haptic(25);
       if(b.mesh.children[0])flash(b.mesh.children[0]);
       spawnCityVFX(b.x,2,b.z,0xe74c3c,7);b._hitT=0.5;b._hitCD=0.5;
@@ -5079,17 +5079,25 @@ function _updLOD(){
     e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
   });
 
-  // ── כל 45 frames (~0.75s): shadow culling + zone group visibility ──
-  // visibility culling על objects בודדים הוסר — גרם להסתרת Z18/אש/SuperSoldiers
-  // במקום: מציגים/מסתירים Groups שלמים לפי מרחק מרכז ה-zone
-  if(_lodFrame%45!==0)return;
-  if(!_lodStaticObjs)_initLODStatics();
+  // ── כל 10 frames (~0.16s): zone group visibility ──
+  // hysteresis: zone נפתח ב-r, נסגר ב-r×1.35 — מונע flickering בגבול
+  if(_lodFrame%10===0){
+    _zoneGroups.forEach(z=>{
+      const dx=z.cx-px, dz=z.cz-pz;
+      const d2=dx*dx+dz*dz;
+      if(z.group.visible){
+        // נסגר רק אם רחוק יותר מ-r×1.35
+        const closeR=z.r*1.35;
+        z.group.visible = d2 < closeR*closeR;
+      } else {
+        // נפתח ב-r רגיל
+        z.group.visible = d2 < z.r*z.r;
+      }
+    });
+  }
 
-  // Zone Groups — הצג רק zones שהשחקן קרוב אליהם
-  _zoneGroups.forEach(z=>{
-    const dx=z.cx-px, dz=z.cz-pz;
-    z.group.visible = (dx*dx+dz*dz) < z.r*z.r;
-  });
+  // ── כל 45 frames (~0.75s): shadow culling ──
+  if(_lodFrame%45!==0)return;
 
   _lodShadowObjs.forEach(obj=>{
     if(obj._isCloud||obj._isGround)return;
@@ -7722,7 +7730,7 @@ function updCh3Entities(dt){
         // ניתן לפגיעה — מגיב ל-F/כפתור התקפה, cooldown משלו
         if(!kg._hitT)kg._hitT=0;
         kg._hitT=Math.max(0,kg._hitT-dt);
-        if(kdd<4&&G.atkCD<=0&&kg._hitT<=0){
+        if(kdd<4&&G._atkFrame&&kg._hitT<=0){
           const dmg=Math.round(dog.pow*9);
           kg.hp-=dmg;haptic(18);spawnBlood(kg.x,1,kg.z,7);showDmg(kg.x,1,kg.z,dmg);
           kg._hitT=0.4;
@@ -7742,7 +7750,7 @@ function updCh3Entities(dt){
     // תפיסה — cooldown נפרד לפישקה
     if(!fe._hitT)fe._hitT=0;
     fe._hitT=Math.max(0,fe._hitT-dt);
-    if(dd<4&&allGangDown&&G.atkCD<=0&&fe._hitT<=0){
+    if(dd<4&&allGangDown&&G._atkFrame&&fe._hitT<=0){
       const dmg=Math.round(dog.pow*10);
       fe.hp-=dmg;haptic(20);spawnBlood(fe.x,1,fe.z,6);showDmg(fe.x,1,fe.z,dmg);
       fe._hitT=0.4;
@@ -7770,7 +7778,7 @@ function updCh3Entities(dt){
         const dmg=15*(1+G.mission*.02);dmgPlayer(dmg);gd._atkT=1.4;
       }
       // ניתן להכנעה
-      if(dd<3.5&&G.atkCD<=0){
+      if(dd<3.5&&G._atkFrame){
         gd.hp-=dog.pow*7;haptic(15);spawnBlood(gd.x,1,gd.z,5);showDmg(gd.x,1,gd.z,Math.round(dog.pow*7));G.atkCD=.55;
         if(gd.hp<=0){gd.mesh.visible=false;sEDie();haptic([30,15,30]);addXP(25);G.coins+=15;updCoins();G.totalKills++;showN('✅ כלב ביטחון הוכנע');}
       }
@@ -7797,8 +7805,8 @@ function updCh3Entities(dt){
     if(dd<3&&b._atkT<=0){
       const dmg=b.phase===2?28:18;dmgPlayer(dmg);b._atkT=1.0;haptic([40,20]);
     }
-    // השחקן תוקף
-    if(dd<4&&G.atkCD<=0){
+    // השחקן תוקף — רק בלחיצת כפתור (_atkFrame)
+    if(dd<4&&G._atkFrame){
       const dmg=dog.pow*11*(1+dog.lv*.1);b.hp-=dmg;sHit();haptic(25);
       flash(b.mesh.children[0]);spawnBlood(b.x,1.5,b.z,14);showDmg(b.x,1.5,b.z,Math.round(dmg));G.atkCD=.55;
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
@@ -7872,7 +7880,7 @@ function updCh3Entities(dt){
           dmgPlayer(16);gd.atkT=1.4;haptic([20,10]);
         }
         // השחקן מכה חזרה
-        if(dd<3.2&&G.atkCD<=0&&gd._hitT<=0){
+        if(dd<3.2&&G._atkFrame&&gd._hitT<=0){
           const dmg=dog.pow*9;
           gd.hp-=dmg;sHit();haptic(15);
           spawnBlood(gd.x,1,gd.z,5);
@@ -10390,7 +10398,7 @@ function updZ07(dt){
   }
 
   // ── פגיעת שחקן ──
-  if(dd<5.5&&G.atkCD<=0&&b._hitT<=0&&b._hitCD<=0){
+  if(dd<5.5&&G._atkFrame&&b._hitT<=0&&b._hitCD<=0){
     const dmg=Math.round(dog.pow*13*(1+dog.lv*.12));
     b.hp-=dmg;sHit();haptic(30);
     flash(b.mesh.children[0]);
@@ -11196,7 +11204,7 @@ function updZ18(dt){
   }
 
   // ── פגיעת שחקן — רק זיפו ──
-  if(G.dog==='zippo'&&dd<5.5&&G.atkCD<=0&&b._hitT<=0){
+  if(G.dog==='zippo'&&dd<5.5&&G._atkFrame&&b._hitT<=0){
     const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
     b.hp-=dmg;sHit();haptic(28);
     flash(b.mesh.children[0]);

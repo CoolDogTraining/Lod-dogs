@@ -2069,7 +2069,7 @@ function updTitan(dt){
   // פגיעת שחקן בטיטאן
   const dog=G.dogs[G.dog];
   const dd2=d2(b.x,b.z,px,pz);
-  if(dd2<5.5&&G.atkCD<=0&&b._hitT<=0&&b._hitCD<=0){
+  if(dd2<5.5&&G._atkFrame&&b._hitT<=0&&b._hitCD<=0){
     const dmg=Math.round(dog.pow*12*(1+dog.lv*.12));
     b.hp-=dmg;sHit();haptic(28);
     flash(b.mesh.children[0]);
