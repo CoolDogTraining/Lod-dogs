@@ -10744,136 +10744,144 @@ function mkZ18Model(){
 // _triggerZ18GrabScene — אנימציה סינמטית: Z-18 אוחז במומו
 // ════════════════════════════════════════════════
 function _triggerZ18GrabScene(){
-  // 1. בנה Z-18 ומומו-dummy בבסיס
+  // ── בנה מודלים ──
+  const SCENE_X=108, SCENE_Z=22;
   const z18mesh=mkZ18Model();
-  z18mesh.position.set(108,0,22);
-  z18mesh.rotation.y=Math.PI; // פונה אל הבסיס
+  z18mesh.position.set(SCENE_X, 0, SCENE_Z+5);
+  z18mesh.rotation.y=Math.PI;
+  z18mesh._lodExempt=true;
   scene.add(z18mesh);
-  G._z18GrabMesh=z18mesh;
 
-  // מומו dummy — כדור ורוד שמייצג את מומו נישאת
+  // מומו dummy מלא
   const momoDummy=new THREE.Group();
-  const mBody=new THREE.Mesh(new THREE.SphereGeometry(0.35,8,8),
-    new THREE.MeshLambertMaterial({color:0xd4a0c8,emissive:0x3a1a30}));
-  mBody.position.y=0.35;momoDummy.add(mBody);
-  // אוזניים
+  momoDummy._lodExempt=true;
+  const mBodyM=new THREE.MeshLambertMaterial({color:0xd4a0c8,emissive:0x3a1a30});
+  const mBody=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.36,0.55),mBodyM);
+  mBody.position.set(0,0.42,0);momoDummy.add(mBody);
+  const mHead=new THREE.Mesh(new THREE.BoxGeometry(0.38,0.34,0.38),mBodyM);
+  mHead.position.set(0,0.76,0.15);momoDummy.add(mHead);
   [-1,1].forEach(s=>{
-    const ear=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.06,0.22,6),
-      new THREE.MeshLambertMaterial({color:0xc090b8}));
-    ear.position.set(s*0.2,0.65,0);ear.rotation.z=s*0.3;momoDummy.add(ear);
+    const ear=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.05,0.2,6),
+      new THREE.MeshLambertMaterial({color:0xb07898}));
+    ear.position.set(s*0.2,0.95,0.15);ear.rotation.z=s*0.35;momoDummy.add(ear);
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.16),mBodyM);
+    leg.position.set(s*0.16,0.1,0.1);momoDummy.add(leg);
   });
-  // זנב
-  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.03,0.3,6),
-    new THREE.MeshLambertMaterial({color:0xc090b8}));
-  tail.position.set(0,0.25,-0.4);tail.rotation.x=0.8;momoDummy.add(tail);
-
-  momoDummy.position.set(108,0,22);
+  const mTail=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.03,0.32,6),
+    new THREE.MeshLambertMaterial({color:0xb07898}));
+  mTail.position.set(0,0.38,-0.28);mTail.rotation.x=0.8;momoDummy.add(mTail);
+  momoDummy.position.set(SCENE_X-1.5, 0, SCENE_Z+1);
   scene.add(momoDummy);
-  G._momoDummy=momoDummy;
 
-  // 2. אפקטי פתיחה — רעידה + אור אדום
-  haptic([80,20,80,20,80]);
-  const grabLight=new THREE.PointLight(0xff0044,0,12);
-  grabLight.position.set(108,3,22);
-  scene.add(grabLight);G._grabLight=grabLight;
+  // אורות סצנה
+  const grabLight=new THREE.PointLight(0xff0044,0,16);
+  grabLight.position.set(SCENE_X,4,SCENE_Z+2);
+  scene.add(grabLight);
+  const fillL=new THREE.PointLight(0x220011,3,10);
+  fillL.position.set(SCENE_X-3,2,SCENE_Z);
+  scene.add(fillL);
 
-  // נעל את השחקן
+  // שמור מצב מצלמה
+  const origCamPos=camera.position.clone();
+  const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1.2,PB.position.z);
   G.paused=true;
 
-  // 3. אנימציה — שלבים
-  let t=0;
-  const BASE_Y_MOMO=0;
-  const GRAB_DUR=3200; // ms סה"כ
+  // יעדי מצלמה סינמטיים
+  const cam1=new THREE.Vector3(SCENE_X-8, 4.5, SCENE_Z-5);   // פתיחה — רחב
+  const cam2=new THREE.Vector3(SCENE_X-4, 3.2, SCENE_Z-3);   // zoom in לאחיזה
+  const camLook=new THREE.Vector3(SCENE_X-0.8, 1.8, SCENE_Z+1.5);
+  let _camPhase=0; // 0=לסצנה, 1=zoom, 2=חזור
 
-  // שלב א: Z-18 נוחת (0-600ms) — אור מהבהב, רעידת מצלמה
-  let flashCount=0;
-  const flashInt=setInterval(()=>{
-    flashCount++;
-    grabLight.intensity= flashCount%2===0 ? 4 : 0;
-    // רעידת camera קטנה
-    if(camera){
-      camera.position.x+=( Math.random()-.5)*0.15;
-      camera.position.z+=( Math.random()-.5)*0.15;
+  // ticker מצלמה — רץ גם כשpaused
+  const _camTick=setInterval(()=>{
+    if(_camPhase===0){
+      camera.position.lerp(cam1, 0.06);
+      camera.lookAt(camLook);
+    } else if(_camPhase===1){
+      camera.position.lerp(cam2, 0.04);
+      camera.lookAt(camLook);
     }
-    if(flashCount>=8) clearInterval(flashInt);
+  },16);
+
+  // -- שלב א: Z18 נוחת (0→600ms) --
+  haptic([80,20,80,20,80]);
+  let _fC=0;
+  const _flashI=setInterval(()=>{
+    _fC++;grabLight.intensity=_fC%2===0?5.5:0;
+    if(_fC>=8){clearInterval(_flashI);grabLight.intensity=4;}
   },75);
 
-  // שלב ב (600ms): Z-18 מרים את מומו — הפנל הצדדי מופיע
+  // -- שלב ב (600ms): אחיזה + מומו מורמת --
   setTimeout(()=>{
-    grabLight.intensity=3;
-    haptic([120,30,60]);
+    haptic([120,30,80,30,60]);
+    showN('😱 Z-18 פרץ לבסיס! מומו!!');
+    _camPhase=1; // zoom in
 
-    // הפנל הסינמטי הצדדי — "תמונה בתמונה"
-    _showGrabPanel();
-
-    // אנימציה: מומו עולה לאוויר
-    let liftT=0;
-    const liftInt=setInterval(()=>{
-      liftT+=16;
-      const prog=Math.min(liftT/600,1);
-      const eased=1-Math.pow(1-prog,3);
-      momoDummy.position.y=eased*1.6; // מומו עולה 1.6 יחידות
-      // z18 מרים יד — rotate כתף
-      if(z18mesh.rotation){
-        z18mesh.rotation.x=eased*(-0.15);
-      }
-      // אור פולס
-      grabLight.intensity=3+Math.sin(liftT*0.02)*1.2;
-      if(liftT>=600) clearInterval(liftInt);
+    let _lT=0;
+    const _lI=setInterval(()=>{
+      _lT+=16;
+      const p=Math.min(_lT/500,1), e=1-Math.pow(1-p,2);
+      z18mesh.rotation.x = e*0.2;
+      z18mesh.position.z = (SCENE_Z+5) - e*3.2; // מתקדם לעבר מומו
+      momoDummy.position.y = e*1.7;
+      momoDummy.position.x = SCENE_X-1.5+e*1.4;
+      grabLight.intensity = 4+Math.sin(_lT*0.025)*1.8;
+      if(_lT>=500)clearInterval(_lI);
     },16);
-
-    showN('😱 Z-18 אחז במומו! זיפו — איפה אתה?!');
   },600);
 
-  // שלב ג (1800ms): מומו נישאת — particles ורודים
+  // -- שלב ג (1700ms): מומו נישאת — זעקה ופרחים --
   setTimeout(()=>{
-    for(let i=0;i<10;i++){
-      spawnPfx(108+(Math.random()-.5)*3,1.5+Math.random(),22+(Math.random()-.5)*3,0xff0066,3);
-    }
-    haptic([50,20,100,20,50]);
+    for(let i=0;i<16;i++)
+      spawnPfx(SCENE_X-0.5+(Math.random()-.5)*2.5, 1.5+Math.random()*2,
+        SCENE_Z+1+(Math.random()-.5)*2, 0xff0066, 3);
+    haptic([60,20,100,20,60]);
     showN('💔 מומו: "זיפו—!"');
-  },1800);
+    for(let i=0;i<8;i++){
+      const ang=i/8*Math.PI*2;
+      spawnPfx(SCENE_X-0.5+Math.cos(ang)*2, 2.2,
+        SCENE_Z+1+Math.sin(ang)*2, 0xdd0055, 4);
+    }
+  },1700);
 
-  // שלב ד (2600ms): Z-18 נסוג — מומו נופלת
+  // -- שלב ד (2500ms): Z18 נסוג --
   setTimeout(()=>{
-    // מומו נופלת בחזרה
-    let dropT=0;
-    const dropInt=setInterval(()=>{
-      dropT+=16;
-      const prog=Math.min(dropT/400,1);
-      momoDummy.position.y=(1-prog)*1.6;
-      if(dropT>=400){
-        clearInterval(dropInt);
-        // פגיעת נחיתה
-        spawnPfx(108,0.3,22,0xffaa00,6);
-        haptic(40);
+    haptic([40,20,80]);
+    showN('⚠️ Z-18 נסוג לאזור APEX עם מומו!');
+    let _rT=0;
+    const _rI=setInterval(()=>{
+      _rT+=16;
+      z18mesh.position.z+=0.2; z18mesh.position.x+=0.05;
+      momoDummy.position.z+=0.2; momoDummy.position.x+=0.05;
+      grabLight.intensity=Math.max(0,grabLight.intensity-0.07);
+      fillL.intensity=Math.max(0,fillL.intensity-0.05);
+      if(_rT>=600)clearInterval(_rI);
+    },16);
+  },2500);
+
+  // -- שלב ה (3300ms): מצלמה חוזרת → cleanup → cutscene --
+  setTimeout(()=>{
+    _camPhase=2;
+    clearInterval(_camTick);
+    let _retT=0;
+    const _retI=setInterval(()=>{
+      _retT+=16;
+      const p=Math.min(_retT/700,1), e=1-Math.pow(1-p,3);
+      camera.position.lerpVectors(cam2, origCamPos, e);
+      camera.lookAt(new THREE.Vector3().lerpVectors(camLook, origLookAt, e));
+      if(_retT>=700){
+        clearInterval(_retI);
+        scene.remove(z18mesh);scene.remove(momoDummy);
+        scene.remove(grabLight);scene.remove(fillL);
+        G.paused=false;
+        showCut('ch8_zippo_returns',()=>{
+          setMission(46);buildZ18();_lodStaticObjs=null;
+        });
       }
     },16);
-    // Z-18 נסוג אחורה
-    let retT=0;
-    const retInt=setInterval(()=>{
-      retT+=16;
-      z18mesh.position.z-=0.1;
-      if(retT>=500) clearInterval(retInt);
-    },16);
-  },2600);
-
-  // שלב ה (3200ms): סיום — פנל נסגר, כנס לcutscene ואז mission 46
-  setTimeout(()=>{
-    _closeGrabPanel();
-    grabLight.intensity=0;
-    scene.remove(z18mesh);
-    scene.remove(momoDummy);
-    if(G._grabLight){scene.remove(G._grabLight);G._grabLight=null;}
-    G.paused=false;
-
-    showCut('ch8_zippo_returns',()=>{
-      setMission(46);
-      buildZ18();
-      _lodStaticObjs=null; // רענן LOD — Z18 חדש ב-scene
-    });
-  },GRAB_DUR);
+  },3300);
 }
+
 
 // פנל סינמטי צדדי — מציג את האנימציה
 let _grabPanelEl=null;
@@ -11203,17 +11211,94 @@ function updZ18(dt){
     }
   }
 
-  // ── פגיעת שחקן — רק זיפו ──
-  if(G.dog==='zippo'&&dd<5.5&&G._atkFrame&&b._hitT<=0){
-    const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
-    b.hp-=dmg;sHit();haptic(28);
-    flash(b.mesh.children[0]);
-    spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,12);
-    showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg));
-    b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
-    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+  // ── קרב זיפו — מצית + דאודורנט (Metal Gear style) ──
+  if(G.dog==='zippo'&&G.mission===46){
+    // הצג מצית ברגע הקרב
+    if(_zippoLighterMesh&&!_zippoLighterMesh.visible){
+      _zippoLighterMesh.visible=true;
+    }
 
-    if(b.hp<=0){
+    // ── מכה רגילה: ניצוצות זיפו (atkFrame) ──
+    if(dd<5.5&&G._atkFrame&&b._hitT<=0){
+      const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
+      b.hp-=dmg;sHit();haptic(28);
+      flash(b.mesh.children[0]);
+      // ניצוצות כתום-לבן
+      for(let i=0;i<8;i++)
+        spawnPfx(b.mesh.position.x+(Math.random()-.5)*2,
+          1.2+Math.random()*1.2,b.mesh.position.z+(Math.random()-.5)*2,
+          Math.random()>.5?0xffaa00:0xffffff,2);
+      spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,8);
+      showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg));
+      b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
+      if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+    }
+
+    // ── Q — מצית × דאודורנט: להבה ענקית (Metal Gear Flamethrower) ──
+    if(!b._flameCD)b._flameCD=0;
+    b._flameCD=Math.max(0,b._flameCD-dt);
+    if(G.keys['KeyQ']&&b._flameCD<=0&&dd<9){
+      G.keys['KeyQ']=false;
+      b._flameCD=5.0; // cooldown 5 שניות
+      haptic([80,30,120,30,80]);
+      showN('🔥 מצית × דאודורנט — להבת זיפו!');
+
+      // מצית נדלקת — גדלה
+      if(_zippoLighterMesh){
+        _zippoLighterMesh.scale.setScalar(4.5);
+        if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=12;
+        if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(3.5);
+        setTimeout(()=>{
+          if(_zippoLighterMesh){
+            _zippoLighterMesh.scale.setScalar(1.8);
+            if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=2.2;
+            if(_zippoLighterMesh._flame)_zippoLighterMesh._flame.scale.setScalar(1);
+          }
+        },600);
+      }
+
+      // גל להבה — cone של particles
+      const ang=Math.atan2(
+        b.mesh.position.x-PB.position.x,
+        b.mesh.position.z-PB.position.z);
+      for(let i=0;i<24;i++){
+        const spread=(Math.random()-.5)*0.7;
+        const dist=1.5+Math.random()*5;
+        spawnPfx(
+          PB.position.x+Math.sin(ang+spread)*dist,
+          0.4+Math.random()*1.5,
+          PB.position.z+Math.cos(ang+spread)*dist,
+          Math.random()>.4?0xff5500:0xffaa00, 4);
+      }
+
+      // אור להבה זמני
+      const flameL=new THREE.PointLight(0xff5500,18,10);
+      flameL.position.copy(PB.position).y+=0.8;
+      scene.add(flameL);
+      let _fT=0;
+      const _fI=setInterval(()=>{
+        _fT+=16;
+        flameL.intensity=Math.max(0,18-(_fT/600)*18)*(0.7+Math.random()*0.6);
+        if(_fT>=600){clearInterval(_fI);scene.remove(flameL);}
+      },16);
+
+      // נזק גדול אם Z18 בטווח
+      if(dd<8){
+        const flameDmg=Math.round(dog.pow*55*(1+dog.lv*.12));
+        b.hp-=flameDmg;
+        b._hitT=0.8;b._hitCD=0.8;
+        flash(b.mesh.children[0]);
+        showDmg(b.mesh.position.x,2.5,b.mesh.position.z,Math.round(flameDmg),'#ff5500');
+        haptic([100,40,80]);
+        if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+        // אפקט כוויה על Z18
+        if(b.mesh._aura)b.mesh._aura.color.setHex(0xff5500);
+        setTimeout(()=>{if(!b.dead&&b.mesh._aura)b.mesh._aura.color.setHex(0xcc0066);},800);
+      }
+    }
+
+    // ── מוות Z18 ──
+    if(b.hp<=0&&!b.dead){
       b.dead=true;b.mesh.visible=false;
       if(b.mesh._aura)b.mesh._aura.intensity=0;
       if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=0;
@@ -11456,6 +11541,11 @@ function updCh8(dt){
 
   // ── Mission 46: קרב Z-18 ──
   if(G.mission===46){
+    // הצג טיפ קרב רק פעם אחת
+    if(!G._z18FightTipShown){
+      G._z18FightTipShown=true;
+      setTimeout(()=>showN('🔥 F = ניצוצות | Q = מצית×דאודורנט (5s cooldown)'),1200);
+    }
     updZ18(dt);
   }
 }
