@@ -3376,7 +3376,7 @@ function addCityGuard(x,_floorY,waypoints,spd){
 }
 
 function enterCityHall(){
-  _lodStaticObjs=null; // reset LOD cache on scene switch
+  _lodStaticObjs=null;_lodShadowObjs=null; // reset LOD cache on scene switch
   G.paused=true;
   fadeOut(()=>{
     if(!cityScene)buildCityScene();
@@ -4145,7 +4145,7 @@ function addGuard(sc,waypoints,x,y,z,spd,arr){
 // ENTER / EXIT MOSQUE
 // ════════════════════════════════════════════════
 function enterMosque(){
-  _lodStaticObjs=null;
+  _lodStaticObjs=null;_lodShadowObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!mosqueScene)buildMosqueScene();
@@ -5038,7 +5038,7 @@ function doAtk(){
 //             matrixAutoUpdate=false לאובייקטים רחוקים.
 // ════════════════════════════════════════════════
 let _lodFrame=0;
-let _lodStaticObjs=null;   // נאסף פעם אחת
+let _lodStaticObjs=null;_lodShadowObjs=null;   // נאסף פעם אחת
 let _lodShadowObjs=null;   // רק אובייקטים שמטילים צל
 
 function _initLODStatics(){
@@ -5100,6 +5100,7 @@ function _updLOD(){
 
   // ── כל 45 frames (~0.75s): shadow culling ──
   if(_lodFrame%45!==0)return;
+  if(!_lodShadowObjs)return;
 
   _lodShadowObjs.forEach(obj=>{
     if(obj._isCloud||obj._isGround)return;
@@ -7436,7 +7437,7 @@ function _spawnShadowInLab(){
 }
 
 function enterLab(){
-  _lodStaticObjs=null;
+  _lodStaticObjs=null;_lodShadowObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!labScene)buildLabScene();
@@ -8609,7 +8610,7 @@ function spawnBlood(x,y,z,n=10){
 // ════════════════════════════════════════════════
 // DAMAGE NUMBERS
 // ════════════════════════════════════════════════
-function showDmg(wx,wy,wz,txt,isCoin){
+function showDmg(wx,wy,wz,txt,colorOrCoin){
   // project 3D position to screen
   if(!camera||!renderer)return;
   const v=new THREE.Vector3(wx,wy+.5,wz);
@@ -8621,7 +8622,7 @@ function showDmg(wx,wy,wz,txt,isCoin){
   el.className='dmg-num';
   el.textContent=txt;
   el.style.left=sx+'px';el.style.top=sy+'px';
-  el.style.color=isCoin?'#f5c518':'#ff4444';
+  el.style.color=colorOrCoin===true?'#f5c518':typeof colorOrCoin==='string'?colorOrCoin:'#ff4444';
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),1000);
 }
@@ -9514,7 +9515,7 @@ function buildHospScene(){
 // enterHosp / exitHosp
 // ════════════════════════════════════════════════
 function enterHosp(){
-  _lodStaticObjs=null;
+  _lodStaticObjs=null;_lodShadowObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!hospScene)buildHospScene();
@@ -10936,7 +10937,7 @@ function _triggerZ18GrabScene(){
         G._cinemaMode=false; // שחרר שליטת מצלמה
         G.paused=false;
         showCut('ch8_zippo_returns',()=>{
-          setMission(46);buildZ18();_lodStaticObjs=null;
+          setMission(46);buildZ18();_lodStaticObjs=null;_lodShadowObjs=null;
         });
       }
     },16);
@@ -11279,28 +11280,35 @@ function updZ18(dt){
       _zippoLighterMesh.visible=true;
     }
 
-    // ── מכה רגילה: ניצוצות + שביב אש קטן ──
+    // ── מכה רגילה: להבה קטנה מהמצית (כל מכה = אש) ──
     if(dd<5.5&&G._atkFrame&&b._hitT<=0){
       const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
       b.hp-=dmg;sHit();haptic(28);
       flash(b.mesh.children[0]);
-      // ניצוצות כתום-לבן
-      for(let i=0;i<8;i++)
-        spawnPfx(b.mesh.position.x+(Math.random()-.5)*2,
-          1.2+Math.random()*1.2,b.mesh.position.z+(Math.random()-.5)*2,
-          Math.random()>.5?0xffaa00:0xffffff,2);
-      // שביב אש קטן מהמצית
-      for(let i=0;i<4;i++)
+      // פרצי אש — גלאם קטן לכיוון Z18
+      const ang=Math.atan2(b.mesh.position.x-PB.position.x, b.mesh.position.z-PB.position.z);
+      for(let i=0;i<10;i++){
+        const spread=(Math.random()-.5)*0.5;
+        const dist=0.8+Math.random()*2.5;
+        spawnPfx(
+          PB.position.x+Math.sin(ang+spread)*dist,
+          0.6+Math.random()*1.2,
+          PB.position.z+Math.cos(ang+spread)*dist,
+          Math.random()>.4?0xff5500:0xffaa00, 2.5);
+      }
+      // ניצוצות לבן-כתום
+      for(let i=0;i<5;i++)
         spawnPfx(b.mesh.position.x+(Math.random()-.5)*1.5,
           1.0+Math.random(),b.mesh.position.z+(Math.random()-.5)*1.5,
-          0xff4400,2);
-      // אור פלאש קצר
-      const fl=new THREE.PointLight(0xff6600,8,5);
-      fl.position.copy(b.mesh.position).y+=1.5;
+          Math.random()>.5?0xffdd00:0xffffff,1.5);
+      // אור אש קצר
+      const fl=new THREE.PointLight(0xff5500,10,6);
+      fl.position.copy(PB.position).y+=1.0;
       scene.add(fl);
-      setTimeout(()=>scene.remove(fl),120);
-      spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,8);
-      showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg));
+      setTimeout(()=>scene.remove(fl),140);
+      // צלקת כוויה על Z18 — הילה כתומה רגעית
+      if(b.mesh._aura){b.mesh._aura.color.setHex(0xff6600);setTimeout(()=>{if(!b.dead&&b.mesh._aura)b.mesh._aura.color.setHex(0xcc0066);},300);}
+      showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg),'#ff5500');
       b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
     }
@@ -11501,7 +11509,7 @@ function updCh8(dt){
           _chargeT:0,_chargeReady:false,_chargeActive:false,
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
-      _lodStaticObjs=null; // רענן LOD אחרי spawn חיילים חדשים
+      _lodStaticObjs=null;_lodShadowObjs=null; // רענן LOD אחרי spawn חיילים חדשים
     }
 
     // ── בדוק ניקוי ──
@@ -11533,7 +11541,7 @@ function updCh8(dt){
           _chargeT:0,_chargeReady:false,_chargeActive:false,
           _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
       });
-      _lodStaticObjs=null; // רענן LOD אחרי spawn שומרי מחסן
+      _lodStaticObjs=null;_lodShadowObjs=null; // רענן LOD אחרי spawn שומרי מחסן
     }
     // trigger כניסה למחסן — zone-based
     const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
@@ -11594,7 +11602,7 @@ function updCh8(dt){
             _chargeT:0,_chargeReady:false,_chargeActive:false,
             _cvx:0,_cvz:0,_slamT:0,_howlT:0,_hitFlash:0,_isSuperSoldier:true});
         });
-        _lodStaticObjs=null; // רענן LOD אחרי spawn גל תקיפה
+        _lodStaticObjs=null;_lodShadowObjs=null; // רענן LOD אחרי spawn גל תקיפה
         showN('⚠️ APEX תוקפים את הבסיס! הגן על הבסיס!');
         haptic([100,30,100]);
       }
