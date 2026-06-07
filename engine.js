@@ -5038,7 +5038,7 @@ function doAtk(){
 //             matrixAutoUpdate=false לאובייקטים רחוקים.
 // ════════════════════════════════════════════════
 let _lodFrame=0;
-let _lodStaticObjs=null;_lodShadowObjs=null;   // נאסף פעם אחת
+let _lodStaticObjs=null;   // נאסף פעם אחת
 let _lodShadowObjs=null;   // רק אובייקטים שמטילים צל
 
 function _initLODStatics(){
@@ -9076,6 +9076,7 @@ let _hospFlickerLights=[],_hospFlickerT=0;
 // מרכז גהה — מרכז בריאות הנפש הנטוש, לוד
 // מיקום: (-15, -148) — צפון העיר
 // ════════════════════════════════════════════════
+const SHAFIYA_X=62, SHAFIYA_Z=-118;
 function buildHospitalExterior(){
   const x=SHAFIYA_X, z=SHAFIYA_Z;
 
@@ -10085,7 +10086,6 @@ let _superSoldiers=[];  // חיילי העל בעולם הפתוח (missions 35+
 // ── קבועים ──
 const SUPER_HP=220, SUPER_SPD=3.4, SUPER_ATK=2.8;
 const Z07_HP=700, Z07_SPD=4.8;
-const SHAFIYA_X=62, SHAFIYA_Z=-118;
 
 // ────────────────────────────────────────────────
 // בניית חייל-על (Super Soldier)
