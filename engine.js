@@ -5806,6 +5806,7 @@ function cacheHUD(){
 }
 
 function updCamera(){
+  if(G._cinemaMode)return; // אנימציה סינמטית — לא נגעים במצלמה
   const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
   const px=PB.position.x,py=PB.position.y+1.1*sz,pz=PB.position.z;
   _vCamTarget.set(px+Math.sin(G.yaw)*cd,py+ch,pz+Math.cos(G.yaw)*cd);
@@ -8064,18 +8065,14 @@ function _updateZippoLighter(){
   if(!_zippoLighterMesh||!_zippoLighterMesh.visible||!PB)return;
   const t=Date.now()*.001;
   const bm=dogModel&&dogModel._bipedalMode;
-  if(bm&&dogLegs&&dogLegs[0]){
-    const pawWorld=new THREE.Vector3();
-    dogLegs[0].paw
-      ? dogLegs[0].paw.getWorldPosition(pawWorld)
-      : dogLegs[0].node.getWorldPosition(pawWorld);
-    _zippoLighterMesh.position.copy(pawWorld);
-  } else {
-    const off=new THREE.Vector3(.38,.58,.45);
-    off.applyQuaternion(PB.quaternion);
-    _zippoLighterMesh.position.copy(PB.position).add(off);
-  }
-  _zippoLighterMesh.rotation.y=PB.rotation.y;
+  // בקרב Z18 (bipedalMode): מצית ביד ימין קדמית — offset קבוע
+  const off = bm
+    ? new THREE.Vector3(.42, .72, .55)
+    : new THREE.Vector3(.38, .58, .45);
+  off.applyQuaternion(PB.quaternion);
+  _zippoLighterMesh.position.copy(PB.position).add(off);
+  _zippoLighterMesh.rotation.y=PB.rotation.y-0.3;
+  _zippoLighterMesh.rotation.z = bm ? 0.2 : 0; // מוטה כלפי Z18
   if(_zippoLighterMesh._flame){
     _zippoLighterMesh._flame.scale.setScalar(.82+Math.sin(t*12)*.2);
     _zippoLighterMesh._flame.position.y=.21+Math.sin(t*11)*.006;
@@ -8121,12 +8118,15 @@ function _buildDeodorant(){
 
 function _updateDeodorant(){
   if(!_deodorantMesh||!_deodorantMesh.visible||!PB)return;
-  // ביד שמאל — offset הפוך מהמצית
-  const off=new THREE.Vector3(-.38,.55,.42);
+  const bm=dogModel&&dogModel._bipedalMode;
+  // ביד שמאל — offset הפוך מהמצית, קצת קדימה
+  const off = bm
+    ? new THREE.Vector3(-.42, .65, .55)
+    : new THREE.Vector3(-.38, .55, .42);
   off.applyQuaternion(PB.quaternion);
   _deodorantMesh.position.copy(PB.position).add(off);
   _deodorantMesh.rotation.y=PB.rotation.y+0.3;
-  _deodorantMesh.rotation.z=0.5; // מוחזק בצד
+  _deodorantMesh.rotation.z = bm ? -0.3 : 0.5; // מוטה — כאילו מחזיק ומרסס
 }
 
 function _showZ18WeaponMode(){
@@ -10816,26 +10816,28 @@ function _triggerZ18GrabScene(){
   fillL.position.set(SCENE_X-3,2,SCENE_Z);
   scene.add(fillL);
 
-  // שמור מצב מצלמה
+  // שמור מצב מצלמה לחזרה
   const origCamPos=camera.position.clone();
   const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1.2,PB.position.z);
+
+  // עצור updCamera — שלטון מלא על המצלמה
+  G._cinemaMode=true;
   G.paused=true;
 
   // יעדי מצלמה סינמטיים — קרוב מהצד לראות צוואר+אחיזה
   const cam1=new THREE.Vector3(SCENE_X+6, 3.0, SCENE_Z-2);   // פתיחה — ימין+מול
-  const cam2=new THREE.Vector3(SCENE_X+3, 2.2, SCENE_Z-1.5); // zoom in — ממש קרוב לאחיזה
-  const camLook=new THREE.Vector3(SCENE_X-0.5, 1.4, SCENE_Z+2.0); // מסתכל על גובה צוואר
-  let _camPhase=0; // 0=לסצנה, 1=zoom, 2=חזור
+  const cam2=new THREE.Vector3(SCENE_X+3, 2.2, SCENE_Z-1.5); // zoom in — ממש קרוב
+  const camLook=new THREE.Vector3(SCENE_X-0.5, 1.4, SCENE_Z+2.0); // גובה צוואר
+  let _camPhase=0; // 0=פתיחה, 1=zoom in
 
-  // ticker מצלמה — רץ גם כשpaused
+  // קבע מצלמה מיידית לנקודת פתיחה — אין lerp ראשוני שמרצד
+  camera.position.copy(cam1);
+  camera.lookAt(camLook);
+
+  // ticker קטן — רק zoom in עדין בשלב ב
   const _camTick=setInterval(()=>{
-    if(_camPhase===0){
-      camera.position.lerp(cam1, 0.06);
-      camera.lookAt(camLook);
-    } else if(_camPhase===1){
-      camera.position.lerp(cam2, 0.04);
-      camera.lookAt(camLook);
-    }
+    if(_camPhase===1) camera.position.lerp(cam2, 0.03);
+    camera.lookAt(camLook);
   },16);
 
   // -- שלב א: Z18 נוחת (0→600ms) --
@@ -10912,6 +10914,7 @@ function _triggerZ18GrabScene(){
         clearInterval(_retI);
         scene.remove(z18mesh);scene.remove(momoDummy);
         scene.remove(grabLight);scene.remove(fillL);
+        G._cinemaMode=false; // שחרר שליטת מצלמה
         G.paused=false;
         showCut('ch8_zippo_returns',()=>{
           setMission(46);buildZ18();_lodStaticObjs=null;
@@ -11257,7 +11260,7 @@ function updZ18(dt){
       _zippoLighterMesh.visible=true;
     }
 
-    // ── מכה רגילה: ניצוצות זיפו (atkFrame) ──
+    // ── מכה רגילה: ניצוצות + שביב אש קטן ──
     if(dd<5.5&&G._atkFrame&&b._hitT<=0){
       const dmg=Math.round(dog.pow*14*(1+dog.lv*.12));
       b.hp-=dmg;sHit();haptic(28);
@@ -11267,6 +11270,16 @@ function updZ18(dt){
         spawnPfx(b.mesh.position.x+(Math.random()-.5)*2,
           1.2+Math.random()*1.2,b.mesh.position.z+(Math.random()-.5)*2,
           Math.random()>.5?0xffaa00:0xffffff,2);
+      // שביב אש קטן מהמצית
+      for(let i=0;i<4;i++)
+        spawnPfx(b.mesh.position.x+(Math.random()-.5)*1.5,
+          1.0+Math.random(),b.mesh.position.z+(Math.random()-.5)*1.5,
+          0xff4400,2);
+      // אור פלאש קצר
+      const fl=new THREE.PointLight(0xff6600,8,5);
+      fl.position.copy(b.mesh.position).y+=1.5;
+      scene.add(fl);
+      setTimeout(()=>scene.remove(fl),120);
       spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,8);
       showDmg(b.mesh.position.x,2,b.mesh.position.z,Math.round(dmg));
       b._hitT=0.4;b._hitCD=0.4;G.atkCD=0.5;
@@ -11587,6 +11600,9 @@ function updCh8(dt){
       _showZ18WeaponMode();
       setTimeout(()=>showN('🔥 F = ניצוצות זיפו | Q = מצית×דאודורנט (5s cooldown)'),1200);
     }
+    // עדכן מיקום מצית + דאודורנט בכל frame
+    if(typeof _updateZippoLighter==='function')_updateZippoLighter(dt);
+    if(typeof _updateDeodorant==='function')_updateDeodorant();
     updZ18(dt);
   }
 }
