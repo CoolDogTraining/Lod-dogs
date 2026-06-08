@@ -7827,7 +7827,25 @@ function updCh3Entities(dt){
   if(G.mission===12&&G._bellaMarker){
     const dd=d2(G._bellaMarker.x,G._bellaMarker.z,px,pz);
     if(dd<4){
+      const bellaX=G._bellaMarker.x, bellaZ=G._bellaMarker.z;
       G._bellaMarker=null;
+      // ── מצלמה סינמטית — מסתכלת למטה על מקום בלה ──
+      if(camera&&PB){
+        const origCamPos=camera.position.clone();
+        const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1,PB.position.z);
+        const bellaCam=new THREE.Vector3(bellaX+3.5, 3.5, bellaZ+5);
+        const bellaLook=new THREE.Vector3(bellaX, 0.3, bellaZ);
+        G._cinemaMode=true;
+        let _lT=0;
+        const _lI=setInterval(()=>{
+          _lT+=16;
+          const p=Math.min(_lT/500,1),e=1-Math.pow(1-p,3);
+          camera.position.lerpVectors(origCamPos,bellaCam,e);
+          camera.lookAt(new THREE.Vector3().lerpVectors(origLookAt,bellaLook,e));
+          if(_lT>=500)clearInterval(_lI);
+        },16);
+        setTimeout(()=>{ G._cinemaMode=false; },4000);
+      }
       setTimeout(()=>showCut('bella_dead',()=>{
         // מיד בסיום הדיאלוג — מחליפים לזיפו ופישקה מתחילה לרוץ לכיכר
         G.dog='zippo';

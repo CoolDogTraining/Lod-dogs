@@ -2092,7 +2092,31 @@ function updTitan(dt){
       setTimeout(()=>{
         showN('רקס עומד בשקט. מסתכל על לוד מלמטה...');
       },2000);
-      // שלב ב׳: רקס מתחיל לקרוס + overlay מלא
+      // שלב ב׳: מצלמה סינמטית + רקס מתחיל לקרוס + overlay
+      setTimeout(()=>{
+        G._reksCollapsing=true;
+        G._reksCollapseT=0;
+        // ── נעילת מצלמה סינמטית על רקס ──
+        if(camera&&G._reksAlly&&G._reksAlly.mesh&&PB){
+          const reksPos=G._reksAlly.mesh.position;
+          const origCamPos=camera.position.clone();
+          const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1,PB.position.z);
+          // מצלמה: מהצד הנמוך, ברמת הגובה של רקס הקורס
+          const rexCam=new THREE.Vector3(reksPos.x+4, 2.2, reksPos.z+5);
+          const rexLook=new THREE.Vector3(reksPos.x, 0.6, reksPos.z);
+          G._cinemaMode=true;
+          // lerp חד לנקודת הפתיחה
+          let _lT=0;
+          const _lI=setInterval(()=>{
+            _lT+=16;
+            const p=Math.min(_lT/600,1),e=1-Math.pow(1-p,3);
+            camera.position.lerpVectors(origCamPos,rexCam,e);
+            camera.lookAt(new THREE.Vector3().lerpVectors(origLookAt,rexLook,e));
+            if(_lT>=600)clearInterval(_lI);
+          },16);
+          // אחרי ה-cutscene — שחרר מצלמה
+          setTimeout(()=>{ G._cinemaMode=false; },8500);
+        }
       setTimeout(()=>{
         G._reksCollapsing=true;
         G._reksCollapseT=0;
