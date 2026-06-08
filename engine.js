@@ -476,6 +476,16 @@ function d2(ax,az,bx,bz){return Math.sqrt((ax-bx)**2+(az-bz)**2);}
 // שדרוג: d2sq — מרחק בריבוע (ללא sqrt) לפעולות השוואה — 2x מהיר יותר במסלולים חמים
 function d2sq(ax,az,bx,bz){return (ax-bx)**2+(az-bz)**2;}
 
+function _isOnRoad(x, z){
+  if(Math.abs(z)<8.5)   return true; // הרצל
+  if(Math.abs(x)<8.5)   return true; // ירושלים
+  if(Math.abs(x-40)<8.5) return true; // הדקל
+  if(Math.abs(x+40)<8.5) return true; // הגפן
+  if(Math.abs(z-50)<7||Math.abs(z+50)<7) return true; // וייצמן / בן גוריון
+  if(d2(x,z,40,0)<22) return true; // כיכר
+  return false;
+}
+
 // ════════════════════════════════════════════════
 // WORLD — compact Lod (~150x150 units)
 // ════════════════════════════════════════════════

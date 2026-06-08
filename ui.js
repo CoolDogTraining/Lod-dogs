@@ -1134,16 +1134,6 @@ const _CROSSWALKS=[
 ];
 
 // האם ישות נמצאת בתוך כביש (אם כן — מכוניות צריכות לעצור)
-function _isOnRoad(x, z){
-  if(Math.abs(z)<8.5)   return true; // הרצל
-  if(Math.abs(x)<8.5)   return true; // ירושלים
-  if(Math.abs(x-40)<8.5) return true; // הדקל
-  if(Math.abs(x+40)<8.5) return true; // הגפן
-  if(Math.abs(z-50)<7||Math.abs(z+50)<7) return true; // וייצמן / בן גוריון
-  // כיכר הכדורים — מרכז (40,0) רדיוס 22
-  if(d2(x,z,40,0)<22) return true;
-  return false;
-}
 
 function getGroundY(x,z){
   // כביש — top surface = 0.12
@@ -2147,6 +2137,7 @@ function updTitan(dt){
           updateMissionHUD();updateNavArrow();saveGame();
         });
       },8500);
+      },1500); // סגירת setTimeout שלב ב׳
     }
   }
 }
