@@ -4785,6 +4785,7 @@ function loop(){
     updCh6(dt); // פרק ו׳
     updCh7(dt); // פרק ז׳
     try{updCh8(dt);}catch(e){console.error('updCh8:',e);}
+    if(G.mission>=48)try{updCh9(dt);}catch(e){console.error('updCh9:',e);}
     // כניסה למסגד — שחקן הגיע לדלת במשימה 8
     if(G.mission===8&&G.gateMarker){
       const px=PB.position.x,pz=PB.position.z;
@@ -12228,4 +12229,57 @@ function _spawnTACommander(x,z){
   G._taBossMgr={mesh,bar,hp:BOSS_HP,mhp:BOSS_HP,dead:false,atkT:0,spd:4.5,atk:25};
   taEnemies.push(G._taBossMgr);
   showN('⚠️ מפקד APEX — בוס!');
+}
+
+// ════════════════════════════════════════════════
+// UPD CH9 — proximity triggers בלוד (missions 48-52)
+// תל אביב מטופלת ב-updTelAviv / _checkTAMissionTriggers
+// ════════════════════════════════════════════════
+function updCh9(dt){
+  if(G.mission<48||G.mission>53)return;
+  if(TA.inTA)return; // תל אביב מטפלת בעצמה
+
+  const px=PB.position.x, pz=PB.position.z;
+
+  // 48 → proximity לרחוב הרצל — setMission כבר קורה מ-47, רק מציג hint
+  if(G.mission===48){
+    if(d2(px,pz,-30,55)<8&&!G._ch9_48done){
+      G._ch9_48done=true;
+      MISSIONS[48].unlock();
+    }
+  }
+
+  // 49 → הגיע לבסיס
+  if(G.mission===49){
+    if(d2(px,pz,105,25)<10&&!G._ch9_49done){
+      G._ch9_49done=true;
+      MISSIONS[49].unlock();
+    }
+  }
+
+  // 50 → הגיע למחסן
+  if(G.mission===50){
+    if(d2(px,pz,205,-114)<12&&!G._ch9_50done){
+      G._ch9_50done=true;
+      setMission(51);
+    }
+  }
+
+  // 51 → חדר פנימי במחסן
+  if(G.mission===51){
+    if(d2(px,pz,215,-125)<8&&!G._ch9_51done){
+      G._ch9_51done=true;
+      MISSIONS[51].unlock();
+    }
+  }
+
+  // 52 → תחנת הרכבת
+  if(G.mission===52){
+    if(d2(px,pz,-40,150)<10&&!G._ch9_52done){
+      G._ch9_52done=true;
+      MISSIONS[52].unlock();
+    }
+  }
+
+  // 53 → עלייה על הרכבת → enterTelAviv (כבר ב-engine main loop)
 }
