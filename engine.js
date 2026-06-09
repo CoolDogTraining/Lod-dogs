@@ -4747,6 +4747,13 @@ function loop(){
     updHUD();
     return;
   }
+  if(TA.inTA){
+    updTelAviv(dt);updPfx(dt);
+    updateNavDirection();
+    if(taCamera)renderer.render(taScene,taCamera);
+    updHUD();
+    return;
+  }
   if(!G.paused&&!G.dlgOpen&&!G.cutOpen&&!G._grabPaused){
     try{updPlayer(dt);}catch(e){console.error('updPlayer:',e);}
     try{updEnemies(dt);}catch(e){console.error('updEnemies:',e);}
@@ -4787,6 +4794,14 @@ function loop(){
     if(G.mission===14||G.mission===15){
       const px=PB.position.x,pz=PB.position.z;
       if(d2(px,pz,80,-68)<5)enterCityHall();
+    }
+    // פרק ט׳ — כניסה לתל אביב במישיון 52/53 (תחנת הרכבת לוד)
+    if((G.mission===52||G.mission===53)&&!TA.inTA){
+      const px=PB.position.x,pz=PB.position.z;
+      if(d2(px,pz,-40,150)<8){
+        if(G.mission===52)setMission(53);
+        enterTelAviv();
+      }
     }
   }
   updCamera();updHUD();drawMM();_updLOD();renderer.render(scene,camera);
@@ -5557,6 +5572,20 @@ function switchDog(){
   PB.position.copy(savedPos);
   if(VILLA.inVilla){VILLA.playerX=savedVillaX;VILLA.playerZ=savedVillaZ;PB.position.set(savedVillaX,0,savedVillaZ);}
   showN({colin:'🦴 קולין — כוח',zippo:'⚡ זיפו — מהירות',momo:'👑 מומו — כריזמה'}[G.dog]);
+}
+
+// forceDog — החלף לכלב מסוים (מהסיפור, לא מהשחקן)
+function forceDog(dog, msg){
+  if(dog==='all')return; // 'all' = רק הודעה, לא מחליף
+  const valid=['colin','zippo','momo'];
+  if(!valid.includes(dog))return;
+  if(G.dog===dog){if(msg)showN(msg);return;}
+  const savedPos=PB.position.clone();
+  G.dog=dog;
+  document.getElementById('hdn').textContent=G.dogs[G.dog].name;
+  buildPlayer();
+  PB.position.copy(savedPos);
+  if(msg)showN(msg);
 }
 
 function checkCh2Triggers(){
@@ -11624,3 +11653,579 @@ function updCh8(dt){
   }
 }
 
+
+// ════════════════════════════════════════════════
+// תל אביב — פרק ט׳
+// World נפרד: רחוב אלנבי, שוק הכרמל, נמל, כיכר רבין, פינסקר
+// קואורדינטות: X = מזרח/מערב, Z = צפון/דרום (כרגיל)
+// מרכז העיר = 0,0 בתוך הסצנה (offset מלוד)
+// ════════════════════════════════════════════════
+
+const TA = {inTA:false, playerX:0, playerZ:0, playerYaw:0, enterGrace:0};
+let taScene=null, taCamera=null, taObjects=[], taEnemies=[], taBossMgr=null;
+
+// ── טקסטורות מקומיות לתל אביב ──
+function _taMkRoadTex(){
+  const c=document.createElement('canvas');c.width=c.height=128;
+  const x=c.getContext('2d');
+  x.fillStyle='#1a1a1e';x.fillRect(0,0,128,128);
+  for(let i=0;i<60;i++){
+    const gx=Math.random()*128,gy=Math.random()*128,r=0.4+Math.random()*1.2;
+    x.fillStyle=`rgba(${80+Math.floor(Math.random()*40)},${80+Math.floor(Math.random()*40)},${80+Math.floor(Math.random()*40)},0.18)`;
+    x.beginPath();x.arc(gx,gy,r,0,Math.PI*2);x.fill();
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+function _taMkWallTex(r,g,b){
+  const c=document.createElement('canvas');c.width=c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=`rgb(${r},${g},${b})`;ctx.fillRect(0,0,64,64);
+  for(let i=0;i<40;i++){
+    const wx=Math.random()*64,wy=Math.random()*64,ww=4+Math.random()*10,wh=2+Math.random()*4;
+    const dr=Math.floor((Math.random()-.5)*18);
+    ctx.fillStyle=`rgba(${r+dr},${g+dr},${b+dr},0.5)`;
+    ctx.fillRect(wx,wy,ww,wh);
+  }
+  return new THREE.CanvasTexture(c);
+}
+
+// ── פרימיטיב מקומי — מוסיף ל-taScene ──
+function _taB(w,h,d,c,x,y,z){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:c}));
+  m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;
+  taScene.add(m);taObjects.push(m);return m;
+}
+function _taCyl(rt,rb,h,seg,c,x,y,z){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),new THREE.MeshLambertMaterial({color:c}));
+  m.position.set(x,y,z);taScene.add(m);taObjects.push(m);return m;
+}
+function _taRd(x,z,w,d,vert){
+  const rTex=_taMkRoadTex();rTex.wrapS=rTex.wrapT=THREE.RepeatWrapping;rTex.repeat.set(3,3);
+  const rm=new THREE.MeshStandardMaterial({map:rTex,roughness:.94,metalness:0});
+  const road=new THREE.Mesh(new THREE.BoxGeometry(vert?w:d,0.12,vert?d:w),rm);
+  road.position.set(x,0.06,z);road.receiveShadow=true;taScene.add(road);taObjects.push(road);
+  // קו צהוב מרכזי
+  const yl=new THREE.Mesh(new THREE.BoxGeometry(vert?.12:d,.01,vert?d:.12),new THREE.MeshLambertMaterial({color:0xffdd00}));
+  yl.position.set(x,.14,z);taScene.add(yl);taObjects.push(yl);
+}
+function _taTree(x,z){
+  const trunk=_taB(.5,2.5,.5,0x5c3317,x,1.25,z);
+  const foliage=_taCyl(.01,2.2,3,7,0x2d7a1e,x,4.5,z);
+  return {trunk,foliage};
+}
+function _taBld(x,z,w,d,h,col){
+  const tex=_taMkWallTex((col>>16)&0xff,(col>>8)&0xff,col&0xff);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(w/5,h/5);
+  const mat=new THREE.MeshStandardMaterial({map:tex,color:col,roughness:.85,metalness:0});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+  body.position.set(x,h/2,z);body.castShadow=true;body.receiveShadow=true;
+  taScene.add(body);taObjects.push(body);
+  // גג שטוח עם מרצפות
+  const roof=_taB(w+.2,.3,d+.2,0x888880,x,h+.15,z);
+  return body;
+}
+
+// ════════════════════════════════════════════════
+// BUILD TEL AVIV SCENE
+// מפה מדויקת: נמל בצפון-מערב, כרמל במרכז, רבין מזרח, אלנבי דרום
+// ════════════════════════════════════════════════
+function buildTelAvivScene(){
+  taScene=new THREE.Scene();
+  taScene.background=new THREE.Color(0x87ceeb); // שמים כחולים
+  taScene.fog=new THREE.Fog(0xb0d0e8,80,320);
+
+  // ── תאורה ──
+  taScene.add(new THREE.AmbientLight(0xfff5e0,2.2));
+  const sun=new THREE.DirectionalLight(0xfff8e0,2.8);
+  sun.position.set(60,120,40);sun.castShadow=true;
+  sun.shadow.mapSize.width=sun.shadow.mapSize.height=1024;
+  taScene.add(sun);
+  taScene.add(new THREE.HemisphereLight(0xaaccff,0x886644,1.0));
+
+  // ── קרקע — אספלט עירוני ──
+  const gTex=_taMkRoadTex();gTex.wrapS=gTex.wrapT=THREE.RepeatWrapping;gTex.repeat.set(40,40);
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({map:gTex,roughness:.95,color:0xcccccc}));
+  gnd.rotation.x=-Math.PI/2;gnd.position.y=-.01;gnd.receiveShadow=true;gnd._isGround=true;
+  taScene.add(gnd);taObjects.push(gnd);
+
+  // ════════════════════════════════════════════════
+  // רחובות ראשיים — גריד תל אביב
+  // אלנבי: E-W z=60  |  דיזנגוף: N-S x=-30
+  // בן יהודה: N-S x=30  |  הירקון: N-S x=90 (לים)
+  // קינג ג׳ורג׳: E-W z=0  |  פינסקר: E-W z=-40
+  // ════════════════════════════════════════════════
+  _taRd(0, 60, 14,240,false);  // רחוב אלנבי — E-W (דרום)
+  _taRd(0,  0, 14,240,false);  // קינג ג׳ורג׳ — E-W (מרכז)
+  _taRd(0,-40, 12,240,false);  // פינסקר — E-W (צפון-מרכז)
+  _taRd(0,-110,12,240,false);  // גורדון — E-W (ליד נמל)
+  _taRd(-30,0, 12,240,true);   // דיזנגוף — N-S
+  _taRd( 30,0, 12,240,true);   // בן יהודה — N-S
+  _taRd( 90,0, 10,240,true);   // הירקון — N-S (צמוד לים)
+  _taRd(-90,0, 10,220,true);   // שוק הכרמל — N-S (מערב)
+
+  // ════════════════════════════════════════════════
+  // ים — לאורך מערב
+  // ════════════════════════════════════════════════
+  const seaMat=new THREE.MeshLambertMaterial({color:0x1a6b9e,transparent:true,opacity:.88});
+  const sea=new THREE.Mesh(new THREE.PlaneGeometry(80,300),seaMat);
+  sea.rotation.x=-Math.PI/2;sea.position.set(135,.02,0);
+  taScene.add(sea);taObjects.push(sea);
+  // גלי ים — רצועות בהירות
+  for(let i=0;i<8;i++){
+    const wave=_taB(80,.08,1.5,0x4fb0e8,135,.06,-100+i*28);
+  }
+
+  // ════════════════════════════════════════════════
+  // נמל תל אביב — צפון-מערב (x=80..140, z=-140..-80)
+  // ════════════════════════════════════════════════
+  (()=>{
+    const PX=105, PZ=-115;
+    // רצפת נמל — בטון אפור
+    const dock=new THREE.Mesh(new THREE.PlaneGeometry(60,55),new THREE.MeshLambertMaterial({color:0x8a8a84}));
+    dock.rotation.x=-Math.PI/2;dock.position.set(PX,.05,PZ);taScene.add(dock);taObjects.push(dock);
+    // רציף — קיר לים
+    _taB(60,.8,1.2,0x5a5a52,PX,.4,PZ-27.5);
+    // עגורנים — 3 יחידות
+    [PX-20,PX,PX+20].forEach(ex=>{
+      _taB(.8,12,.8,0xcc4400,ex,6,PZ-24);     // עמוד
+      _taB(14,.6,.6,0xcc4400,ex+5,12.3,PZ-24); // זרוע
+      _taB(.2,10,.2,0x888880,ex+12,7.3,PZ-24); // כבל
+    });
+    // מחסני נמל
+    _taBld(PX-18,PZ+12,20,10,6,0x9e9e8c);
+    _taBld(PX+18,PZ+12,18,10,5.5,0x8c8c7c);
+    // סירות — 2
+    _taB(8,1.2,3,0xe8d8a0,PX-8,0.6,PZ-22);
+    _taB(6,1,2.5,0xd0c090,PX+10,0.6,PZ-24);
+    // שלט נמל תל אביב
+    _taB(8,.8,.15,0x1a4a8a,PX,3.5,PZ+5);
+    // עצים לאורך הכניסה
+    for(let i=-2;i<=2;i++)_taTree(PX+i*8,PZ+20);
+    // marker כניסת נמל
+    G._taPortPos={x:PX,z:PZ+18};
+  })();
+
+  // ════════════════════════════════════════════════
+  // שוק הכרמל — מרכז-מערב (x=-90..-40, z=20..80)
+  // ════════════════════════════════════════════════
+  (()=>{
+    const MX=-65, MZ=50;
+    // קורת-גג מרכזית לאורך השוק
+    _taB(.6,3.5,55,0x6b3f1a,MX,1.75,MZ);
+    // פרגולה — קורות רוחב
+    for(let i=0;i<8;i++){
+      _taB(22,.4,.4,0x6b3f1a,MX,3.3,MZ-24+i*7);
+    }
+    // דוכנים — 12 יחידות, סירוגין 2 צדדים
+    const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133];
+    for(let i=0;i<12;i++){
+      const side=i%2===0?-1:1;
+      const dz=MZ-26+i*4.8;
+      const dx=MX+side*6;
+      const col=awningCols[i%awningCols.length];
+      _taB(4,.85,2.8,0xd4a96a,dx,0.42,dz);   // שולחן
+      _taB(4.6,.12,2.8,col,dx,1.2,dz);        // גוון
+      // מוצרים — תיבה קטנה
+      _taB(1.5,.4,1,col,dx,1.1,dz);
+    }
+    // כלבה נירה — ליד דוכן בקצה דרום
+    G._taNiraPos={x:MX,z:MZ+24};
+    _taB(1.2,.6,2,0xc8a060,MX,0.3,MZ+24); // placeholder נירה
+    // ריצוף שוק
+    const mktFloor=new THREE.Mesh(new THREE.PlaneGeometry(22,55),new THREE.MeshLambertMaterial({color:0xc8b89a}));
+    mktFloor.rotation.x=-Math.PI/2;mktFloor.position.set(MX,.04,MZ);taScene.add(mktFloor);taObjects.push(mktFloor);
+    // עצים בקצות השוק
+    _taTree(MX-8,MZ-26);_taTree(MX+8,MZ-26);
+    _taTree(MX-8,MZ+26);_taTree(MX+8,MZ+26);
+    G._taMarketPos={x:MX,z:MZ};
+  })();
+
+  // ════════════════════════════════════════════════
+  // בניינים לאורך אלנבי — דרום (z=60..80)
+  // בתים עם חזית ים-תיכונית, טיח, מרפסות
+  // ════════════════════════════════════════════════
+  const alenbyCols=[0xf5e6c8,0xe8d8b0,0xf0dcc0,0xddd0b0,0xe8e0cc];
+  [[-80,72],[- 50,74],[-20,72],[10,70],[40,72],[70,74],[100,72]].forEach(([bx,bz],i)=>{
+    const h=8+Math.random()*6;
+    _taBld(bx,bz,14,10,h,alenbyCols[i%alenbyCols.length]);
+    // מרפסת
+    _taB(14,.2,2.5,0xddccaa,bx,h+.1,bz-6.2);
+    _taB(14,.2,2.5,0xddccaa,bx,h*.6+.1,bz-6.2);
+  });
+
+  // ════════════════════════════════════════════════
+  // דיזנגוף — שני צדדים (x=-30±20, z=-80..60)
+  // בתים בינוניים, קפה, עצי פיקוס
+  // ════════════════════════════════════════════════
+  const dizCols=[0xf0e8d8,0xe8dcc8,0xf8f0e0,0xe0d8c8];
+  for(let dz=-70;dz<=50;dz+=24){
+    const h=10+Math.random()*8;
+    _taBld(-48,dz,16,12,h,dizCols[Math.floor(Math.random()*dizCols.length)]);
+    _taBld(-12,dz,14,12,h*.9,dizCols[Math.floor(Math.random()*dizCols.length)]);
+    // עצי פיקוס לאורך הרחוב
+    _taTree(-38,dz);_taTree(-22,dz);
+  }
+
+  // ════════════════════════════════════════════════
+  // בניין APEX — פינסקר (x=50..70, z=-40)
+  // חזית: חלונות מרושתים, כהה ומאיים
+  // ════════════════════════════════════════════════
+  (()=>{
+    const AX=58, AZ=-40;
+    // גוף הבניין — 4 קומות, אפור כהה
+    _taBld(AX,AZ,16,14,18,0x3a3a3e);
+    // חלונות מרושתים — 3x4
+    for(let row=0;row<4;row++) for(let col=-1;col<=1;col++){
+      _taB(2.8,2,.12,0x1a1a2e,AX+col*4.5,4+row*4,AZ-7.08); // חלון כהה
+      _taB(2.8,.12,.12,0x888888,AX+col*4.5,4+row*4,AZ-7.06); // סורג
+      _taB(.12,2,.12,0x888888,AX+col*4.5,4+row*4,AZ-7.06);
+    }
+    // לוגו APEX על גג
+    _taB(6,.3,1,0xcc0000,AX,18.15,AZ-4);
+    // דלת ברזל
+    _taB(2.4,3,.15,0x222222,AX,1.5,AZ-7.1);
+    // תאורת חירום אדומה
+    const apexLight=new THREE.PointLight(0xff2200,3,20);
+    apexLight.position.set(AX,6,AZ-7);taScene.add(apexLight);taObjects.push(apexLight);
+    G._taApexBldPos={x:AX,z:AZ};
+    // כניסת מעבדה — בלוק גג מהדופן האחורית
+    _taB(16,.5,2,0x282828,AX,18.3,AZ+7.5); // גג מורחב לכניסת גג
+    G._taLabRoofEntry={x:AX,z:AZ+6};
+  })();
+
+  // ════════════════════════════════════════════════
+  // כיכר רבין — מרכז (x=30..70, z=-5..25)
+  // אנדרטה, גנות, שביל
+  // ════════════════════════════════════════════════
+  (()=>{
+    const RX=50, RZ=10;
+    // ריצוף הכיכר — אריחים בהירים
+    const sqFloor=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshLambertMaterial({color:0xe8e4d8}));
+    sqFloor.rotation.x=-Math.PI/2;sqFloor.position.set(RX,.05,RZ);taScene.add(sqFloor);taObjects.push(sqFloor);
+    // אריחי גריד
+    for(let i=-4;i<=4;i++){
+      _taB(40,.05,.2,0xccccbc,RX,.06,RZ+i*3);
+      _taB(.2,.05,30,0xccccbc,RX+i*4.5,.06,RZ);
+    }
+    // אנדרטת רבין — עמוד + לוח
+    _taCyl(.5,.5,4.5,8,0x888880,RX,2.25,RZ);
+    _taB(3.5,2.5,.2,0x444440,RX,5.5,RZ);
+    // גנות — ירוק סביב
+    const gar=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshLambertMaterial({color:0x3d8a2a}));
+    gar.rotation.x=-Math.PI/2;gar.position.set(RX,.04,RZ+22);taScene.add(gar);taObjects.push(gar);
+    for(let i=0;i<10;i++)_taTree(RX-16+i*4,RZ+25+(i%2)*4);
+    // עצים פנימיים בכיכר
+    [[-14,-8],[14,-8],[-14,8],[14,8]].forEach(([ox,oz])=>_taTree(RX+ox,RZ+oz));
+    G._taRabinPos={x:RX,z:RZ};
+  })();
+
+  // ════════════════════════════════════════════════
+  // פארק הירקון — צפון (x=-60..60, z=-160..-120)
+  // ════════════════════════════════════════════════
+  (()=>{
+    const PKX=0, PKZ=-140;
+    const pg=new THREE.Mesh(new THREE.PlaneGeometry(120,40),new THREE.MeshLambertMaterial({color:0x4a9e30}));
+    pg.rotation.x=-Math.PI/2;pg.position.set(PKX,.06,PKZ);taScene.add(pg);taObjects.push(pg);
+    // נהר ירקון — רצועה כחולה
+    const river=new THREE.Mesh(new THREE.PlaneGeometry(120,8),new THREE.MeshLambertMaterial({color:0x2a6a9a,transparent:true,opacity:.8}));
+    river.rotation.x=-Math.PI/2;river.position.set(PKX,.08,PKZ+5);taScene.add(river);taObjects.push(river);
+    // עצים — שורה מרובה
+    for(let i=-5;i<=5;i++){
+      _taTree(PKX+i*10,PKZ-12);
+      _taTree(PKX+i*10,PKZ+15);
+    }
+    G._taYarkonPos={x:PKX,z:PKZ};
+  })();
+
+  // ════════════════════════════════════════════════
+  // בניינים בין הרחובות — מרכז העיר
+  // ════════════════════════════════════════════════
+  const cityPalette=[0xf5e6c8,0xe8dcc8,0xf0e0c4,0xf8f4e8,0xe4dcc0,0xf0e8d4];
+  const bldGrid=[
+    [-60,-20,16,12,14],[-60,20,16,12,12],[-60,-60,14,10,16],
+    [ -5,-20,14,12,11],[ -5,20,14,12,13],[  -5,-60,14,10,10],
+    [ 55,-20,16,14,15],[ 55,20,16,14,12],[  55,-65,14,10,18],
+    [-60,120,16,12,9], [ -5,115,14,10,11],[ 55,115,16,12,8],
+  ];
+  bldGrid.forEach(([bx,bz,w,d,h])=>{
+    const c=cityPalette[Math.floor(Math.random()*cityPalette.length)];
+    _taBld(bx,bz,w,d,h,c);
+    // מרפסת בינלאומית — קופסת בטון קדמית
+    _taB(w,.18,2,0xddccaa,bx,h+.09,bz-d/2-1);
+  });
+
+  // ════════════════════════════════════════════════
+  // תחנת הרכבת — כניסה לתל אביב (דרום, z=120)
+  // ════════════════════════════════════════════════
+  (()=>{
+    const TX=0, TZ=120;
+    _taBld(TX,TZ+5,30,20,8,0xccc0a8);         // מבנה
+    _taB(30,.12,20,0x888870,TX,.06,TZ+5);       // פלטפורמה
+    // רציף רכבת
+    _taB(26,.4,5,0x9a9080,TX,.2,TZ-7);
+    // עמודי גגון
+    [-10,0,10].forEach(ox=>_taCyl(.3,.3,4,6,0x666660,TX+ox,2,TZ-7));
+    _taB(26,.25,.4,0x888870,TX,4.1,TZ-7);       // מעקה גגון
+    // שלט
+    _taB(10,.8,.15,0x1a4480,TX,6,TZ-2);
+    // קו רכבת
+    _taB(4,.12,40,0x444440,TX-1,.06,TZ+10);
+    _taB(4,.12,40,0x444440,TX+1,.06,TZ+10);
+    G._taTrainPos={x:TX,z:TZ};
+  })();
+
+  // ════════════════════════════════════════════════
+  // מצלמה
+  // ════════════════════════════════════════════════
+  taCamera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,.1,400);
+  taCamera.position.set(0,6,130);
+  taCamera.lookAt(0,0,120);
+}
+
+// ════════════════════════════════════════════════
+// ENTER / EXIT TEL AVIV
+// ════════════════════════════════════════════════
+function enterTelAviv(){
+  _lodStaticObjs=null;_lodShadowObjs=null;
+  G.paused=true;
+  fadeOut(()=>{
+    if(!taScene)buildTelAvivScene();
+    TA.inTA=true;
+    // מיקום כניסה — תחנת הרכבת
+    TA.playerX=0;TA.playerZ=115;
+    TA.playerYaw=Math.PI;
+    G.yaw=Math.PI;
+    TA.enterGrace=3.0;
+    if(taCamera){
+      taCamera.position.set(0,6,130);
+      taCamera.lookAt(0,1,120);
+    }
+    scene.remove(PB);
+    taScene.add(PB);
+    PB.position.set(TA.playerX,0,TA.playerZ);
+    showN('🌆 תל אביב. גדולה. רועשת. כלום לא מוכר.\nזיפו: \"אני יודע לאן ללכת.\"');
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+function exitTelAviv(){
+  G.paused=true;
+  fadeOut(()=>{
+    TA.inTA=false;
+    if(taScene)taScene.remove(PB);
+    scene.add(PB);
+    PB.position.set(-40,0,150); // תחנת רכבת לוד
+    taObjects.forEach(o=>{
+      if(o.geometry)o.geometry.dispose();
+      if(o.material){
+        if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());
+        else o.material.dispose();
+      }
+    });
+    taObjects.length=0;taEnemies.length=0;
+    taScene=null;taCamera=null;taBossMgr=null;
+    G.paused=false;
+    fadeIn();
+  });
+}
+
+// ════════════════════════════════════════════════
+// UPD TEL AVIV — loop בתוך תל אביב
+// ════════════════════════════════════════════════
+function updTelAviv(dt){
+  if(!TA.inTA||G.paused||G.dlgOpen)return;
+  TA.enterGrace=Math.max(0,(TA.enterGrace||0)-dt);
+  if(G.atkCD>0)G.atkCD-=dt;
+  const _taAtkCD=G.dog==='zippo'?0.28:0.5;
+  if(G.keys['KeyF']&&G.atkCD<=0){G.atkCD=_taAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);}
+
+  // ── תנועה ──
+  const spd=G.dogs[G.dog].spd*1.05; // תל אביב — קצת יותר מהירה
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
+  _vRgt.set( Math.cos(G.yaw),0,-Math.sin(G.yaw));
+  let inputX=0,inputZ=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp'])   {inputX+=_vFwd.x;inputZ+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']) {inputX-=_vFwd.x;inputZ-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']) {inputX-=_vRgt.x;inputZ-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){inputX+=_vRgt.x;inputZ+=_vRgt.z;}
+  if(G.joy.on){inputX+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;inputZ+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
+  const iln=Math.hypot(inputX,inputZ)||1;
+  let nx=TA.playerX+(inputX/iln)*spd*dt;
+  let nz=TA.playerZ+(inputZ/iln)*spd*dt;
+  // גבולות תל אביב
+  nx=Math.max(-130,Math.min(150,nx));
+  nz=Math.max(-180,Math.min(140,nz));
+  TA.playerX=nx;TA.playerZ=nz;
+  PB.position.set(TA.playerX,0,TA.playerZ);
+
+  // ── אנימציית הליכה ──
+  const _taMoving=Math.abs(inputX)>.01||Math.abs(inputZ)>.01;
+  if(_taMoving){
+    walkT+=dt*8;
+    dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y=_by+Math.abs(Math.sin(walkT))*.09;}
+    if(dogTail)dogTail.rotation.z=Math.sin(walkT*2)*.35;
+  } else {
+    dogLegs.forEach(lg=>{lg.node.rotation.x*=.85;});
+    if(dogModel){const _by=dogModel._baseY||0.25;dogModel.position.y+=(_by-dogModel.position.y)*.15;}
+    if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
+  }
+  if(_taMoving)PB.rotation.y=Math.atan2(-inputX,-inputZ);
+
+  // ── מצלמה ──
+  if(taCamera){
+    const sz=G.dog==='momo'?.58:1,cd=9,ch=5+G.pitch*7;
+    const tpx=TA.playerX,tpy=1.1*sz,tpz=TA.playerZ;
+    _vCamTarget.set(tpx+Math.sin(G.yaw)*cd,tpy+ch,tpz+Math.cos(G.yaw)*cd);
+    taCamera.position.lerp(_vCamTarget,.1);
+    taCamera.lookAt(tpx,tpy+.7,tpz);
+  }
+
+  // ── אויבי APEX בתל אביב — spawn לפי mission ──
+  _updTAEnemies(dt);
+
+  // ── triggers מישיונים ──
+  _checkTAMissionTriggers();
+}
+
+// ════════════════════════════════════════════════
+// TRIGGERS — בדיקת מרחק למטרות mission בתל אביב
+// ════════════════════════════════════════════════
+function _checkTAMissionTriggers(){
+  if(!TA.inTA)return;
+  const px=TA.playerX, pz=TA.playerZ;
+
+  // mission 54: שוק הכרמל
+  if(G.mission===54&&G._taMarketPos&&d2(px,pz,G._taMarketPos.x,G._taMarketPos.z)<18)
+    setMission(55);
+
+  // mission 55: נירה — פינת השוק
+  if(G.mission===55&&G._taNiraPos&&d2(px,pz,G._taNiraPos.x,G._taNiraPos.z)<5){
+    setMission(56);
+  }
+
+  // mission 56: גג הבניין APEX
+  if(G.mission===56&&G._taLabRoofEntry&&d2(px,pz,G._taLabRoofEntry.x,G._taLabRoofEntry.z)<6)
+    setMission(57);
+
+  // mission 60: נמל — קרב
+  if(G.mission===60&&G._taPortPos&&d2(px,pz,G._taPortPos.x,G._taPortPos.z)<20)
+    setMission(61);
+
+  // mission 61: כיכר רבין — קרב סיום
+  if(G.mission===61&&G._taRabinPos&&d2(px,pz,G._taRabinPos.x,G._taRabinPos.z)<22&&!G._taRabinBattleDone){
+    G._taRabinBattleDone=true;
+    _spawnTARabinFight();
+  }
+
+  // mission 62: מפקד APEX נהרג — כץ מקריב
+  if(G.mission===62&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
+    G._taKatzSacDone=true;
+    setTimeout(()=>showCut('ch9_katz_sacrifice',()=>{
+      setTimeout(()=>showCut('ch9_ending',()=>{
+        setMission(63);
+        exitTelAviv();
+      }),500);
+    }),600);
+  }
+}
+
+// ════════════════════════════════════════════════
+// ENEMIES — אויבי APEX בתל אביב
+// ════════════════════════════════════════════════
+const _TA_ENEMY_HP=55, _TA_ENEMY_SPD=5.8, _TA_ENEMY_ATK=12;
+
+function _spawnTAEnemy(x,z){
+  if(!taScene)return;
+  const mesh=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1,1.2,.8),new THREE.MeshLambertMaterial({color:0x1a1a2e}));
+  body.position.y=.6;mesh.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.7,.7),new THREE.MeshLambertMaterial({color:0x1a1a2e}));
+  head.position.y=1.55;mesh.add(head);
+  // עיניים אדומות
+  const eyeM=new THREE.MeshLambertMaterial({color:0xff2200,emissive:0xcc0000});
+  [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.BoxGeometry(.12,.1,.05),eyeM);e.position.set(s*.18,1.58,.36);mesh.add(e);});
+  mesh.position.set(x,0,z);mesh.castShadow=true;
+  taScene.add(mesh);
+  const bar=_taMkHPBar(mesh,_TA_ENEMY_HP);
+  const e={mesh,bar,hp:_TA_ENEMY_HP,mhp:_TA_ENEMY_HP,spd:_TA_ENEMY_SPD,atk:_TA_ENEMY_ATK,
+    atkT:0,state:'patrol',homeX:x,homeZ:z,_alertT:0};
+  taEnemies.push(e);return e;
+}
+
+function _taMkHPBar(parent,mhp){
+  const bg=new THREE.Mesh(new THREE.BoxGeometry(2,.18,.05),new THREE.MeshLambertMaterial({color:0x333333}));
+  bg.position.set(0,2.4,0);parent.add(bg);
+  const fill=new THREE.Mesh(new THREE.BoxGeometry(2,.14,.06),new THREE.MeshLambertMaterial({color:0xff3300}));
+  fill.position.set(0,2.4,.01);parent.add(fill);
+  fill._mhp=mhp;return fill;
+}
+
+function _updTAEnemies(dt){
+  if(!TA.inTA)return;
+  const px=TA.playerX,pz=TA.playerZ;
+  const dog=G.dogs[G.dog];
+  taEnemies.forEach(e=>{
+    if(e.hp<=0||!e.mesh.visible)return;
+    const ex=e.mesh.position.x,ez=e.mesh.position.z;
+    const dd=d2(ex,ez,px,pz);
+    e.atkT=Math.max(0,e.atkT-dt);
+    if(dd<18)e.state='chase';
+    else if(dd>30)e.state='patrol';
+    if(e.state==='chase'){
+      const ang=Math.atan2(px-ex,pz-ez);
+      e.mesh.position.x+=Math.sin(ang)*e.spd*dt;
+      e.mesh.position.z+=Math.cos(ang)*e.spd*dt;
+      e.mesh.rotation.y=ang;
+      if(dd<2.2&&e.atkT<=0){
+        e.atkT=1.1;G.hp=Math.max(0,G.hp-e.atk);
+        e.mesh.rotation.z=.3;setTimeout(()=>{if(e.mesh)e.mesh.rotation.z=0;},200);
+      }
+    } else {
+      // patrol חיפוש
+      e._alertT=(e._alertT||0)+dt;
+      if(e._alertT>2){e._alertT=0;
+        const a=Math.random()*Math.PI*2;
+        e.mesh.position.x=e.homeX+Math.cos(a)*4;
+        e.mesh.position.z=e.homeZ+Math.sin(a)*4;
+      }
+    }
+    // פגיעת שחקן
+    if(G.keys['KeyF']&&dd<2.8&&G.atkCD<=0){
+      e.hp-=dog.atk;
+      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);}
+      if(e.hp<=0){e.mesh.visible=false;sBark();}
+    }
+  });
+}
+
+function _spawnTARabinFight(){
+  if(!taScene)return;
+  showN('⚔️ חיילי APEX — הקיפו!');
+  const R=G._taRabinPos||{x:50,z:10};
+  // 6 חיילים פרוסים סביב הכיכר
+  [[R.x-16,R.z-12],[R.x+16,R.z-12],[R.x-16,R.z+12],
+   [R.x+16,R.z+12],[R.x,R.z-18],[R.x,R.z+18]].forEach(([x,z])=>_spawnTAEnemy(x,z));
+  // בוס מפקד
+  _spawnTACommander(R.x,R.z-5);
+  setMission(62);
+}
+
+function _spawnTACommander(x,z){
+  if(!taScene)return;
+  const mesh=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.6,1),new THREE.MeshLambertMaterial({color:0x0a0a1e}));
+  body.position.y=.8;mesh.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.9,.85,.85),new THREE.MeshLambertMaterial({color:0x0a0a1e}));
+  head.position.y=1.93;mesh.add(head);
+  // כתפיות אדומות
+  [-1,1].forEach(s=>{const sh=new THREE.Mesh(new THREE.BoxGeometry(.5,.2,.8),new THREE.MeshLambertMaterial({color:0xcc0000}));sh.position.set(s*.8,1.5,0);mesh.add(sh);});
+  mesh.position.set(x,0,z);taScene.add(mesh);taObjects.push(mesh);
+  const BOSS_HP=220;
+  const bar=_taMkHPBar(mesh,BOSS_HP);
+  G._taBossMgr={mesh,bar,hp:BOSS_HP,mhp:BOSS_HP,dead:false,atkT:0,spd:4.5,atk:25};
+  taEnemies.push(G._taBossMgr);
+  showN('⚠️ מפקד APEX — בוס!');
+}
