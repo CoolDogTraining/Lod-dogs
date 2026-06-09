@@ -2582,6 +2582,9 @@ function _devJump(n){
     if(n>=48){
       G._ch9_48done=false;G._ch9_49done=false;G._ch9_50done=false;
       G._ch9_51done=false;G._ch9_52done=false;
+      G._ta53done=false;G._ta54done=false;G._ta55done=false;
+      G._ta56done=false;G._ta57done=false;G._ta58done=false;
+      G._ta59done=false;G._ta60done=false;G._ta61done=false;
       G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
       // וודא שלא נשארים בתל אביב
       if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
@@ -2606,6 +2609,9 @@ function csStartChapter(n){
     if(n>=48){
       G._ch9_48done=false;G._ch9_49done=false;G._ch9_50done=false;
       G._ch9_51done=false;G._ch9_52done=false;
+      G._ta53done=false;G._ta54done=false;G._ta55done=false;
+      G._ta56done=false;G._ta57done=false;G._ta58done=false;
+      G._ta59done=false;G._ta60done=false;G._ta61done=false;
       G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
       if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
       setTimeout(()=>{if(typeof PB!=='undefined')PB.position.set(-30,0,55);},300);

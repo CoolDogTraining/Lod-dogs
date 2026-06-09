@@ -4796,13 +4796,10 @@ function loop(){
       const px=PB.position.x,pz=PB.position.z;
       if(d2(px,pz,80,-68)<5)enterCityHall();
     }
-    // פרק ט׳ — כניסה לתל אביב במישיון 52/53 (תחנת הרכבת לוד)
-    if((G.mission===52||G.mission===53)&&!TA.inTA){
+    // פרק ט׳ — כניסה לתל אביב: רק מישיון 53, אחרי שהשחקן עמד ליד הרכבת
+    if(G.mission===53&&!TA.inTA){
       const px=PB.position.x,pz=PB.position.z;
-      if(d2(px,pz,-40,150)<8){
-        if(G.mission===52)setMission(53);
-        enterTelAviv();
-      }
+      if(d2(px,pz,-40,150)<8)enterTelAviv();
     }
   }
   updCamera();updHUD();drawMM();_updLOD();renderer.render(scene,camera);
@@ -12092,36 +12089,87 @@ function updTelAviv(dt){
 }
 
 // ════════════════════════════════════════════════
-// TRIGGERS — בדיקת מרחק למטרות mission בתל אביב
+// TRIGGERS — missions בתל אביב (53-62)
 // ════════════════════════════════════════════════
 function _checkTAMissionTriggers(){
   if(!TA.inTA)return;
   const px=TA.playerX, pz=TA.playerZ;
 
-  // mission 54: שוק הכרמל
-  if(G.mission===54&&G._taMarketPos&&d2(px,pz,G._taMarketPos.x,G._taMarketPos.z)<18)
-    setMission(55);
-
-  // mission 55: נירה — פינת השוק
-  if(G.mission===55&&G._taNiraPos&&d2(px,pz,G._taNiraPos.x,G._taNiraPos.z)<5){
-    setMission(56);
+  // 53 → הגיע לשוק הכרמל — מקדם ל-54 + unlock
+  if(G.mission===53&&!G._ta53done){
+    if(d2(px,pz,-65,50)<20){
+      G._ta53done=true;
+      showCut('ch9_tel_aviv_arrive',()=>setMission(54));
+    }
   }
 
-  // mission 56: גג הבניין APEX
-  if(G.mission===56&&G._taLabRoofEntry&&d2(px,pz,G._taLabRoofEntry.x,G._taLabRoofEntry.z)<6)
-    setMission(57);
-
-  // mission 60: נמל — קרב
-  if(G.mission===60&&G._taPortPos&&d2(px,pz,G._taPortPos.x,G._taPortPos.z)<20)
-    setMission(61);
-
-  // mission 61: כיכר רבין — קרב סיום
-  if(G.mission===61&&G._taRabinPos&&d2(px,pz,G._taRabinPos.x,G._taRabinPos.z)<22&&!G._taRabinBattleDone){
-    G._taRabinBattleDone=true;
-    _spawnTARabinFight();
+  // 54 → proximity לשוק — מקדם ל-55
+  if(G.mission===54&&!G._ta54done){
+    if(d2(px,pz,-65,50)<14){
+      G._ta54done=true;
+      MISSIONS[54].unlock();
+      setTimeout(()=>setMission(55),800);
+    }
   }
 
-  // mission 62: מפקד APEX נהרג — כץ מקריב
+  // 55 → נירה — proximity
+  if(G.mission===55&&!G._ta55done){
+    if(d2(px,pz,-65,74)<7){
+      G._ta55done=true;
+      MISSIONS[55].unlock();
+    }
+  }
+
+  // 56 → בניין APEX
+  if(G.mission===56&&!G._ta56done){
+    if(d2(px,pz,58,-40)<10){
+      G._ta56done=true;
+      MISSIONS[56].unlock();
+    }
+  }
+
+  // 57 → גג הבניין
+  if(G.mission===57&&!G._ta57done){
+    if(d2(px,pz,58,-34)<7){
+      G._ta57done=true;
+      MISSIONS[57].unlock();
+    }
+  }
+
+  // 58 → נמצא במעבדה — כץ מופיע
+  if(G.mission===58&&!G._ta58done){
+    if(d2(px,pz,58,-40)<10){
+      G._ta58done=true;
+      MISSIONS[58].unlock();
+    }
+  }
+
+  // 59 → יצא מהבניין לרחוב
+  if(G.mission===59&&!G._ta59done){
+    if(d2(px,pz,58,-30)<8){
+      G._ta59done=true;
+      MISSIONS[59].unlock();
+    }
+  }
+
+  // 60 → הגיע לנמל
+  if(G.mission===60&&!G._ta60done){
+    if(d2(px,pz,105,-97)<18){
+      G._ta60done=true;
+      MISSIONS[60].unlock();
+    }
+  }
+
+  // 61 → הגיע לכיכר רבין
+  if(G.mission===61&&!G._ta61done){
+    if(d2(px,pz,50,10)<22){
+      G._ta61done=true;
+      MISSIONS[61].unlock();
+      setTimeout(()=>_spawnTARabinFight(),1500);
+    }
+  }
+
+  // 62 → בוס מת — כץ מקריב
   if(G.mission===62&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
     G._taKatzSacDone=true;
     setTimeout(()=>showCut('ch9_katz_sacrifice',()=>{
@@ -12232,54 +12280,38 @@ function _spawnTACommander(x,z){
 }
 
 // ════════════════════════════════════════════════
-// UPD CH9 — proximity triggers בלוד (missions 48-52)
-// תל אביב מטופלת ב-updTelAviv / _checkTAMissionTriggers
+// UPD CH9 — proximity triggers בלוד (missions 48-53)
+// 48/49 מנוהלים ע"י שרשרת קאטסינים ב-story.js
+// 50/51/52 דורשים proximity כי unlock לא נקרא אוטומטית
 // ════════════════════════════════════════════════
 function updCh9(dt){
   if(G.mission<48||G.mission>53)return;
-  if(TA.inTA)return; // תל אביב מטפלת בעצמה
+  if(TA.inTA)return;
 
   const px=PB.position.x, pz=PB.position.z;
 
-  // 48 → proximity לרחוב הרצל — setMission כבר קורה מ-47, רק מציג hint
-  if(G.mission===48){
-    if(d2(px,pz,-30,55)<8&&!G._ch9_48done){
-      G._ch9_48done=true;
-      MISSIONS[48].unlock();
-    }
-  }
-
-  // 49 → הגיע לבסיס
-  if(G.mission===49){
-    if(d2(px,pz,105,25)<10&&!G._ch9_49done){
-      G._ch9_49done=true;
-      MISSIONS[49].unlock();
-    }
-  }
-
-  // 50 → הגיע למחסן
-  if(G.mission===50){
-    if(d2(px,pz,205,-114)<12&&!G._ch9_50done){
+  // 50 → הגיע למחסן APEX
+  if(G.mission===50&&!G._ch9_50done){
+    if(d2(px,pz,205,-114)<12){
       G._ch9_50done=true;
       setMission(51);
     }
   }
 
-  // 51 → חדר פנימי במחסן
-  if(G.mission===51){
-    if(d2(px,pz,215,-125)<8&&!G._ch9_51done){
+  // 51 → חדר פנימי
+  if(G.mission===51&&!G._ch9_51done){
+    if(d2(px,pz,215,-125)<8){
       G._ch9_51done=true;
       MISSIONS[51].unlock();
     }
   }
 
   // 52 → תחנת הרכבת
-  if(G.mission===52){
-    if(d2(px,pz,-40,150)<10&&!G._ch9_52done){
+  if(G.mission===52&&!G._ch9_52done){
+    if(d2(px,pz,-40,150)<10){
       G._ch9_52done=true;
       MISSIONS[52].unlock();
     }
   }
-
-  // 53 → עלייה על הרכבת → enterTelAviv (כבר ב-engine main loop)
+  // 53 → proximity ל-enterTelAviv מטופל ב-main loop
 }

@@ -745,93 +745,107 @@ const MISSIONS=[
      setTimeout(()=>setMission(52),600);
    }),800)},
 
-  // 52 — תחנת הרכבת לוד
+  // 52 — תחנת הרכבת לוד — קאטסין Z-18, ואז מקדם ל-53
   {txt:'5️⃣2️⃣ הגיעו לתחנת הרכבת של לוד 🚉',
    hint:'תחנת הרכבת לוד — דרום העיר',
    targetFn:()=>({x:-40,z:150}),
    unlock:()=>{
      forceDog('zippo','זיפו מוביל לתחנה');
-     setTimeout(()=>showCut('ch9_z18_shadow',()=>{}),1000);
+     setTimeout(()=>showCut('ch9_z18_shadow',()=>{
+       setTimeout(()=>setMission(53),600);
+     }),1000);
    }},
 
-  // 53 — עלו על הרכבת — enterTelAviv מופעל מ-engine ב-proximity
+  // 53 — עלו על הרכבת — proximity ב-engine יקרא enterTelAviv
+  // unlock נקרא רק פעם אחת כשמגיעים לתחנה (מ-52)
+  // engine main loop: כשmission===53 && קרוב לתחנה → enterTelAviv
   {txt:'5️⃣3️⃣ עלו על הרכבת לתל אביב 🚆',
    hint:'תחנת הרכבת לוד — עמדו ליד הרכבת',
    targetFn:()=>({x:-40,z:150}),
    unlock:()=>showN('🚆 הרכבת מגיעה. תל אביב מחכה.')},
 
-  // 54 — שוק הכרמל: לאסוף מידע מנירה
-  {txt:'5️⃣4️⃣ לכו לשוק הכרמל — שמעו מה אומרים 🥩',
-   hint:'שוק הכרמל — תל אביב',
-   targetFn:()=>({x:-120,z:-520}),
+  // 54 — בתל אביב: לכו לשוק הכרמל
+  // targetFn במרחב תל אביב — engine לא משתמש בו לניווט, רק hint
+  {txt:'5️⃣4️⃣ לכו לשוק הכרמל 🥩',
+   hint:'שוק הכרמל — צפון-מערב',
+   targetFn:()=>G._taMarketPos||({x:-65,z:50}),
    unlock:()=>showN('🐾 מומו: "יש פה כלבים שיודעים. אני מרגישה."')},
 
-  // 55 — פגשו את נירה, קבלו מידע על דיזנגוף
+  // 55 — פגשו את נירה — proximity ב-_checkTAMissionTriggers יקדם
   {txt:'5️⃣5️⃣ פגשו את נירה ליד דוכן הבשר 🐕',
-   hint:'קצה שוק הכרמל',
-   targetFn:()=>({x:-140,z:-540}),
-   unlock:()=>setTimeout(()=>showCut('ch9_carmel_market',()=>{}),600)},
+   hint:'קצה שוק הכרמל — דוכן בשר',
+   targetFn:()=>G._taNiraPos||({x:-65,z:74}),
+   unlock:()=>setTimeout(()=>showCut('ch9_carmel_market',()=>{
+     setTimeout(()=>setMission(56),600);
+   }),600)},
 
-  // 56 — עברו דרך דיזנגוף לרחוב פינסקר
+  // 56 — הגיעו לבניין APEX פינסקר
   {txt:'5️⃣6️⃣ הגיעו לרחוב פינסקר — הבניין עם החלונות 🏙️',
-   hint:'רחוב פינסקר, תל אביב',
-   targetFn:()=>({x:60,z:-480}),
-   unlock:()=>setTimeout(()=>showCut('ch9_dizengoff_approach',()=>{}),800)},
+   hint:'רחוב פינסקר — בניין APEX',
+   targetFn:()=>G._taApexBldPos||({x:58,z:-40}),
+   unlock:()=>setTimeout(()=>showCut('ch9_dizengoff_approach',()=>{
+     setTimeout(()=>setMission(57),600);
+   }),800)},
 
-  // 57 — חדרו לבניין מהגג, גלו את המעבדה
-  {txt:'5️⃣7️⃣ חדרו לבניין — כנסו מהגג 🔬',
-   hint:'גג הבניין — פינסקר',
-   targetFn:()=>({x:65,z:-475}),
-   unlock:()=>setTimeout(()=>showCut('ch9_apex_lab_found',()=>{}),1000)},
+  // 57 — כנסו מהגג
+  {txt:'5️⃣7️⃣ הגיעו לגג הבניין 🔬',
+   hint:'גג הבניין — כנסו מלמעלה',
+   targetFn:()=>G._taLabRoofEntry||({x:58,z:-34}),
+   unlock:()=>setTimeout(()=>showCut('ch9_apex_lab_found',()=>{
+     setTimeout(()=>setMission(58),600);
+   }),1000)},
 
-  // 58 — כץ מופיע — שמעו אותו
+  // 58 — כץ מופיע — שרשרת קאטסינים, ואז מקדם ל-59
   {txt:'5️⃣8️⃣ כץ כאן — שמעו אותו 🧪',
    hint:'המעבדה — קומה תחתית',
-   targetFn:()=>({x:65,z:-475}),
+   targetFn:()=>G._taApexBldPos||({x:58,z:-40}),
    unlock:()=>{
      forceDog('zippo','זיפו מוביל — כץ מדבר');
-     setTimeout(()=>showCut('ch9_katz_appears',()=>{}),600);
-     setTimeout(()=>showCut('ch9_katz_truth',()=>{}),4500);
+     setTimeout(()=>showCut('ch9_katz_appears',()=>{
+       setTimeout(()=>showCut('ch9_katz_truth',()=>{
+         setTimeout(()=>showCut('ch9_apex_soldiers',()=>{
+           setTimeout(()=>setMission(59),600);
+         }),400);
+       }),400);
+     }),600);
    }},
 
-  // 59 — אזעקה, חיילי APEX מגיעים
-  {txt:'5️⃣9️⃣ חיילי APEX! הגנו על המעבדה ⚔️',
-   hint:'מחוץ לבניין פינסקר',
-   targetFn:()=>({x:70,z:-470}),
+  // 59 — צאו מהבניין לרחוב
+  {txt:'5️⃣9️⃣ צאו מהבניין — לנמל! ⚔️',
+   hint:'צאו מהבניין לרחוב פינסקר',
+   targetFn:()=>({x:58,z:-30}),
    unlock:()=>{
-     forceDog('colin','קולין מוביל את ההגנה');
-     setTimeout(()=>showCut('ch9_apex_soldiers',()=>{}),800);
+     forceDog('colin','קולין מוביל');
+     showN('⚔️ APEX בחוץ! לנמל — מהר!');
    }},
 
-  // 60 — ריצה לנמל תל אביב
+  // 60 — נמל תל אביב
   {txt:'6️⃣0️⃣ הגיעו לנמל תל אביב 🌊',
-   hint:'נמל תל אביב — צפון',
-   targetFn:()=>({x:-200,z:-600}),
-   unlock:()=>setTimeout(()=>showCut('ch9_port_battle',()=>{}),800)},
+   hint:'נמל תל אביב — צפון-מערב',
+   targetFn:()=>G._taPortPos||({x:105,z:-97}),
+   unlock:()=>setTimeout(()=>showCut('ch9_port_battle',()=>{
+     setTimeout(()=>setMission(61),600);
+   }),800)},
 
-  // 61 — קרב בכיכר רבין
+  // 61 — כיכר רבין
   {txt:'6️⃣1️⃣ חיילים נסוגו לכיכר רבין — הקיפו! 🏛️',
    hint:'כיכר רבין — מרכז תל אביב',
-   targetFn:()=>({x:80,z:-460}),
+   targetFn:()=>G._taRabinPos||({x:50,z:10}),
    unlock:()=>{
      forceDog('zippo','זיפו מוביל את ההקפה');
      setTimeout(()=>showCut('ch9_rabin_square',()=>{}),600);
    }},
 
-  // 62 — כץ מקריב את עצמו + סיום פרק ט׳
+  // 62 — בוס + קרבן כץ — מנוהל ע"י _checkTAMissionTriggers
   {txt:'6️⃣2️⃣ מפקד APEX — עצרו אותו! 💙',
    hint:'כיכר רבין — מרכז',
-   targetFn:()=>({x:82,z:-458}),
-   unlock:()=>{
-     forceDog('all','כל הכנופייה יחד');
-     setTimeout(()=>showCut('ch9_katz_sacrifice',()=>{}),600);
-     setTimeout(()=>showCut('ch9_ending',()=>{}),7000);
-   }},
+   targetFn:()=>G._taRabinPos||({x:50,z:10}),
+   unlock:()=>forceDog('all','כל הכנופייה יחד')},
 
-  // 63 — placeholder פרק י׳
+  // 63 — סיום פרק ט׳
   {txt:'🔜 האדריכל מחכה. פרק י׳ בקרוב.',
-   hint:'תל אביב — נמל',
-   targetFn:()=>({x:-200,z:-600}),
+   hint:'תל אביב',
+   targetFn:()=>G._taPortPos||({x:105,z:-97}),
    unlock:()=>showN('🔜 פרק ט׳ הסתיים. APEX עדיין שם — ולמעלה ממנו: האדריכל.')},
 ];
 
