@@ -2578,6 +2578,16 @@ function _devJump(n){
       G._shadowEnemy=null;G._shadowBossDead=false;
       G._bigFireRunning=false;G._fireIntervalDead=true; // עצור interval ישן אם קיים
     }
+    // אפס ch9 state אם קופצים לפרק ט׳
+    if(n>=48){
+      G._ch9_48done=false;G._ch9_49done=false;G._ch9_50done=false;
+      G._ch9_51done=false;G._ch9_52done=false;
+      G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
+      // וודא שלא נשארים בתל אביב
+      if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
+      // מיקם שחקן ברחוב הרצל (נקודת פתיחת פרק ט׳)
+      setTimeout(()=>{if(typeof PB!=='undefined')PB.position.set(-30,0,55);},300);
+    }
     G._poolCutPlaying=false;G._reksJoinCutPlaying=false;
   }
   if(typeof setMission==='function') setMission(n);
@@ -2592,6 +2602,14 @@ function csStartChapter(n){
   if(typeof G!=='undefined'&&G.dog&&G.hud){
     window._csChapter=null;
     if(n<=G.mission)G.mission=n-1;
+    // אפס ch9 state
+    if(n>=48){
+      G._ch9_48done=false;G._ch9_49done=false;G._ch9_50done=false;
+      G._ch9_51done=false;G._ch9_52done=false;
+      G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
+      if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
+      setTimeout(()=>{if(typeof PB!=='undefined')PB.position.set(-30,0,55);},300);
+    }
     if(typeof setMission==='function') setMission(n);
     // סדר את העולם לפי הפרק שנבחר
     setTimeout(()=>{if(typeof _applyWorldState==='function')_applyWorldState(n);},200);
