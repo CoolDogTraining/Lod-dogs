@@ -4548,6 +4548,9 @@ function mAtk(){
       G._labAtk=true;G.atkCD=_c;
       sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     }
+  } else if(TA.inTA){
+    const _c=G.dog==='zippo'?0.28:0.5;
+    if(G.atkCD<=0){G.atkCD=_c;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);G._taAtkFrame=true;setTimeout(()=>{G._taAtkFrame=false;},250);}
   } else {doAtk();}
 }function mF(){
   G._z18FireMob=true;setTimeout(()=>{G._z18FireMob=false;},200);
@@ -11890,6 +11893,9 @@ function buildTelAvivScene(){
     // כניסת מעבדה — בלוק גג מהדופן האחורית
     _taB(16,.5,2,0x282828,AX,18.3,AZ+7.5); // גג מורחב לכניסת גג
     G._taLabRoofEntry={x:AX,z:AZ+6};
+    // מעבדה פנימית — קומה תחתית, נפרדת מדלת הכניסה
+    _taBld(AX,AZ-15,12,10,4,0x2a2a2e); // בניין תת-קרקעי
+    G._taLabInteriorPos={x:AX,z:AZ-15};
   })();
 
   // ════════════════════════════════════════════════
@@ -12037,7 +12043,7 @@ function updTelAviv(dt){
   TA.enterGrace=Math.max(0,(TA.enterGrace||0)-dt);
   if(G.atkCD>0)G.atkCD-=dt;
   const _taAtkCD=G.dog==='zippo'?0.28:0.5;
-  if(G.keys['KeyF']&&G.atkCD<=0){G.atkCD=_taAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);}
+  if(G.keys['KeyF']&&G.atkCD<=0){G.atkCD=_taAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);G._taAtkFrame=true;setTimeout(()=>{G._taAtkFrame=false;},250);}
 
   // ── תנועה ──
   const spd=G.dogs[G.dog].spd*1.05; // תל אביב — קצת יותר מהירה
@@ -12099,48 +12105,69 @@ function _checkTAMissionTriggers(){
   if(G.mission===53&&!G._ta53done){
     if(d2(px,pz,-65,50)<20){
       G._ta53done=true;
-      showCut('ch9_tel_aviv_arrive',()=>setMission(54));
+      showCut('ch9_tel_aviv_arrive',()=>{
+        G.mission=54;MISSIONS[54].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[54].txt}`);
+      });
     }
   }
 
-  // 54 → proximity לשוק — מקדם ל-55
+  // 54 → proximity לשוק — מקדם ל-55 (radius קטן יותר כדי לא לאגור עם 53)
   if(G.mission===54&&!G._ta54done){
-    if(d2(px,pz,-65,50)<14){
+    if(d2(px,pz,-65,74)<12){
       G._ta54done=true;
-      MISSIONS[54].unlock();
-      setTimeout(()=>setMission(55),800);
+      G.mission=55;MISSIONS[55].unlock();updateMissionHUD();updateNavArrow();saveGame();
+      showN(`📋 ${MISSIONS[55].txt}`);
     }
   }
 
-  // 55 → נירה — proximity
+  // 55 → נירה — proximity, מקדם ל-56
   if(G.mission===55&&!G._ta55done){
     if(d2(px,pz,-65,74)<7){
       G._ta55done=true;
-      MISSIONS[55].unlock();
+      setTimeout(()=>showCut('ch9_carmel_market',()=>{
+        G.mission=56;MISSIONS[56].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[56].txt}`);
+      }),400);
     }
   }
 
-  // 56 → בניין APEX
+  // 56 → בניין APEX פינסקר (קואורדינטות נפרדות מ-58)
   if(G.mission===56&&!G._ta56done){
     if(d2(px,pz,58,-40)<10){
       G._ta56done=true;
-      MISSIONS[56].unlock();
+      setTimeout(()=>showCut('ch9_dizengoff_approach',()=>{
+        G.mission=57;MISSIONS[57].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[57].txt}`);
+      }),400);
     }
   }
 
-  // 57 → גג הבניין
+  // 57 → גג הבניין — נפרד מ-56, קואורדינטות שונות
   if(G.mission===57&&!G._ta57done){
     if(d2(px,pz,58,-34)<7){
       G._ta57done=true;
-      MISSIONS[57].unlock();
+      setTimeout(()=>showCut('ch9_apex_lab_found',()=>{
+        G.mission=58;MISSIONS[58].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[58].txt}`);
+      }),400);
     }
   }
 
-  // 58 → נמצא במעבדה — כץ מופיע
+  // 58 → כץ מופיע — שרשרת קאטסינים
   if(G.mission===58&&!G._ta58done){
-    if(d2(px,pz,58,-40)<10){
+    const lp=G._taLabInteriorPos||{x:58,z:-55};
+    if(d2(px,pz,lp.x,lp.z)<10){
       G._ta58done=true;
-      MISSIONS[58].unlock();
+      forceDog('zippo','זיפו מוביל — כץ מדבר');
+      setTimeout(()=>showCut('ch9_katz_appears',()=>{
+        setTimeout(()=>showCut('ch9_katz_truth',()=>{
+          setTimeout(()=>showCut('ch9_apex_soldiers',()=>{
+            G.mission=59;MISSIONS[59].unlock();updateMissionHUD();updateNavArrow();saveGame();
+            showN(`📋 ${MISSIONS[59].txt}`);
+          }),400);
+        }),400);
+      }),600);
     }
   }
 
@@ -12148,7 +12175,10 @@ function _checkTAMissionTriggers(){
   if(G.mission===59&&!G._ta59done){
     if(d2(px,pz,58,-30)<8){
       G._ta59done=true;
-      MISSIONS[59].unlock();
+      forceDog('colin','קולין מוביל');
+      showN('⚔️ APEX בחוץ! לנמל — מהר!');
+      G.mission=60;MISSIONS[60].unlock();updateMissionHUD();updateNavArrow();saveGame();
+      showN(`📋 ${MISSIONS[60].txt}`);
     }
   }
 
@@ -12156,7 +12186,10 @@ function _checkTAMissionTriggers(){
   if(G.mission===60&&!G._ta60done){
     if(d2(px,pz,105,-97)<18){
       G._ta60done=true;
-      MISSIONS[60].unlock();
+      setTimeout(()=>showCut('ch9_port_battle',()=>{
+        G.mission=61;MISSIONS[61].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[61].txt}`);
+      }),400);
     }
   }
 
@@ -12164,8 +12197,12 @@ function _checkTAMissionTriggers(){
   if(G.mission===61&&!G._ta61done){
     if(d2(px,pz,50,10)<22){
       G._ta61done=true;
-      MISSIONS[61].unlock();
-      setTimeout(()=>_spawnTARabinFight(),1500);
+      forceDog('zippo','זיפו מוביל את ההקפה');
+      setTimeout(()=>showCut('ch9_rabin_square',()=>{
+        G.mission=62;MISSIONS[62].unlock();updateMissionHUD();updateNavArrow();saveGame();
+        showN(`📋 ${MISSIONS[62].txt}`);
+        setTimeout(()=>_spawnTARabinFight(),800);
+      }),600);
     }
   }
 
@@ -12174,7 +12211,7 @@ function _checkTAMissionTriggers(){
     G._taKatzSacDone=true;
     setTimeout(()=>showCut('ch9_katz_sacrifice',()=>{
       setTimeout(()=>showCut('ch9_ending',()=>{
-        setMission(63);
+        G.mission=63;MISSIONS[63].unlock();updateMissionHUD();updateNavArrow();saveGame();
         exitTelAviv();
       }),500);
     }),600);
@@ -12229,7 +12266,11 @@ function _updTAEnemies(dt){
       e.mesh.position.z+=Math.cos(ang)*e.spd*dt;
       e.mesh.rotation.y=ang;
       if(dd<2.2&&e.atkT<=0){
-        e.atkT=1.1;G.hp=Math.max(0,G.hp-e.atk);
+        e.atkT=1.1;
+        const _dog=G.dogs[G.dog];
+        _dog.hp=Math.max(0,_dog.hp-e.atk);
+        haptic(25);
+        if(_dog.hp<=0)playerDeath();
         e.mesh.rotation.z=.3;setTimeout(()=>{if(e.mesh)e.mesh.rotation.z=0;},200);
       }
     } else {
@@ -12241,11 +12282,11 @@ function _updTAEnemies(dt){
         e.mesh.position.z=e.homeZ+Math.sin(a)*4;
       }
     }
-    // פגיעת שחקן
-    if(G.keys['KeyF']&&dd<2.8&&G.atkCD<=0){
+    // פגיעת שחקן — מקלדת + מובייל
+    if((G.keys['KeyF']||G._taAtkFrame)&&dd<2.8&&G.atkCD<=0){
       e.hp-=dog.atk;
       if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);}
-      if(e.hp<=0){e.mesh.visible=false;sBark();}
+      if(e.hp<=0){e.mesh.visible=false;sBark();addXP(30);G.coins+=15;updCoins();}
     }
   });
 }
@@ -12259,7 +12300,7 @@ function _spawnTARabinFight(){
    [R.x+16,R.z+12],[R.x,R.z-18],[R.x,R.z+18]].forEach(([x,z])=>_spawnTAEnemy(x,z));
   // בוס מפקד
   _spawnTACommander(R.x,R.z-5);
-  setMission(62);
+  // mission 62 כבר הוגדר ב-trigger לפני הקריאה הזו
 }
 
 function _spawnTACommander(x,z){

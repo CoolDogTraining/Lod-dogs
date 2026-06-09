@@ -775,66 +775,43 @@ const MISSIONS=[
   {txt:'5️⃣5️⃣ פגשו את נירה ליד דוכן הבשר 🐕',
    hint:'קצה שוק הכרמל — דוכן בשר',
    targetFn:()=>G._taNiraPos||({x:-65,z:74}),
-   unlock:()=>setTimeout(()=>showCut('ch9_carmel_market',()=>{
-     setTimeout(()=>setMission(56),600);
-   }),600)},
+   unlock:()=>{}},
 
   // 56 — הגיעו לבניין APEX פינסקר
   {txt:'5️⃣6️⃣ הגיעו לרחוב פינסקר — הבניין עם החלונות 🏙️',
    hint:'רחוב פינסקר — בניין APEX',
    targetFn:()=>G._taApexBldPos||({x:58,z:-40}),
-   unlock:()=>setTimeout(()=>showCut('ch9_dizengoff_approach',()=>{
-     setTimeout(()=>setMission(57),600);
-   }),800)},
+   unlock:()=>{}},
 
   // 57 — כנסו מהגג
   {txt:'5️⃣7️⃣ הגיעו לגג הבניין 🔬',
    hint:'גג הבניין — כנסו מלמעלה',
    targetFn:()=>G._taLabRoofEntry||({x:58,z:-34}),
-   unlock:()=>setTimeout(()=>showCut('ch9_apex_lab_found',()=>{
-     setTimeout(()=>setMission(58),600);
-   }),1000)},
+   unlock:()=>{}},
 
-  // 58 — כץ מופיע — שרשרת קאטסינים, ואז מקדם ל-59
+  // 58 — כץ מופיע — מנוהל ע"י _checkTAMissionTriggers
   {txt:'5️⃣8️⃣ כץ כאן — שמעו אותו 🧪',
    hint:'המעבדה — קומה תחתית',
-   targetFn:()=>G._taApexBldPos||({x:58,z:-40}),
-   unlock:()=>{
-     forceDog('zippo','זיפו מוביל — כץ מדבר');
-     setTimeout(()=>showCut('ch9_katz_appears',()=>{
-       setTimeout(()=>showCut('ch9_katz_truth',()=>{
-         setTimeout(()=>showCut('ch9_apex_soldiers',()=>{
-           setTimeout(()=>setMission(59),600);
-         }),400);
-       }),400);
-     }),600);
-   }},
+   targetFn:()=>G._taLabInteriorPos||({x:58,z:-55}),
+   unlock:()=>{}},
 
   // 59 — צאו מהבניין לרחוב
   {txt:'5️⃣9️⃣ צאו מהבניין — לנמל! ⚔️',
    hint:'צאו מהבניין לרחוב פינסקר',
    targetFn:()=>({x:58,z:-30}),
-   unlock:()=>{
-     forceDog('colin','קולין מוביל');
-     showN('⚔️ APEX בחוץ! לנמל — מהר!');
-   }},
+   unlock:()=>{}},
 
   // 60 — נמל תל אביב
   {txt:'6️⃣0️⃣ הגיעו לנמל תל אביב 🌊',
    hint:'נמל תל אביב — צפון-מערב',
    targetFn:()=>G._taPortPos||({x:105,z:-97}),
-   unlock:()=>setTimeout(()=>showCut('ch9_port_battle',()=>{
-     setTimeout(()=>setMission(61),600);
-   }),800)},
+   unlock:()=>{}},
 
   // 61 — כיכר רבין
   {txt:'6️⃣1️⃣ חיילים נסוגו לכיכר רבין — הקיפו! 🏛️',
    hint:'כיכר רבין — מרכז תל אביב',
    targetFn:()=>G._taRabinPos||({x:50,z:10}),
-   unlock:()=>{
-     forceDog('zippo','זיפו מוביל את ההקפה');
-     setTimeout(()=>showCut('ch9_rabin_square',()=>{}),600);
-   }},
+   unlock:()=>{}},
 
   // 62 — בוס + קרבן כץ — מנוהל ע"י _checkTAMissionTriggers
   {txt:'6️⃣2️⃣ מפקד APEX — עצרו אותו! 💙',
