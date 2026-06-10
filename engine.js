@@ -4617,6 +4617,27 @@ function updateNavDirection(){
   const el=document.getElementById('nav-edge-arrow');
   const lbl=document.getElementById('nav-edge-lbl');
   if(!el||!lbl)return;
+  // TA — השתמש במיקום TA ובתargetFn ישירות
+  if(typeof TA!=='undefined'&&TA.inTA){
+    const px=TA.playerX,pz=TA.playerZ;
+    const tgt=m.targetFn?m.targetFn():null;if(!tgt)return;
+    const tx=tgt.x||0,tz=tgt.z||0;
+    const dx=tx-px,dz=tz-pz;
+    const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
+    const worldAngle=Math.atan2(dx,dz);
+    const camAngle=worldAngle-(G.yaw+Math.PI);
+    const W=window.innerWidth,H=window.innerHeight;
+    const cx=W/2,cy=H/2;
+    const rx=-Math.sin(camAngle),ry=-Math.cos(camAngle);
+    const scale=Math.min(Math.abs(rx)>0?(cx*.55)/Math.abs(rx):Infinity,Math.abs(ry)>0?(cy*.55)/Math.abs(ry):Infinity);
+    el.style.left=Math.round(cx+rx*scale)+'px';el.style.top=Math.round(cy+ry*scale)+'px';
+    el.style.transform='translate(-50%,-50%)';el.style.display='flex';
+    const icon=document.getElementById('nav-edge-icon');
+    if(icon)icon.style.transform=`rotate(${Math.atan2(rx,ry)}rad)`;
+    lbl.textContent=dist<50?`📍 ${m.hint}`:`${m.hint} ${dist}מ׳`;
+    _navTargetWorld={x:tx,z:tz};
+    return;
+  }
   const px=PB.position.x,pz=PB.position.z;
   let tx,tz;
   if(G.mission===0){tx=-60;tz=60;}
@@ -5920,8 +5941,8 @@ function updHUD(){
 let _mmFrame=0;
 function drawMM(){
   _mmFrame++;
-  // שדרוג: עדכן מינימפ כל 3 פריימים — canvas drawing יקר
   if(_mmFrame%3!==0) return;
+  if(typeof TA!=='undefined'&&TA.inTA){drawMMTelAviv();return;}
   if(VILLA.inVilla){drawMMMosque();return;}
   const ctx=mmCtx,W=120,H=120,sc=.58;
   const px=PB.position.x,pz=PB.position.z,cx=W/2-px*sc,cy=H/2-pz*sc;
@@ -11667,7 +11688,7 @@ const _taLamps=[];         // {bulb, x, z}
 const _taLampPool=[];      // pool של PointLights
 const _taBldList=[];       // collision: [{x,z,w,d}]
 
-function _taAdd(m){ taScene.add(m); taObjects.push(m); return m; }
+var _taAdd=function(m){ taScene.add(m); taObjects.push(m); return m; };
 
 function _taDk(c,f){
   return ((Math.floor(((c>>16)&0xff)*f)<<16)|
@@ -12076,488 +12097,666 @@ function _taInBld(x,z,margin){
 // צפון = Z שלילי (לים), דרום = Z חיובי (יפו)
 // עיר: X=(-220..220), Z=(-250..200) — ענקית
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// ZONE SYSTEM — תל אביב
+// ════════════════════════════════════════════════
+const _taZoneGroups=[];  // [{group, cx, cz, r}]
+
+function _taBuildZoned(buildFn, cx, cz, r){
+  const g=new THREE.Group();
+  taScene.add(g);
+  _taZoneGroups.push({group:g,cx,cz,r,visible:true});
+  const prev=window._taCurZone;
+  window._taCurZone=g;
+  // patch _taAdd so ALL helpers (tree, lamp, bench, sign, bld) route into group
+  const _origTA=_taAdd;
+  window._taAdd=function(m){g.add(m);taObjects.push(m);return m;};
+  try{ buildFn(); } finally{ window._taAdd=_origTA; window._taCurZone=prev; }
+}
+
+function _taUpdZones(){
+  if(!TA.inTA||!_taZoneGroups.length)return;
+  const px=TA.playerX,pz=TA.playerZ;
+  _taZoneGroups.forEach(z=>{
+    const dx=z.cx-px,dz=z.cz-pz,d2=dx*dx+dz*dz;
+    const closeR=z.r*(z.group.visible?1.35:1.0);
+    z.group.visible=d2<closeR*closeR;
+  });
+}
+
+// override _taAdd to support zones
+function _taAddZ(m){
+  const g=window._taCurZone;
+  if(g){ g.add(m); taObjects.push(m); return m; }
+  taScene.add(m); taObjects.push(m); return m;
+}
+
+// ════════════════════════════════════════════════
+// BUILD TEL AVIV SCENE — 5 שכונות ברורות
+// ════════════════════════════════════════════════
+// ZONES:
+//  A. שכונת הבוז׳אוס הלבן — x=-120..40, z=-80..40 (מרכז)
+//  B. שוק הכרמל + יפו דרום — x=-180..-60, z=50..200
+//  C. שכונת הצפון המודרנית — x=-120..80, z=-200..-90
+//  D. נמל תל אביב — x=110..210, z=-210..-100
+//  E. טיילת הים — x=120..210, z=-90..180
+// ════════════════════════════════════════════════
 function buildTelAvivScene(){
   taScene=new THREE.Scene();
-  taScene.background=new THREE.Color(0x7ab5d8);
-  taScene.fog=new THREE.Fog(0x90c0dc,120,480);
+  taScene.background=new THREE.Color(0x87c0d8);
+  taScene.fog=new THREE.Fog(0x90c0dc,140,520);
+  window._taCurZone=null;
 
-  // ── תאורה ──
-  taScene.add(new THREE.AmbientLight(0xfff5e8,1.8));
-  const sun=new THREE.DirectionalLight(0xfff2d8,2.6);
-  sun.position.set(80,140,60);sun.castShadow=true;
+  // ── תאורה גלובלית ──
+  const amb=new THREE.AmbientLight(0xfff8f0,1.7);taScene.add(amb);
+  const sun=new THREE.DirectionalLight(0xfffbe8,2.5);
+  sun.position.set(90,160,70);sun.castShadow=true;
   sun.shadow.mapSize.set(2048,2048);
-  sun.shadow.camera.left=-280;sun.shadow.camera.right=280;
-  sun.shadow.camera.top=280;sun.shadow.camera.bottom=-280;
-  sun.shadow.camera.far=600;sun.shadow.bias=-0.0002;
+  sun.shadow.camera.left=-320;sun.shadow.camera.right=320;
+  sun.shadow.camera.top=320;sun.shadow.camera.bottom=-320;
+  sun.shadow.camera.far=700;sun.shadow.bias=-0.0002;
   taScene.add(sun);
-  taScene.add(new THREE.HemisphereLight(0xa8c8e8,0x607848,.9));
-  const fill3=new THREE.DirectionalLight(0x8ab0d8,.25);fill3.position.set(-80,50,-40);taScene.add(fill3);
+  const hemi=new THREE.HemisphereLight(0xadd4f0,0x5a7848,0.85);taScene.add(hemi);
+  const fill=new THREE.DirectionalLight(0x8ab8e0,0.3);fill.position.set(-100,60,-50);taScene.add(fill);
 
-  // הוסף fill מצפון
-  const fill2=new THREE.DirectionalLight(0x8ab0d8,.25);fill2.position.set(-80,50,-40);taScene.add(fill2);
-
-  // ── קרקע ――
+  // ── קרקע ──
   (()=>{
     const sz=512,tc=document.createElement('canvas');tc.width=tc.height=sz;
     const tx=tc.getContext('2d');
-    tx.fillStyle='#2a2828';tx.fillRect(0,0,sz,sz);
-    for(let i=0;i<2000;i++){
-      const x=Math.random()*sz,y=Math.random()*sz,r=.3+Math.random()*.9;
-      const v=Math.floor(24+Math.random()*24);
-      tx.fillStyle=`rgb(${v},${v},${v})`;tx.beginPath();tx.arc(x,y,r,0,Math.PI*2);tx.fill();
-    }
-    const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(60,60);
-    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.MeshStandardMaterial({map:tex,roughness:.96,color:0xffffff}));
-    gnd.rotation.x=-Math.PI/2;gnd.position.y=-.01;gnd.receiveShadow=true;gnd._isGround=true;_taAdd(gnd);
+    tx.fillStyle='#252424';tx.fillRect(0,0,sz,sz);
+    for(let i=0;i<3000;i++){const x=Math.random()*sz,y=Math.random()*sz,v=Math.floor(22+Math.random()*28);tx.fillStyle=`rgb(${v},${v},${v})`;tx.beginPath();tx.arc(x,y,.3+Math.random()*.9,0,Math.PI*2);tx.fill();}
+    const tex=new THREE.CanvasTexture(tc);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(65,65);
+    const gnd=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({map:tex,roughness:.97,color:0xffffff}));
+    gnd.rotation.x=-Math.PI/2;gnd.position.y=-.01;gnd.receiveShadow=true;gnd._isGround=true;taScene.add(gnd);taObjects.push(gnd);
   })();
 
-  // ═══════════════════════════════════════════════
-  // כבישים ראשיים — גריד תל אביב אמיתי
-  // E-W (z קבוע): אלנבי z=80, קינג ג׳ורג׳ z=30, גורדון z=-30,
-  //               בן יהודה z=-80, פינסקר z=-120, גורדון z=-160
-  // N-S (x קבוע): דיזנגוף x=-60, ארלוזורוב x=0, בן יהודה x=50,
-  //               הירקון x=110 (צמוד לים)
-  // ═══════════════════════════════════════════════
-  _taRd(  0,  80, 14,460,false); // אלנבי — E-W (דרום)
-  _taRd(  0,  30, 14,460,false); // קינג ג׳ורג׳ — E-W
-  _taRd(  0, -30, 13,460,false); // גורדון — E-W
-  _taRd(  0, -80, 13,460,false); // בן יהודה E-W
-  _taRd(  0,-130, 12,460,false); // פינסקר — E-W
-  _taRd(  0,-175, 12,460,false); // גורדון/מחסן — E-W
-  _taRd(  0, 140, 12,460,false); // יפו — E-W (דרום)
+  // ── כבישים ראשיים (תמיד גלויים — לא ב-zone) ──
+  _taBuildRoads();
 
-  _taRd(-60,  0, 13,500,true);   // דיזנגוף — N-S
-  _taRd(  0,  0, 14,500,true);   // ארלוזורוב / רחוב ראשי — N-S
-  _taRd( 55,  0, 12,500,true);   // בן יהודה — N-S
-  _taRd(115,  0, 11,500,true);   // הירקון — N-S
-  _taRd(-120, 0, 11,460,true);   // נחלת בנימין — N-S
-  _taRd(-180, 0, 10,400,true);   // פינסקר מערבי — N-S
+  // ── ים + חוף (תמיד גלוי) ──
+  _taBuildSea();
 
-  // כבישים משניים
-  _taRd(  0,  -5, 10,460,false); // רחוב אמצעי נוסף
-  _taRd(-90,  0, 10,400,true);   // N-S נוסף
+  // ── ZONE A: בוז׳אוס לבן — מרכז ──
+  _taBuildZoned(_taBuildZone_Bauhaus, -40, -20, 160);
 
-  // ═══════════════════════════════════════════════
-  // ים — צד מערב (x=170+)
-  // ═══════════════════════════════════════════════
+  // ── ZONE B: שוק הכרמל + יפו ──
+  _taBuildZoned(_taBuildZone_Carmel, -120, 120, 150);
+
+  // ── ZONE C: צפון מודרני ──
+  _taBuildZoned(_taBuildZone_North, -20, -150, 160);
+
+  // ── ZONE D: נמל ──
+  _taBuildZoned(_taBuildZone_Port, 165, -155, 130);
+
+  // ── ZONE E: טיילת ──
+  _taBuildZoned(_taBuildZone_Tayelet, 160, 30, 140);
+
+  // ── ZONE F: יפו עתיקה (דרום-מזרח) ──
+  _taBuildZoned(_taBuildZone_Jaffa, -60, 160, 130);
+
+  // ── מצלמה ──
+  taCamera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,.1,550);
+  taCamera.position.set(0,7,120);taCamera.lookAt(0,1,110);
+
+  // ── pool פנסים ──
+  _taLampPool.length=0;
+  for(let i=0;i<14;i++){const pl=new THREE.PointLight(0xffd97a,0,22);taScene.add(pl);_taLampPool.push(pl);}
+}
+
+// ════════════════════════════════════════════════
+// כבישים — גריד תל אביב
+// ════════════════════════════════════════════════
+function _taBuildRoads(){
+  // E-W (z קבוע)
+  [[80,14],[30,14],[-30,13],[-80,13],[-130,12],[-175,11],[140,11]].forEach(([z,w])=>_taRd(0,z,w,460,false));
+  // N-S (x קבוע)
+  [[-60,13],[0,14],[55,12],[115,11],[-120,10],[-180,9]].forEach(([x,w])=>_taRd(x,0,w,520,true));
+  // שלטי רחוב
+  [[-62,82,'שד׳ דיזנגוף / אלנבי',0],[2,32,'ארלוזורוב / קינג ג׳ורג׳',0],
+   [57,82,'בן יהודה / אלנבי',0],[-62,-82,'דיזנגוף / בן יהודה',0],
+   [2,-62,'ארלוזורוב',Math.PI/2],[57,-132,'בן יהודה / פינסקר',0],
+  ].forEach(([x,z,n,r])=>_taSign(x,z,n,r));
+}
+
+// ════════════════════════════════════════════════
+// ים וחוף
+// ════════════════════════════════════════════════
+function _taBuildSea(){
+  // ים
+  const seaMat=new THREE.MeshLambertMaterial({color:0x1a70a8,transparent:true,opacity:.88});
+  const sea=new THREE.Mesh(new THREE.PlaneGeometry(130,560),seaMat);
+  sea.rotation.x=-Math.PI/2;sea.position.set(210,.04,0);taScene.add(sea);taObjects.push(sea);
+  // גלים
+  for(let i=0;i<14;i++){
+    const wv=new THREE.Mesh(new THREE.PlaneGeometry(130,1.6),new THREE.MeshLambertMaterial({color:0x55c0f0,transparent:true,opacity:.28}));
+    wv.rotation.x=-Math.PI/2;wv.position.set(210,.06,-260+i*42);taScene.add(wv);taObjects.push(wv);
+  }
+  // חול
+  const sand=new THREE.Mesh(new THREE.PlaneGeometry(20,560),new THREE.MeshLambertMaterial({color:0xd8c888}));
+  sand.rotation.x=-Math.PI/2;sand.position.set(157,.03,0);taScene.add(sand);taObjects.push(sand);
+}
+
+// ════════════════════════════════════════════════
+// ZONE A — בוז׳אוס לבן (מרכז העיר, x=-120..60, z=-80..40)
+// פלטה: שמנת-לבן, מרפסות, תריסים ירוקים/כחולים
+// ════════════════════════════════════════════════
+function _taBuildZone_Bauhaus(){
+  const B_COLS=[0xf5f0e8,0xeee8d8,0xf8f4ec,0xe8e2d4,0xf2ece0,0xfaf6ee];
+  const B_SHUT=[0x3a6a3a,0x2a5a8a,0x6a5a2a,0x8a3a2a];
+
+  // שורות בניינים בין הרחובות
+  // בין אלנבי(z=80) לקינג ג׳ורג׳(z=30): z=54
+  for(let bx=-170;bx<=120;bx+=42){
+    if(_taFarFromRoad(bx,54)){
+      _taZBld(bx,54, 16+Math.random()*6, 10, 8+Math.random()*10, B_COLS, B_SHUT, 'bauhaus');
+    }
+  }
+  // בין קינג ג׳ורג׳(30) לגורדון(-30): z=0
+  for(let bx=-165;bx<=115;bx+=40){
+    if(_taFarFromRoad(bx,0)){
+      _taZBld(bx,0, 18+Math.random()*6, 10, 9+Math.random()*12, B_COLS, B_SHUT, 'bauhaus');
+    }
+  }
+  // בין גורדון(-30) לבן יהודה(-80): z=-54
+  for(let bx=-160;bx<=110;bx+=40){
+    if(_taFarFromRoad(bx,-54)){
+      _taZBld(bx,-54, 15+Math.random()*5, 10, 8+Math.random()*9, B_COLS, B_SHUT, 'bauhaus');
+    }
+  }
+  // לאורך דיזנגוף — בתים פרטיים
+  for(let bz=-75;bz<=25;bz+=30){
+    if(_taFarFromRoad(-85,bz)&&_taFarFromRoad(-38,bz)){
+      _taZHouse(-85,bz, 4+Math.random()*3, B_COLS, B_SHUT);
+      _taZHouse(-38,bz, 4+Math.random()*3, B_COLS, B_SHUT);
+    }
+  }
+  // עצים לאורך הרחובות
+  for(let bx=-185;bx<=145;bx+=16){
+    _taBldTree(bx,70);_taBldTree(bx,90);
+    _taBldTree(bx,-42);_taBldTree(bx,-68);
+  }
+  for(let bz=-75;bz<=35;bz+=18){
+    _taBldTree(-70,bz);_taBldTree(-52,bz);
+    _taBldTree(-8,bz);_taBldTree(8,bz);
+  }
+  // ספסלים ופנסים
+  for(let bx=-180;bx<=140;bx+=28){
+    _taBench(bx,87,0);_taBench(bx,73,Math.PI);
+    _taLamp(bx,74);_taLamp(bx,86);
+  }
+  for(let bz=-70;bz<=30;bz+=28){
+    _taBench(-63,bz,Math.PI/2);_taLamp(-62,bz);
+    _taBench(3,bz,Math.PI/2);_taLamp(2,bz);
+  }
+  // כיכר דיזנגוף — עיגולית
   (()=>{
-    const seaMat=new THREE.MeshLambertMaterial({color:0x1a6b9e,transparent:true,opacity:.88});
-    const sea=new THREE.Mesh(new THREE.PlaneGeometry(120,520),seaMat);
-    sea.rotation.x=-Math.PI/2;sea.position.set(205,.03,0);_taAdd(sea);
-    // גלי ים
-    for(let i=0;i<12;i++){
-      const wv=new THREE.Mesh(new THREE.PlaneGeometry(120,1.8),new THREE.MeshLambertMaterial({color:0x4fb8ea,transparent:true,opacity:.3}));
-      wv.rotation.x=-Math.PI/2;wv.position.set(205,.05,-240+i*44);_taAdd(wv);
-    }
-    // חוף — חול
-    const beach=new THREE.Mesh(new THREE.PlaneGeometry(22,520),new THREE.MeshLambertMaterial({color:0xd4c488}));
-    beach.rotation.x=-Math.PI/2;beach.position.set(153,.02,0);_taAdd(beach);
-    // טיילת (promenade)
-    const prom=new THREE.Mesh(new THREE.BoxGeometry(16,.2,520),new THREE.MeshStandardMaterial({color:0xc8c0a8,roughness:.92}));
-    prom.position.set(143,.1,0);_taAdd(prom);
-    // ספסלים לאורך הטיילת
-    for(let pz=-200;pz<200;pz+=22){
-      _taBench(138,pz,Math.PI/2);
-      _taBench(148,pz,-Math.PI/2);
-    }
-    G._taBeachPos={x:145,z:0};
+    const DX=-60, DZ=-10;
+    const sqF=new THREE.Mesh(new THREE.CircleGeometry(16,24),new THREE.MeshStandardMaterial({color:0xd5cfc0,roughness:.9}));
+    sqF.rotation.x=-Math.PI/2;sqF.position.set(DX,.07,DZ);_taAddZ(sqF);
+    const fount=new THREE.Mesh(new THREE.CylinderGeometry(4,.5,1.2,16),new THREE.MeshLambertMaterial({color:0xb8b0a0}));
+    fount.position.set(DX,.6,DZ);_taAddZ(fount);
+    const water=new THREE.Mesh(new THREE.CircleGeometry(3.5,16),new THREE.MeshLambertMaterial({color:0x4a9ac8,transparent:true,opacity:.8}));
+    water.rotation.x=-Math.PI/2;water.position.set(DX,1.25,DZ);_taAddZ(water);
+    for(let i=0;i<7;i++)_taBldTree(DX+Math.cos(i/7*Math.PI*2)*20,DZ+Math.sin(i/7*Math.PI*2)*18);
+    [[DX-14,DZ-8,0],[DX+14,DZ-8,0],[DX-14,DZ+8,Math.PI],[DX+14,DZ+8,Math.PI]].forEach(([x,z,a])=>_taBench(x,z,a));
+    G._taDizengoffSq={x:DX,z:DZ};
   })();
+}
 
-  // ═══════════════════════════════════════════════
-  // בלוקי מגורים — שכונות שונות
-  // ═══════════════════════════════════════════════
-  // שכונה A: בין אלנבי לקינג ג׳ורג׳ (z=30..80), x=-120..60
-  const _blk=(x,z,w,d,h,zone)=>{_taBldBlock(x,z,w,d,h,zone);};
-  const _hse=(x,z,h,zone)=>{_taBldHouse(x,z,h,zone);};
+// ════════════════════════════════════════════════
+// ZONE B — שוק הכרמל + יפו צפונית (x=-200..-50, z=40..200)
+// פלטה: כתום/חום/קרם חם, דוכנים, צפיפות
+// ════════════════════════════════════════════════
+function _taBuildZone_Carmel(){
+  const C_COLS=[0xdec898,0xd4b880,0xe0cc9a,0xc8a870,0xd8bc8c];
+  const C_SHUT=[0xaa4400,0x885500,0x664400];
 
-  // ── אלנבי—קינג ג׳ורג׳ (z=35..75) ──
-  for(let bx=-180;bx<=150;bx+=38){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8&&Math.abs(bx+120)>8){
-      const h=7+Math.random()*8;
-      _blk(bx,54,16,10,h,'bauhaus');
+  // בניינים סביב השוק
+  [[-160,115],[-130,115],[-105,115],[-160,150],[-130,150],[-105,150],
+   [-75,55],[-105,55],[-135,55],[-160,55]].forEach(([bx,bz])=>{
+    if(_taFarFromRoad(bx,bz))
+      _taZHouse(bx,bz, 3.5+Math.random()*3, C_COLS, C_SHUT);
+  });
+  for(let bx=-190;bx<=-60;bx+=36){
+    if(_taFarFromRoad(bx,78)&&_taFarFromRoad(bx,93)){
+      _taZHouse(bx,78, 4+Math.random()*3, C_COLS, C_SHUT);
+      _taZHouse(bx,93, 3+Math.random()*3, C_COLS, C_SHUT);
     }
   }
-  // ── קינג ג׳ורג׳—גורדון (z=-25..25) ──
-  for(let bx=-175;bx<=145;bx+=40){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      const h=9+Math.random()*10;
-      _blk(bx,0,18,10,h,'mod');
-    }
-  }
-  // ── גורדון—בן יהודה (z=-75..-35) ──
-  for(let bx=-170;bx<=140;bx+=36){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      _blk(bx,-54,14,10,7+Math.random()*8,'bauhaus');
-    }
-  }
-  // ── בן יהודה—פינסקר (z=-125..-85) ──
-  for(let bx=-165;bx<=135;bx+=36){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      _blk(bx,-105,14,10,8+Math.random()*9,'mod');
-    }
-  }
-  // ── פינסקר—גורדון2 (z=-170..-135) ──
-  for(let bx=-160;bx<=130;bx+=38){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      _blk(bx,-152,16,10,7+Math.random()*6,'bauhaus');
-    }
-  }
-  // ── צפון מהנמל (z=-220..-180) ──
-  for(let bx=-140;bx<=120;bx+=36){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      _blk(bx,-200,14,10,5+Math.random()*6,'mod');
-    }
-  }
-  // ── שכונת יפו — דרום (z=100..190) ──
-  for(let bx=-170;bx<=120;bx+=36){
-    if(Math.abs(bx)>8&&Math.abs(bx-55)>8&&Math.abs(bx+60)>8){
-      _hse(bx,120,4+Math.random()*3,'jaffa');
-      _hse(bx,165,3.5+Math.random()*3,'jaffa');
-    }
-  }
-  // ── בתים לאורך דיזנגוף (x=-60, z שונה) ──
-  for(let bz=-220;bz<=180;bz+=42){
-    if(Math.abs(bz-80)>8&&Math.abs(bz-30)>8&&Math.abs(bz+30)>8&&Math.abs(bz+80)>8&&Math.abs(bz+130)>8&&Math.abs(bz+175)>8&&Math.abs(bz-140)>8){
-      _hse(-85,bz,4+Math.random()*4,'bauhaus');
-      _hse(-38,bz,5+Math.random()*5,'mod');
-    }
-  }
-  // ── בתים לאורך ארלוזורוב (x=0) ──
-  for(let bz=-220;bz<=180;bz+=42){
-    if(Math.abs(bz-80)>8&&Math.abs(bz-30)>8&&Math.abs(bz+30)>8&&Math.abs(bz+80)>8&&Math.abs(bz+130)>8&&Math.abs(bz+175)>8&&Math.abs(bz-140)>8){
-      _hse(28,bz,5+Math.random()*5,'bauhaus');
-    }
-  }
-  // ── בתים ליד הים (x=120..140) ──
-  for(let bz=-200;bz<=180;bz+=38){
-    if(Math.abs(bz-80)>8&&Math.abs(bz-30)>8&&Math.abs(bz+30)>8&&Math.abs(bz+80)>8&&Math.abs(bz+130)>8&&Math.abs(bz+175)>8&&Math.abs(bz-140)>8){
-      _hse(130,bz,5+Math.random()*4,'sea');
-    }
-  }
+  // השוק עצמו
+  _taBuildMarket();
+  // עצים — דקלים + שיטים
+  for(let bx=-195;bx<=-55;bx+=20){_taBldTree(bx,65);_taBldTree(bx,100);}
+  for(let bz=45;bz<=190;bz+=20){_taBldTree(-195,bz);_taBldTree(-55,bz);}
+  // פנסים
+  for(let bx=-190;bx<=-55;bx+=26){_taLamp(bx,65);_taLamp(bx,100);}
+}
 
-  // ═══════════════════════════════════════════════
-  // שוק הכרמל — x=-120..-60, z=60..120
-  // ═══════════════════════════════════════════════
-  (()=>{
-    const MX=-90, MZ=90;
-    // רצפת שוק
-    const mktFloor=new THREE.Mesh(new THREE.PlaneGeometry(70,60),new THREE.MeshLambertMaterial({color:0xb0a890}));
-    mktFloor.rotation.x=-Math.PI/2;mktFloor.position.set(MX,.05,MZ);_taAdd(mktFloor);
-    // גגות אוהל בדים — שורות
-    const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133,0xcc9900];
-    for(let row=0;row<4;row++){
-      for(let col=0;col<6;col++){
-        const ax=MX-30+col*11, az=MZ-22+row*14;
-        // עמוד שוק
-        const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,2.8,6),new THREE.MeshLambertMaterial({color:0x888880}));
-        pole.position.set(ax,1.4,az);_taAdd(pole);
-        // גג
-        const aw=new THREE.Mesh(new THREE.BoxGeometry(10,.15,12),new THREE.MeshLambertMaterial({color:awningCols[(row*6+col)%awningCols.length]}));
-        aw.position.set(ax,2.95,az);aw.rotation.x=.08*(row%2?1:-1);_taAdd(aw);
-        // "סחורה" — ארגזי צבע
-        if(Math.random()<.7){
-          const prod=new THREE.Mesh(new THREE.BoxGeometry(2.5,.7,2),new THREE.MeshLambertMaterial({color:[0xff6600,0xffcc00,0x44aa22,0xee2244,0xff8800][Math.floor(Math.random()*5)]}));
-          prod.position.set(ax,0.35,az+3);_taAdd(prod);
-        }
+// ════════════════════════════════════════════════
+// ZONE C — צפון מודרני (x=-140..90, z=-220..-90)
+// פלטה: אפור-כחול, בניינים גבוהים, זכוכית
+// ════════════════════════════════════════════════
+function _taBuildZone_North(){
+  const N_COLS=[0xd5dce8,0xc8d4e4,0xdce4f0,0xcad4e2,0xe0e8f4];
+  const N_SHUT=[0x444466,0x224466,0x446688];
+
+  // בין בן יהודה(-80) לפינסקר(-130): z=-105
+  for(let bx=-170;bx<=120;bx+=42){
+    if(_taFarFromRoad(bx,-105)){
+      _taZBld(bx,-105, 18+Math.random()*8, 12, 12+Math.random()*16, N_COLS, N_SHUT, 'mod');
+    }
+  }
+  // בין פינסקר(-130) ל-z=-175
+  for(let bx=-165;bx<=115;bx+=40){
+    if(_taFarFromRoad(bx,-152)){
+      _taZBld(bx,-152, 16+Math.random()*6, 10, 10+Math.random()*12, N_COLS, N_SHUT, 'mod');
+    }
+  }
+  // צפון מאוד (z=-200)
+  for(let bx=-130;bx<=100;bx+=38){
+    if(_taFarFromRoad(bx,-200)){
+      _taZBld(bx,-200, 14+Math.random()*6, 10, 8+Math.random()*10, N_COLS, N_SHUT, 'mod');
+    }
+  }
+  // לאורך N-S
+  for(let bz=-210;bz<=-95;bz+=36){
+    if(_taFarFromRoad(-85,bz)&&_taFarFromRoad(-38,bz)){
+      _taZBld(-85,bz, 14,10, 10+Math.random()*12, N_COLS, N_SHUT, 'mod');
+      _taZBld(28,bz, 12,10, 11+Math.random()*10, N_COLS, N_SHUT, 'mod');
+    }
+  }
+  // בניין APEX — בתוך ZONE C
+  _taBuildApex();
+  // עצים מודרניים — ברושים דקים
+  for(let bx=-145;bx<=85;bx+=18){_taBldTree(bx,-92);_taBldTree(bx,-118);}
+  for(let bz=-215;bz<=-95;bz+=20){_taBldTree(-130,bz);_taBldTree(82,bz);}
+  // כיכר רבין (ב-zone C)
+  _taBuildRabinSquare();
+  // פנסים
+  for(let bx=-150;bx<=90;bx+=26){_taLamp(bx,-92);_taLamp(bx,-118);_taLamp(bx,-165);}
+  for(let bz=-215;bz<=-95;bz+=28){_taLamp(-130,bz);_taLamp(-8,bz);}
+}
+
+// ════════════════════════════════════════════════
+// ZONE D — נמל (x=110..210, z=-220..-100)
+// פלטה: תעשייתי, בטון, כהה
+// ════════════════════════════════════════════════
+function _taBuildZone_Port(){
+  _taBuildPort();
+  // מחסני נמל + rstaurant strip
+  const P_COLS=[0x9a9a8c,0x888880,0xb0a898];
+  const P_SHUT=[0x444444,0x223344];
+  for(let bz=-210;bz<=-105;bz+=36){
+    _taZBld(130,bz, 14,10, 6+Math.random()*4, P_COLS, P_SHUT, 'mod');
+  }
+  // דקלים לאורך הנמל
+  for(let bz=-200;bz<=-110;bz+=22){_taBldTree(120,bz);_taBldTree(155,bz);}
+  for(let bx=118;bx<=200;bx+=22){_taBldTree(bx,-210);_taBldTree(bx,-105);}
+  // פנסים
+  for(let bz=-200;bz<=-110;bz+=24){_taLamp(118,bz);_taLamp(158,bz);}
+}
+
+// ════════════════════════════════════════════════
+// ZONE E — טיילת הים (x=120..210, z=-90..180)
+// פלטה: ים, חול, בתי קפה לבנים
+// ════════════════════════════════════════════════
+function _taBuildZone_Tayelet(){
+  const T_COLS=[0xf8f4f0,0xf0ece4,0xfcf8f4,0xe8e4dc];
+  const T_SHUT=[0x4488aa,0x2266aa,0x44aa88];
+  // טיילת
+  const prom=new THREE.Mesh(new THREE.BoxGeometry(20,.22,300),new THREE.MeshStandardMaterial({color:0xd0c8b2,roughness:.9}));
+  prom.position.set(143,.11,45);_taAddZ(prom);
+  // ספסלים לאורך
+  for(let bz=-80;bz<=170;bz+=20){
+    _taBench(138,bz,Math.PI/2);_taBench(150,bz,-Math.PI/2);
+    _taLamp(140,bz);
+  }
+  // בתי קפה קטנים
+  for(let bz=-70;bz<=160;bz+=55){
+    _taZHouse(132,bz, 3.5, T_COLS, T_SHUT);
+  }
+  // מגדלי מלון לאורך הים
+  [[128,-60],[128,0],[128,60],[128,120]].forEach(([bx,bz])=>{
+    _taZBld(bx,bz, 12,10, 20+Math.random()*14, T_COLS, T_SHUT, 'sea');
+  });
+  // דקלים — הים תמיד
+  for(let bz=-80;bz<=170;bz+=14){_taBldTree(148,bz);}
+  for(let bz=-80;bz<=170;bz+=22){_taBldTree(130,bz);}
+  G._taBeachPos={x:148,z:40};
+}
+
+// ════════════════════════════════════════════════
+// ZONE F — יפו עתיקה (x=-120..20, z=120..230)
+// פלטה: אבן, חום-עתיק, צפוף
+// ════════════════════════════════════════════════
+function _taBuildZone_Jaffa(){
+  const J_COLS=[0xd4b888,0xc8a870,0xdcc099,0xb89858,0xe0c080];
+  const J_SHUT=[0x885522,0x664411,0x773311];
+  // בתים ישנים צפופים
+  for(let bx=-110;bx<=10;bx+=28){
+    for(let bz=130;bz<=220;bz+=30){
+      if(_taFarFromRoad(bx,bz)){
+        _taZHouse(bx,bz, 3+Math.random()*3.5, J_COLS, J_SHUT);
+        _taZHouse(bx+12,bz+12, 2.8+Math.random()*2.5, J_COLS, J_SHUT);
       }
     }
-    // כלבה נירה
-    (()=>{
-      const g=new THREE.Group();
-      const body=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,.9),new THREE.MeshLambertMaterial({color:0xc8b090}));
-      body.position.y=.55;g.add(body);
-      const head=new THREE.Mesh(new THREE.BoxGeometry(.45,.4,.5),new THREE.MeshLambertMaterial({color:0xc8b090}));
-      head.position.set(0,.88,.5);g.add(head);
-      const eyeM=new THREE.MeshLambertMaterial({color:0x333322});
-      [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,5,4),eyeM);e.position.set(s*.12,.9,.77);g.add(e);});
-      g.position.set(MX-28,0,MZ+22);taScene.add(g);taObjects.push(g);
-      G._taNiraPos={x:MX-28,z:MZ+22};
-      G._taMarketPos={x:MX,z:MZ};
-    })();
-    // שלט שוק
-    const sc=document.createElement('canvas');sc.width=400;sc.height=100;
-    const stx=sc.getContext('2d');
-    stx.fillStyle='#8B2200';stx.fillRect(0,0,400,100);
-    stx.fillStyle='#FFE070';stx.font='bold 52px Arial';stx.textAlign='center';stx.textBaseline='middle';
-    stx.fillText('שוק הכרמל',200,50);
-    const mkSign=new THREE.Mesh(new THREE.BoxGeometry(8,2,.15),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(sc),side:THREE.DoubleSide}));
-    mkSign.position.set(MX,5,MZ-30);_taAdd(mkSign);
-  })();
-  G._taMarketPos=G._taMarketPos||{x:-90,z:90};
-
-  // ═══════════════════════════════════════════════
-  // בניין APEX — פינסקר x=70, z=-130
-  // (קומות גבוהות, מאיים, זהה לאסתטיקת APEX)
-  // ═══════════════════════════════════════════════
+  }
+  // כנסיית יפו
   (()=>{
-    if(!_taWallTex) _taWallTex=_taMkWallTex(false);
-    const AX=70, AZ=-130;
-    // גוף הבניין — 5 קומות, צבע כהה ואיום
-    const apexWall=_taMkWallTex(true);
-    const tc=apexWall.clone();tc.needsUpdate=true;tc.repeat.set(4,5);
-    const wMat=new THREE.MeshStandardMaterial({map:tc,color:0x3a3a3e,roughness:.85,metalness:.1});
-    const body=new THREE.Mesh(new THREE.BoxGeometry(18,22,16),wMat);
-    body.position.set(AX,11,AZ);body.castShadow=true;body.receiveShadow=true;_taAdd(body);
-    _taBldList.push({x:AX,z:AZ,w:18,d:16});
-    // פרפט גג
-    (()=>{const _pm=new THREE.Mesh(new THREE.BoxGeometry(18.6,.5,16.6),new THREE.MeshLambertMaterial({color:0x222228}));_pm.position.set(AX,22.25,AZ);_taAdd(_pm);})();
-    // חלונות מרושתים — 5x4
-    const eyeM=new THREE.MeshStandardMaterial({color:0x1a1a2e,emissive:0x0a0a1a,roughness:.1,transparent:true,opacity:.8});
-    for(let r=0;r<5;r++) for(let c=-2;c<=2;c++){
-      const wn=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.5,.08),eyeM.clone());
-      wn.position.set(AX+c*3.2,3.5+r*3.6,AZ-8.04);_taAdd(wn);
-      // סורג
-      const grH=new THREE.Mesh(new THREE.BoxGeometry(2.3,.06,.06),new THREE.MeshLambertMaterial({color:0x444444}));
-      grH.position.set(AX+c*3.2,3.5+r*3.6,AZ-8.02);_taAdd(grH);
-      const grV=new THREE.Mesh(new THREE.BoxGeometry(.06,2.6,.06),new THREE.MeshLambertMaterial({color:0x444444}));
-      grV.position.set(AX+c*3.2,3.5+r*3.6,AZ-8.02);_taAdd(grV);
-    }
-    // לוגו APEX — פס אדום על גג
-    const logoBar=new THREE.Mesh(new THREE.BoxGeometry(10,.3,1),new THREE.MeshStandardMaterial({color:0xcc0000,emissive:0x440000}));
-    logoBar.position.set(AX,22.4,AZ-4);_taAdd(logoBar);
-    // אור סגול — APEX signature
-    const apexL=new THREE.PointLight(0x8800cc,3,25);apexL.position.set(AX,12,AZ-9);_taAdd(apexL);
-    // דלת ברזל
-    const door=new THREE.Mesh(new THREE.BoxGeometry(2.8,3.2,.12),new THREE.MeshStandardMaterial({color:0x1a1a1e,roughness:.4,metalness:.7}));
-    door.position.set(AX,1.6,AZ-8.06);_taAdd(door);
-    // כניסת גג (לנסיון כניסה מהגג)
-    (()=>{const _rm=new THREE.Mesh(new THREE.BoxGeometry(16,.4,2),new THREE.MeshLambertMaterial({color:0x202028}));_rm.position.set(AX,22.2,AZ+7);_taAdd(_rm);})();
-
-    G._taApexBldPos={x:AX,z:AZ};
-    G._taLabRoofEntry={x:AX,z:AZ+7};
-    G._taLabInteriorPos={x:AX,z:AZ+15}; // מאחורי הבניין
+    const CX=-40, CZ=190;
+    const body=new THREE.Mesh(new THREE.BoxGeometry(14,10,18),new THREE.MeshStandardMaterial({color:0xd0c0a0,roughness:.88}));
+    body.position.set(CX,5,CZ);body.castShadow=true;_taAddZ(body);_taBldList.push({x:CX,z:CZ,w:14,d:18});
+    const tower=new THREE.Mesh(new THREE.BoxGeometry(5,18,5),new THREE.MeshStandardMaterial({color:0xc8b898,roughness:.9}));
+    tower.position.set(CX-4.5,9,CZ-9);tower.castShadow=true;_taAddZ(tower);
+    const cross_v=new THREE.Mesh(new THREE.BoxGeometry(.3,2.5,.3),new THREE.MeshLambertMaterial({color:0xc0a858}));
+    cross_v.position.set(CX-4.5,18.5,CZ-9);_taAddZ(cross_v);
+    const cross_h=new THREE.Mesh(new THREE.BoxGeometry(1.6,.3,.3),new THREE.MeshLambertMaterial({color:0xc0a858}));
+    cross_h.position.set(CX-4.5,17.8,CZ-9);_taAddZ(cross_h);
   })();
-
-  // ═══════════════════════════════════════════════
-  // מעבדה APEX — מאחורי הבניין, כניסה צפונית
-  // ═══════════════════════════════════════════════
-  (()=>{
-    const LX=70, LZ=-110;
-    // קיר מעבדה
-    const labFloor=new THREE.Mesh(new THREE.PlaneGeometry(20,18),new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:.98}));
-    labFloor.rotation.x=-Math.PI/2;labFloor.position.set(LX,.02,LZ);labFloor._isGround=true;_taAdd(labFloor);
-    // תאורת מעבדה — פלואורסנט קר
-    for(let i=-6;i<=6;i+=6){
-      const labL=new THREE.PointLight(0xb0d8ff,1.5,15);labL.position.set(LX+i,4,LZ);_taAdd(labL);
-      const lb=new THREE.Mesh(new THREE.BoxGeometry(3,.2,1.5),new THREE.MeshStandardMaterial({color:0x333355,roughness:.4,metalness:.8}));
-      lb.position.set(LX+i,4.1,LZ);_taAdd(lb);
-    }
-    // מסכים וציוד
-    [[LX-7,LZ-6],[LX,LZ-6],[LX+7,LZ-6]].forEach(([cx,cz])=>{
-      const desk=new THREE.Mesh(new THREE.BoxGeometry(3,.08,1.2),new THREE.MeshLambertMaterial({color:0x2a2a30}));
-      desk.position.set(cx,.8,cz);_taAdd(desk);
-      const screen=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,.05),new THREE.MeshStandardMaterial({color:0x001830,emissive:0x003366,emissiveIntensity:.8}));
-      screen.position.set(cx,1.5,cz-.6);_taAdd(screen);
-      // נתונים על המסך
-      const sc2=document.createElement('canvas');sc2.width=180;sc2.height=120;
-      const stx=sc2.getContext('2d');stx.fillStyle='#001830';stx.fillRect(0,0,180,120);
-      stx.fillStyle='#00ff88';stx.font='10px monospace';
-      ['APEX://Z-01','STATUS:ACTIVE','LAT:32.08','LON:34.78','DNA:▓▓▓▓░░'].forEach((t,i)=>{stx.fillText(t,6,16+i*16);});
-      const screenTex=new THREE.CanvasTexture(sc2);
-      screen.material.map=screenTex;screen.material.needsUpdate=true;
-    });
-    // לוגו APEX
-    const logoM=new THREE.MeshStandardMaterial({color:0x0a001a,emissive:0x550088});
-    const logo=new THREE.Mesh(new THREE.PlaneGeometry(6,2.5),logoM);
-    logo.position.set(LX,3.5,LZ-8.5);_taAdd(logo);
-    // כלובים ריקים
-    for(let i=-7;i<=7;i+=7){
-      const cage=new THREE.Mesh(new THREE.BoxGeometry(2.5,2,2.2),new THREE.MeshStandardMaterial({color:0x333338,wireframe:true}));
-      cage.position.set(LX+i,1,LZ+5);_taAdd(cage);
-    }
-    G._taLabInteriorPos={x:LX,z:LZ};
-  })();
-
-  // ═══════════════════════════════════════════════
-  // נמל תל אביב — x=140..200, z=-180..-120
-  // ═══════════════════════════════════════════════
-  (()=>{
-    const PX=168, PZ=-150;
-    // רצפת נמל — בטון
-    const dock=new THREE.Mesh(new THREE.PlaneGeometry(70,60),new THREE.MeshLambertMaterial({color:0x7a7a74}));
-    dock.rotation.x=-Math.PI/2;dock.position.set(PX,.06,PZ);dock._isGround=true;_taAdd(dock);
-    // רציף
-    const pier=new THREE.Mesh(new THREE.BoxGeometry(70,.9,1.5),new THREE.MeshLambertMaterial({color:0x525248}));
-    pier.position.set(PX,.45,PZ-30);_taAdd(pier);
-    // עגורנים — 3
-    [PX-22,PX,PX+22].forEach(ex=>{
-      const post=new THREE.Mesh(new THREE.BoxGeometry(.9,14,.9),new THREE.MeshLambertMaterial({color:0xcc4400}));
-      post.position.set(ex,7,PZ-26);_taAdd(post);
-      const arm=new THREE.Mesh(new THREE.BoxGeometry(16,.65,.65),new THREE.MeshLambertMaterial({color:0xcc4400}));
-      arm.position.set(ex+6,14.3,PZ-26);_taAdd(arm);
-      const cable=new THREE.Mesh(new THREE.BoxGeometry(.18,10,.18),new THREE.MeshLambertMaterial({color:0x888880}));
-      cable.position.set(ex+14,9.3,PZ-26);_taAdd(cable);
-    });
-    // מחסני נמל
-    const whMat=new THREE.MeshLambertMaterial({color:0x9a9a8c});
-    [[PX-22,PZ+12,22,12,6],[PX+20,PZ+12,18,10,5.5]].forEach(([wx,wz,ww,wd,wh])=>{
-      const wh2=new THREE.Mesh(new THREE.BoxGeometry(ww,wh,wd),whMat);
-      wh2.position.set(wx,wh/2,wz);_taAdd(wh2);_taBldList.push({x:wx,z:wz,w:ww,d:wd});
-    });
-    // סירות
-    [[PX-10,.7,PZ-26],[PX+12,.65,PZ-28]].forEach(([sx,sy,sz])=>{
-      const b=new THREE.Mesh(new THREE.BoxGeometry(9,1.4,3),new THREE.MeshLambertMaterial({color:0xe8d4a0}));
-      b.position.set(sx,sy,sz);_taAdd(b);
-    });
-    // שלט נמל
-    const nsc=document.createElement('canvas');nsc.width=320;nsc.height=90;
-    const nstx=nsc.getContext('2d');nstx.fillStyle='#1a3a8a';nstx.fillRect(0,0,320,90);
-    nstx.fillStyle='#ffffff';nstx.font='bold 44px Arial';nstx.textAlign='center';nstx.textBaseline='middle';
-    nstx.fillText('נמל תל אביב',160,45);
-    const portSign=new THREE.Mesh(new THREE.BoxGeometry(8,2.2,.15),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(nsc),side:THREE.DoubleSide}));
-    portSign.position.set(PX,5,PZ+5);_taAdd(portSign);
-    G._taPortPos={x:PX,z:PZ};
-  })();
-
-  // ═══════════════════════════════════════════════
-  // כיכר רבין — x=0, z=-60
-  // ═══════════════════════════════════════════════
-  (()=>{
-    const RX=0, RZ=-60;
-    // קרקע כיכר — אריחים
-    const sqFloor=new THREE.Mesh(new THREE.PlaneGeometry(55,45),new THREE.MeshStandardMaterial({color:0xd8d0c0,roughness:.92}));
-    sqFloor.rotation.x=-Math.PI/2;sqFloor.position.set(RX,.07,RZ);sqFloor._isGround=true;_taAdd(sqFloor);
-    // אנדרטה — עמוד גבוה
-    const monument=new THREE.Mesh(new THREE.CylinderGeometry(.8,.9,12,12),new THREE.MeshStandardMaterial({color:0xd8d0c0,roughness:.9}));
-    monument.position.set(RX,6,RZ);monument.castShadow=true;_taAdd(monument);
-    const cap=new THREE.Mesh(new THREE.CylinderGeometry(2,2,.5,12),new THREE.MeshStandardMaterial({color:0xb8b0a0,roughness:.88}));
-    cap.position.set(RX,12.25,RZ);_taAdd(cap);
-    // עצי כיכר
-    for(let i=0;i<8;i++){
-      const ang=i/8*Math.PI*2;
-      _taBldTree(RX+Math.cos(ang)*18,RZ+Math.sin(ang)*15);
-    }
-    // ספסלים
-    [[RX-16,RZ-14,0],[RX+16,RZ-14,0],[RX-16,RZ+14,Math.PI],[RX+16,RZ+14,Math.PI],
-     [RX-22,RZ,Math.PI/2],[RX+22,RZ,-Math.PI/2]].forEach(([x,z,a])=>_taBench(x,z,a));
-    // דשא
-    const grass=new THREE.Mesh(new THREE.PlaneGeometry(40,30),new THREE.MeshLambertMaterial({color:0x3a8822}));
-    grass.rotation.x=-Math.PI/2;grass.position.set(RX,.06,RZ+5);_taAdd(grass);
-    G._taRabinPos={x:RX,z:RZ};
-  })();
-
-  // ═══════════════════════════════════════════════
-  // פארק הירקון — x=-80, z=-100
-  // ═══════════════════════════════════════════════
-  (()=>{
-    const PKX=-80, PKZ=-100;
-    const pg=new THREE.Mesh(new THREE.PlaneGeometry(90,70),new THREE.MeshLambertMaterial({color:0x2d8018}));
-    pg.rotation.x=-Math.PI/2;pg.position.set(PKX,.06,PKZ);_taAdd(pg);
-    // נהר ירקון
-    const river=new THREE.Mesh(new THREE.PlaneGeometry(90,14),new THREE.MeshLambertMaterial({color:0x2a6a9a,transparent:true,opacity:.85}));
-    river.rotation.x=-Math.PI/2;river.position.set(PKX,.08,PKZ+8);_taAdd(river);
-    for(let i=0;i<15;i++) _taBldTree(PKX+(Math.random()-.5)*80,PKZ+(Math.random()-.5)*55);
-    for(let p=0;p<5;p++) _taBench(PKX+(Math.random()-.5)*60,PKZ+(Math.random()-.5)*40,Math.random()*Math.PI*2);
-  })();
-
-  // ═══════════════════════════════════════════════
-  // עצים לאורך כל הרחובות הראשיים
-  // ═══════════════════════════════════════════════
-  // אלנבי — E-W (z=80) — תמרים אופייניים
-  for(let tx=-200;tx<=180;tx+=16){
-    if(!_taInBld(tx,72,3)&&!_taInBld(tx,88,3)){
-      _taBldTree(tx,72); _taBldTree(tx,88);
-    }
-  }
-  // דיזנגוף — N-S (x=-60) — עצי רחוב
-  for(let tz=-230;tz<=170;tz+=18){
-    if(!_taInBld(-68,tz,3)&&!_taInBld(-52,tz,3)){
-      _taBldTree(-68,tz); _taBldTree(-52,tz);
-    }
-  }
-  // ארלוזורוב — N-S (x=0)
-  for(let tz=-230;tz<=170;tz+=18){
-    if(!_taInBld(-8,tz,3)&&!_taInBld(8,tz,3)){
-      _taBldTree(-8,tz); _taBldTree(8,tz);
-    }
-  }
-  // בן יהודה — N-S (x=55)
-  for(let tz=-230;tz<=170;tz+=18){
-    if(!_taInBld(47,tz,3)) _taBldTree(47,tz);
-    if(!_taInBld(63,tz,3)) _taBldTree(63,tz);
-  }
-
-  // ═══════════════════════════════════════════════
-  // פנסי רחוב
-  // ═══════════════════════════════════════════════
-  // E-W streets
-  [[80,7],[80,-7],[30,7],[30,-7],[-30,7],[-30,-7],[-80,7],[-80,-7],[-130,7],[-130,-7],[-175,7],[-175,-7]].forEach(([z,xoff])=>{
-    for(let px=-200;px<=180;px+=24) if(!_taInBld(px,z,2)) _taLamp(px+xoff*.08,z+xoff);
-  });
-  // N-S streets
-  [[-60,7],[-60,-7],[0,7],[0,-7],[55,7],[55,-7],[115,7],[115,-7]].forEach(([x,zoff])=>{
-    for(let pz=-230;pz<=170;pz+=24) if(!_taInBld(x,pz,2)) _taLamp(x+zoff,pz);
-  });
-
-  // ═══════════════════════════════════════════════
-  // שלטי רחוב בצמתים
-  // ═══════════════════════════════════════════════
-  [
-    [-62, 82,'שד׳ דיזנגוף / רח׳ אלנבי',0],[-62, 32,'שד׳ דיזנגוף / קינג ג׳ורג׳',0],
-    [-62,-28,'שד׳ דיזנגוף / גורדון',0],  [-62,-78,'שד׳ דיזנגוף / בן יהודה',0],
-    [2,  82,'רח׳ ארלוזורוב / אלנבי',0],  [2,  32,'רח׳ ארלוזורוב / קינג ג׳ורג׳',0],
-    [57, 82,'רח׳ בן יהודה / אלנבי',0],   [57,-28,'רח׳ בן יהודה / גורדון',0],
-    [2, -62,'רח׳ ארלוזורוב',Math.PI/2],   [-62,-132,'שד׳ דיזנגוף / פינסקר',0],
-  ].forEach(([x,z,name,r])=>_taSign(x,z,name,r));
-
-  // ═══════════════════════════════════════════════
-  // ספסלים לאורך הרחובות
-  // ═══════════════════════════════════════════════
-  for(let px=-190;px<=170;px+=30){
-    if(!_taInBld(px,86,2)) _taBench(px,86,0);
-    if(!_taInBld(px,74,2)) _taBench(px,74,Math.PI);
-    if(!_taInBld(px,34,2)) _taBench(px,34,0);
-  }
-  for(let pz=-220;pz<=160;pz+=30){
-    if(!_taInBld(-64,pz,2)) _taBench(-64,pz,Math.PI/2);
-    if(!_taInBld(3,pz,2)) _taBench(3,pz,Math.PI/2);
-  }
-
-  // ═══════════════════════════════════════════════
-  // מצלמה
-  // ═══════════════════════════════════════════════
-  taCamera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,.1,500);
-  taCamera.position.set(0,7,120);
-  taCamera.lookAt(0,1,110);
-
-  // ── pool לפנסים ──
-  for(let i=0;i<12;i++){
-    const pl=new THREE.PointLight(0xffd97a,0,20);
-    taScene.add(pl);_taLampPool.push(pl);
-  }
-}
-
-// ── עדכון pool פנסים ──
-function _taUpdLamps(){
-  if(!_taLamps.length||!TA.inTA)return;
-  const lampsOn=G.dayTime>0.72||G.dayTime<0.28;
-  const targetI=lampsOn?1.1:0;
-  const px=TA.playerX, pz=TA.playerZ;
-  const sorted=_taLamps.map((l,i)=>({l,i,d:(l.x-px)**2+(l.z-pz)**2})).sort((a,b)=>a.d-b.d).slice(0,8);
-  sorted.forEach(({l},i)=>{
-    const pl=_taLampPool[i];if(!pl)return;
-    pl.position.set(l.x,4.5,l.z);
-    pl.intensity+=(targetI-pl.intensity)*0.06;
-  });
-  for(let i=sorted.length;i<_taLampPool.length;i++) if(_taLampPool[i])_taLampPool[i].intensity*=0.85;
-  _taLamps.forEach(l=>{
-    if(l.bulb){const t=lampsOn?1:0;const cur=l.bulb.emissive.r;const nr=cur+(t-cur)*0.05;l.bulb.emissive.setRGB(nr,nr*.85,nr*.3);}
-  });
+  // עצי תאנה ועתיקים
+  for(let bx=-115;bx<=15;bx+=22){_taBldTree(bx,135);_taBldTree(bx,220);}
+  for(let bz=135;bz<=215;bz+=22){_taBldTree(-115,bz);_taBldTree(15,bz);}
+  // פנסים עתיקים (צהובים יותר)
+  for(let bx=-110;bx<=10;bx+=28){_taLamp(bx,140);_taLamp(bx,200);}
 }
 
 // ════════════════════════════════════════════════
-// ENTER / EXIT TEL AVIV
+// HELPERS — בניינים לפי zone
+// ════════════════════════════════════════════════
+function _taFarFromRoad(x,z){
+  // True אם הנקודה לא חוסמת רחוב ראשי
+  const roads=[
+    {x:null,z:80,w:null,h:20},{x:null,z:30,w:null,h:20},{x:null,z:-30,w:null,h:18},
+    {x:null,z:-80,w:null,h:18},{x:null,z:-130,w:null,h:16},{x:null,z:-175,w:null,h:16},{x:null,z:140,w:null,h:16},
+    {x:-60,z:null,w:18,h:null},{x:0,z:null,w:20,h:null},{x:55,z:null,w:16,h:null},
+    {x:115,z:null,w:16,h:null},{x:-120,z:null,w:14,h:null},{x:-180,z:null,w:12,h:null},
+  ];
+  return !roads.some(r=>{
+    if(r.z!==null) return Math.abs(z-r.z)<r.h/2+6;
+    if(r.x!==null) return Math.abs(x-r.x)<r.w/2+6;
+    return false;
+  });
+}
+
+function _taZBld(x,z,w,d,h,cols,shutCols,zone){
+  const c=cols[Math.floor(Math.random()*cols.length)];
+  const sc=Math.floor(Math.random()*shutCols.length);
+  if(!_taWallTex)_taWallTex=_taMkWallTex(false);
+  const tC=_taWallTex.clone();tC.needsUpdate=true;tC.repeat.set(w/4,h/4);
+  const wallMat=new THREE.MeshStandardMaterial({map:tC,color:new THREE.Color(c),roughness:.87,metalness:0});
+  const bld=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);
+  bld.position.set(x,h/2,z);bld.castShadow=true;bld.receiveShadow=true;_taAddZ(bld);
+  _taBldList.push({x,z,w,d});
+  // פרפט
+  const par=new THREE.Mesh(new THREE.BoxGeometry(w+.4,.45,d+.4),new THREE.MeshLambertMaterial({color:_taDk(c,.76)}));
+  par.position.set(x,h+.22,z);_taAddZ(par);
+  // גג
+  const seal=new THREE.Mesh(new THREE.BoxGeometry(w-.15,.07,d-.15),new THREE.MeshLambertMaterial({color:0x1e1e1c}));
+  seal.position.set(x,h+.03,z);_taAddZ(seal);
+  // מיכל מים 65%
+  if(Math.random()<.65){
+    const wt=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.68,8),new THREE.MeshLambertMaterial({color:0xc8c4bc}));
+    wt.position.set(x+(Math.random()-.5)*(w*.5),h+.54,z+(Math.random()-.5)*(d*.5));_taAddZ(wt);
+  }
+  // חלונות + תריסים
+  (()=>{
+    const sc2=64,tc=document.createElement('canvas');tc.width=sc2*4;tc.height=sc2*4;
+    const tx=tc.getContext('2d');tx.clearRect(0,0,tc.width,tc.height);
+    const cols2=Math.max(2,Math.floor(w/2.5)),rows2=Math.max(2,Math.floor(h/2.4));
+    const shut=shutCols[Math.floor(Math.random()*shutCols.length)];
+    const sr=((shut>>16)&0xff),sg=((shut>>8)&0xff),sb=(shut&0xff);
+    for(let r=0;r<rows2;r++) for(let c2=0;c2<cols2;c2++){
+      const px=(c2/cols2)*tc.width+6,py=(r/rows2)*tc.height+6;
+      const pw=tc.width/cols2-10,ph=tc.height/rows2-10;
+      tx.fillStyle=`rgba(100,175,215,${.5+Math.random()*.35})`;tx.fillRect(px,py,pw,ph);
+      tx.strokeStyle='rgba(235,225,205,.85)';tx.lineWidth=2;tx.strokeRect(px-1,py-1,pw+2,ph+2);
+      if(Math.random()<.55){tx.fillStyle=`rgba(${sr},${sg},${sb},.78)`;tx.fillRect(px-1,py-1,pw*.45+2,ph+2);}
+    }
+    const wTex=new THREE.CanvasTexture(tc);
+    const wMat=new THREE.MeshLambertMaterial({map:wTex,transparent:true,alphaTest:.04});
+    const wp=new THREE.Mesh(new THREE.PlaneGeometry(w*.88,h*.84),wMat);
+    wp.position.set(x,h/2+.1,z-d/2-.04);_taAddZ(wp);
+    const wp2=new THREE.Mesh(new THREE.PlaneGeometry(w*.88,h*.84),wMat.clone());
+    wp2.position.set(x,h/2+.1,z+d/2+.04);wp2.rotation.y=Math.PI;_taAddZ(wp2);
+  })();
+  // מרפסות (בוז׳אוס + sea)
+  if(h>7&&(zone==='bauhaus'||zone==='sea')){
+    for(let wy=3.2;wy<h-.9;wy+=4.2){
+      const bw=Math.min(5.5,w-1.5);
+      const bal=new THREE.Mesh(new THREE.BoxGeometry(bw,.11,1.1),new THREE.MeshLambertMaterial({color:_taDk(c,.84)}));
+      bal.position.set(x,wy-.05,z-d/2-.55);_taAddZ(bal);
+      const rail=new THREE.Mesh(new THREE.BoxGeometry(bw,.48,.07),new THREE.MeshLambertMaterial({color:0x888882}));
+      rail.position.set(x,wy+.28,z-d/2-1.0);_taAddZ(rail);
+    }
+  }
+  // דלת
+  const dc=new THREE.Color().setHSL(Math.random()*.1+.04,.5,.22+Math.random()*.06);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.15,2.0,.07),new THREE.MeshStandardMaterial({color:dc,roughness:.8}));
+  door.position.set(x+(Math.random()-.5)*(w*.3),.99,z-d/2-.05);_taAddZ(door);
+}
+
+function _taZHouse(x,z,h,cols,shutCols){
+  const c=cols[Math.floor(Math.random()*cols.length)];
+  if(!_taWallTex)_taWallTex=_taMkWallTex(false);
+  const tC=_taWallTex.clone();tC.needsUpdate=true;tC.repeat.set(2,h/3.5);
+  const wallMat=new THREE.MeshStandardMaterial({map:tC,color:new THREE.Color(c),roughness:.86});
+  const bld=new THREE.Mesh(new THREE.BoxGeometry(8,h,8),wallMat);
+  bld.position.set(x,h/2,z);bld.castShadow=true;bld.receiveShadow=true;_taAddZ(bld);
+  _taBldList.push({x,z,w:8,d:8});
+  const par=new THREE.Mesh(new THREE.BoxGeometry(8.35,.38,8.35),new THREE.MeshLambertMaterial({color:_taDk(c,.74)}));
+  par.position.set(x,h+.19,z);_taAddZ(par);
+  if(Math.random()<.6){
+    const wt=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.56,8),new THREE.MeshLambertMaterial({color:0xccc8c0}));
+    wt.position.set(x+(Math.random()-.5)*2,h+.48,z+(Math.random()-.5)*2);_taAddZ(wt);
+  }
+  const shut=shutCols[Math.floor(Math.random()*shutCols.length)];
+  const glsMat=new THREE.MeshStandardMaterial({color:0x7ab8d0,roughness:.05,metalness:.12,transparent:true,opacity:.7});
+  const frMat=new THREE.MeshLambertMaterial({color:0xeee5d5});
+  const shutMat=new THREE.MeshLambertMaterial({color:shut});
+  [-1.8,1.8].forEach(wx=>{
+    for(let wy=1.4;wy<h-.7;wy+=Math.max(2,h/Math.ceil(h/2))){
+      const fr=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.12,.07),frMat);
+      fr.position.set(x+wx,wy,z-4.02);_taAddZ(fr);
+      const wn=new THREE.Mesh(new THREE.BoxGeometry(.86,.92,.05),glsMat.clone());
+      wn.position.set(x+wx,wy,z-4.0);_taAddZ(wn);
+      const sl=new THREE.Mesh(new THREE.BoxGeometry(.43,1.02,.04),shutMat);
+      sl.position.set(x+wx-.44,wy,z-4.04);_taAddZ(sl);
+    }
+  });
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.92,.07),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(Math.random()*.1+.04,.5,.2),roughness:.8}));
+  door.position.set(x,.95,z-4.04);_taAddZ(door);
+  if(h>4.5){
+    const bal=new THREE.Mesh(new THREE.BoxGeometry(3.5,.1,1.0),new THREE.MeshLambertMaterial({color:_taDk(c,.82)}));
+    bal.position.set(x,h*.52+.15,z-4.0-.5);_taAddZ(bal);
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(3.5,.44,.07),new THREE.MeshLambertMaterial({color:0x888880}));
+    rail.position.set(x,h*.52+.4,z-4.0-.95);_taAddZ(rail);
+  }
+}
+
+// ════════════════════════════════════════════════
+// שוק הכרמל
+// ════════════════════════════════════════════════
+function _taBuildMarket(){
+  const MX=-90, MZ=100;
+  const mktFloor=new THREE.Mesh(new THREE.PlaneGeometry(80,70),new THREE.MeshLambertMaterial({color:0xb0a890}));
+  mktFloor.rotation.x=-Math.PI/2;mktFloor.position.set(MX,.05,MZ);_taAddZ(mktFloor);
+  const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133,0xdd9900,0x116633];
+  for(let row=0;row<5;row++) for(let col=0;col<7;col++){
+    const ax=MX-33+col*11, az=MZ-28+row*14;
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,2.8,6),new THREE.MeshLambertMaterial({color:0x888880}));
+    pole.position.set(ax,1.4,az);_taAddZ(pole);
+    const aw=new THREE.Mesh(new THREE.BoxGeometry(10,.15,12),new THREE.MeshLambertMaterial({color:awningCols[(row*7+col)%awningCols.length]}));
+    aw.position.set(ax,2.95,az);aw.rotation.x=.08*(row%2?1:-1);_taAddZ(aw);
+    if(Math.random()<.75){
+      const prodCols=[0xff6600,0xffcc00,0x44aa22,0xee2244,0xff8800,0xffee00,0x22aa88];
+      const prod=new THREE.Mesh(new THREE.BoxGeometry(2.5,.7,2),new THREE.MeshLambertMaterial({color:prodCols[Math.floor(Math.random()*prodCols.length)]}));
+      prod.position.set(ax,0.35,az+3.5);_taAddZ(prod);
+    }
+  }
+  // נירה הכלבה
+  (()=>{
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.7,.5,.9),new THREE.MeshLambertMaterial({color:0xc8b090}));
+    body.position.y=.55;g.add(body);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.45,.4,.5),new THREE.MeshLambertMaterial({color:0xc8b090}));
+    head.position.set(0,.88,.5);g.add(head);
+    [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.06,5,4),new THREE.MeshLambertMaterial({color:0x333322}));e.position.set(s*.12,.9,.77);g.add(e);});
+    const tail=new THREE.Mesh(new THREE.CylinderGeometry(.05,.08,.5,6),new THREE.MeshLambertMaterial({color:0xb89878}));
+    tail.rotation.z=.8;tail.position.set(0,.7,-.48);g.add(tail);
+    g.position.set(MX-32,0,MZ+26);taScene.add(g);taObjects.push(g);
+    G._taNiraPos={x:MX-32,z:MZ+26};
+    G._taMarketPos={x:MX,z:MZ};
+  })();
+  // שלט שוק
+  const sc=document.createElement('canvas');sc.width=400;sc.height=100;
+  const stx=sc.getContext('2d');
+  stx.fillStyle='#8B2200';stx.fillRect(0,0,400,100);
+  stx.fillStyle='#FFE070';stx.font='bold 52px Arial';stx.textAlign='center';stx.textBaseline='middle';
+  stx.fillText('שוק הכרמל',200,50);
+  const mkSign=new THREE.Mesh(new THREE.BoxGeometry(8,2,.15),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(sc),side:THREE.DoubleSide}));
+  mkSign.position.set(MX,5,MZ-35);taScene.add(mkSign);taObjects.push(mkSign);
+}
+
+// ════════════════════════════════════════════════
+// בניין APEX
+// ════════════════════════════════════════════════
+function _taBuildApex(){
+  const AX=70, AZ=-130;
+  if(!_taWallTex)_taWallTex=_taMkWallTex(false);
+  const apexWall=_taMkWallTex(true);
+  const tC=apexWall.clone();tC.needsUpdate=true;tC.repeat.set(4,5);
+  const wMat=new THREE.MeshStandardMaterial({map:tC,color:0x3a3a3e,roughness:.85,metalness:.12});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(18,22,16),wMat);
+  body.position.set(AX,11,AZ);body.castShadow=true;body.receiveShadow=true;_taAddZ(body);
+  _taBldList.push({x:AX,z:AZ,w:18,d:16});
+  // פרפט כהה
+  const par=new THREE.Mesh(new THREE.BoxGeometry(18.6,.5,16.6),new THREE.MeshLambertMaterial({color:0x1e1e24}));
+  par.position.set(AX,22.25,AZ);_taAddZ(par);
+  // חלונות מרושתים
+  const eyeM=new THREE.MeshStandardMaterial({color:0x1a1a2e,emissive:0x080820,roughness:.1,transparent:true,opacity:.82});
+  for(let r=0;r<5;r++) for(let c=-2;c<=2;c++){
+    const wn=new THREE.Mesh(new THREE.BoxGeometry(2.2,2.5,.08),eyeM.clone());
+    wn.position.set(AX+c*3.2,3.5+r*3.6,AZ-8.04);_taAddZ(wn);
+    const grH=new THREE.Mesh(new THREE.BoxGeometry(2.3,.06,.06),new THREE.MeshLambertMaterial({color:0x444444}));
+    grH.position.set(AX+c*3.2,3.5+r*3.6,AZ-8.02);_taAddZ(grH);
+  }
+  // לוגו APEX
+  const logoBar=new THREE.Mesh(new THREE.BoxGeometry(10,.3,1),new THREE.MeshStandardMaterial({color:0xcc0000,emissive:0x550000}));
+  logoBar.position.set(AX,22.4,AZ-4);_taAddZ(logoBar);
+  const apexL=new THREE.PointLight(0x8800cc,3.5,28);apexL.position.set(AX,13,AZ-9);_taAddZ(apexL);
+  // דלת
+  const door=new THREE.Mesh(new THREE.BoxGeometry(2.8,3.2,.12),new THREE.MeshStandardMaterial({color:0x1a1a1e,roughness:.4,metalness:.7}));
+  door.position.set(AX,1.6,AZ-8.06);_taAddZ(door);
+  // כניסת גג
+  const roofEntry=new THREE.Mesh(new THREE.BoxGeometry(16,.4,2),new THREE.MeshLambertMaterial({color:0x202028}));
+  roofEntry.position.set(AX,22.2,AZ+7);_taAddZ(roofEntry);
+  G._taApexBldPos={x:AX,z:AZ};
+  G._taLabRoofEntry={x:AX,z:AZ+7};
+  // מעבדה אחורית
+  _taBuildApexLab(AX,AZ-18);
+}
+
+function _taBuildApexLab(LX,LZ){
+  const labFloor=new THREE.Mesh(new THREE.PlaneGeometry(20,18),new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:.98}));
+  labFloor.rotation.x=-Math.PI/2;labFloor.position.set(LX,.02,LZ);labFloor._isGround=true;_taAddZ(labFloor);
+  for(let i=-6;i<=6;i+=6){
+    const labL=new THREE.PointLight(0xb0d8ff,1.5,15);labL.position.set(LX+i,4,LZ);_taAddZ(labL);
+    const lb=new THREE.Mesh(new THREE.BoxGeometry(3,.2,1.5),new THREE.MeshStandardMaterial({color:0x333355,roughness:.4,metalness:.8}));
+    lb.position.set(LX+i,4.1,LZ);_taAddZ(lb);
+  }
+  [[LX-7,LZ-4],[LX,LZ-4],[LX+7,LZ-4]].forEach(([cx,cz])=>{
+    const desk=new THREE.Mesh(new THREE.BoxGeometry(3,.08,1.2),new THREE.MeshLambertMaterial({color:0x2a2a30}));
+    desk.position.set(cx,.8,cz);_taAddZ(desk);
+    const screen=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,.05),new THREE.MeshStandardMaterial({color:0x001830,emissive:0x003366,emissiveIntensity:.8}));
+    screen.position.set(cx,1.5,cz-.6);_taAddZ(screen);
+    const sc2=document.createElement('canvas');sc2.width=180;sc2.height=120;
+    const stx=sc2.getContext('2d');stx.fillStyle='#001830';stx.fillRect(0,0,180,120);
+    stx.fillStyle='#00ff88';stx.font='10px monospace';
+    ['APEX://Z-01','STATUS:ACTIVE','LAT:32.08','LON:34.78','DNA:▓▓▓▓░░'].forEach((t,i)=>stx.fillText(t,6,16+i*16));
+    screen.material.map=new THREE.CanvasTexture(sc2);screen.material.needsUpdate=true;
+  });
+  for(let i=-7;i<=7;i+=7){
+    const cage=new THREE.Mesh(new THREE.BoxGeometry(2.5,2,2.2),new THREE.MeshStandardMaterial({color:0x333338,wireframe:true}));
+    cage.position.set(LX+i,1,LZ+4);_taAddZ(cage);
+  }
+  G._taLabInteriorPos={x:LX,z:LZ};
+}
+
+// ════════════════════════════════════════════════
+// כיכר רבין
+// ════════════════════════════════════════════════
+function _taBuildRabinSquare(){
+  const RX=0, RZ=-60;
+  const sqFloor=new THREE.Mesh(new THREE.PlaneGeometry(55,48),new THREE.MeshStandardMaterial({color:0xd5cfc0,roughness:.92}));
+  sqFloor.rotation.x=-Math.PI/2;sqFloor.position.set(RX,.07,RZ);sqFloor._isGround=true;_taAddZ(sqFloor);
+  const monument=new THREE.Mesh(new THREE.CylinderGeometry(.8,.9,12,12),new THREE.MeshStandardMaterial({color:0xd8d0c0,roughness:.9}));
+  monument.position.set(RX,6,RZ);monument.castShadow=true;_taAddZ(monument);
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(2,2,.5,12),new THREE.MeshStandardMaterial({color:0xb8b0a0,roughness:.88}));
+  cap.position.set(RX,12.25,RZ);_taAddZ(cap);
+  for(let i=0;i<8;i++){const ang=i/8*Math.PI*2;_taBldTree(RX+Math.cos(ang)*20,RZ+Math.sin(ang)*16);}
+  [[RX-16,RZ-14,0],[RX+16,RZ-14,0],[RX-16,RZ+14,Math.PI],[RX+16,RZ+14,Math.PI],
+   [RX-24,RZ,Math.PI/2],[RX+24,RZ,-Math.PI/2]].forEach(([x,z,a])=>_taBench(x,z,a));
+  const grass=new THREE.Mesh(new THREE.PlaneGeometry(42,32),new THREE.MeshLambertMaterial({color:0x3a8822}));
+  grass.rotation.x=-Math.PI/2;grass.position.set(RX,.06,RZ+6);_taAddZ(grass);
+  // שלט
+  const rsc=document.createElement('canvas');rsc.width=320;rsc.height=80;
+  const rstx=rsc.getContext('2d');rstx.fillStyle='#1a2a6a';rstx.fillRect(0,0,320,80);
+  rstx.fillStyle='#fff';rstx.font='bold 40px Arial';rstx.textAlign='center';rstx.textBaseline='middle';
+  rstx.fillText('כיכר רבין',160,40);
+  const rsign=new THREE.Mesh(new THREE.BoxGeometry(6,1.5,.1),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(rsc),side:THREE.DoubleSide}));
+  rsign.position.set(RX,3,RZ-26);_taAddZ(rsign);
+  G._taRabinPos={x:RX,z:RZ};
+}
+
+// ════════════════════════════════════════════════
+// נמל
+// ════════════════════════════════════════════════
+function _taBuildPort(){
+  const PX=168, PZ=-155;
+  const dock=new THREE.Mesh(new THREE.PlaneGeometry(80,65),new THREE.MeshLambertMaterial({color:0x747470}));
+  dock.rotation.x=-Math.PI/2;dock.position.set(PX,.06,PZ);dock._isGround=true;_taAddZ(dock);
+  const pier=new THREE.Mesh(new THREE.BoxGeometry(80,.9,1.5),new THREE.MeshLambertMaterial({color:0x525248}));
+  pier.position.set(PX,.45,PZ-32);_taAddZ(pier);
+  // עגורנים
+  [PX-22,PX,PX+22].forEach(ex=>{
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.9,14,.9),new THREE.MeshLambertMaterial({color:0xcc4400}));
+    post.position.set(ex,7,PZ-28);_taAddZ(post);
+    const arm=new THREE.Mesh(new THREE.BoxGeometry(18,.65,.65),new THREE.MeshLambertMaterial({color:0xcc4400}));
+    arm.position.set(ex+7,14.3,PZ-28);_taAddZ(arm);
+    const cable=new THREE.Mesh(new THREE.BoxGeometry(.18,10,.18),new THREE.MeshLambertMaterial({color:0x888880}));
+    cable.position.set(ex+16,9.3,PZ-28);_taAddZ(cable);
+    _taLamp(ex,PZ-14);
+  });
+  // מחסנים
+  [[PX-22,PZ+10,22,12,6],[PX+20,PZ+10,18,10,5.5]].forEach(([wx,wz,ww,wd,wh])=>{
+    const wh2=new THREE.Mesh(new THREE.BoxGeometry(ww,wh,wd),new THREE.MeshLambertMaterial({color:0x9a9a8c}));
+    wh2.position.set(wx,wh/2,wz);_taAddZ(wh2);_taBldList.push({x:wx,z:wz,w:ww,d:wd});
+  });
+  // סירות
+  [[PX-10,.7,PZ-28],[PX+12,.65,PZ-30]].forEach(([sx,sy,sz])=>{
+    const b=new THREE.Mesh(new THREE.BoxGeometry(9,1.4,3),new THREE.MeshLambertMaterial({color:0xe8d4a0}));
+    b.position.set(sx,sy,sz);_taAddZ(b);
+  });
+  // שלט נמל
+  const nsc=document.createElement('canvas');nsc.width=320;nsc.height=90;
+  const nstx=nsc.getContext('2d');nstx.fillStyle='#1a3a8a';nstx.fillRect(0,0,320,90);
+  nstx.fillStyle='#fff';nstx.font='bold 44px Arial';nstx.textAlign='center';nstx.textBaseline='middle';
+  nstx.fillText('נמל תל אביב',160,45);
+  const portSign=new THREE.Mesh(new THREE.BoxGeometry(8,2.2,.15),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(nsc),side:THREE.DoubleSide}));
+  portSign.position.set(PX,5,PZ+5);_taAddZ(portSign);
+  G._taPortPos={x:PX,z:PZ};
+}
+
+// ════════════════════════════════════════════════
+// ENTER / EXIT
 // ════════════════════════════════════════════════
 function enterTelAviv(){
-  _lodStaticObjs=null;_lodShadowObjs=null;
   G.paused=true;
   fadeOut(()=>{
     if(!taScene)buildTelAvivScene();
     TA.inTA=true;
-    // כניסה — תחנת רכבת (z=110 = דרום, x=0)
-    TA.playerX=0; TA.playerZ=110;
-    TA.playerYaw=Math.PI;
-    G.yaw=Math.PI;
+    TA.playerX=0;TA.playerZ=110;
+    TA.playerYaw=Math.PI;G.yaw=Math.PI;
     TA.enterGrace=3.0;
     if(taCamera){taCamera.position.set(0,7,126);taCamera.lookAt(0,1,115);}
     scene.remove(PB);taScene.add(PB);
@@ -12574,20 +12773,19 @@ function exitTelAviv(){
     if(taScene)taScene.remove(PB);
     scene.add(PB);
     PB.position.set(-40,0,150);
-    // dispose
     taObjects.forEach(o=>{
       if(o.geometry)o.geometry.dispose();
       if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}
     });
-    taObjects.length=0;taEnemies.length=0;_taBldList.length=0;_taLamps.length=0;_taLampPool.length=0;
+    taObjects.length=0;taEnemies.length=0;_taBldList.length=0;_taLamps.length=0;_taLampPool.length=0;_taZoneGroups.length=0;
     taScene=null;taCamera=null;
-    _taRoadTex=null;_taSidewalkTex=null;_taWallTex=null;_taRoofTex=null;_taAsphalt=null;
+    _taRoadTex=null;_taSidewalkTex=null;_taWallTex=null;_taRoofTex=null;
     G.paused=false;fadeIn();
   });
 }
 
 // ════════════════════════════════════════════════
-// UPD TEL AVIV — main loop
+// UPD TEL AVIV
 // ════════════════════════════════════════════════
 function updTelAviv(dt){
   if(!TA.inTA||G.paused||G.dlgOpen)return;
@@ -12598,8 +12796,7 @@ function updTelAviv(dt){
     G.atkCD=_taAtkCD;sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     G._taAtkFrame=true;setTimeout(()=>{G._taAtkFrame=false;},250);
   }
-
-  // ── תנועה ──
+  // תנועה
   const spd=G.dogs[G.dog].spd*1.05;
   _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));
   _vRgt.set( Math.cos(G.yaw),0,-Math.sin(G.yaw));
@@ -12612,21 +12809,14 @@ function updTelAviv(dt){
   const iln=Math.hypot(inputX,inputZ)||1;
   let nx=TA.playerX+(inputX/iln)*spd*dt;
   let nz=TA.playerZ+(inputZ/iln)*spd*dt;
-
-  // collision עם בניינים
-  const margin=0.9;
-  const hitX=_taBldList.some(b=>Math.abs(nx-b.x)<b.w/2+margin&&Math.abs(TA.playerZ-b.z)<b.d/2+margin);
-  const hitZ=_taBldList.some(b=>Math.abs(TA.playerX-b.x)<b.w/2+margin&&Math.abs(nz-b.z)<b.d/2+margin);
-  if(hitX)nx=TA.playerX;
-  if(hitZ)nz=TA.playerZ;
-
-  // גבולות עיר
-  nx=Math.max(-230,Math.min(220,nx));
-  nz=Math.max(-265,Math.min(200,nz));
+  // collision
+  const mg=0.9;
+  if(_taBldList.some(b=>Math.abs(nx-b.x)<b.w/2+mg&&Math.abs(TA.playerZ-b.z)<b.d/2+mg))nx=TA.playerX;
+  if(_taBldList.some(b=>Math.abs(TA.playerX-b.x)<b.w/2+mg&&Math.abs(nz-b.z)<b.d/2+mg))nz=TA.playerZ;
+  nx=Math.max(-230,Math.min(225,nx));nz=Math.max(-270,Math.min(210,nz));
   TA.playerX=nx;TA.playerZ=nz;
   PB.position.set(TA.playerX,0,TA.playerZ);
-
-  // ── אנימציה ──
+  // אנימציה
   const _taMoving=Math.abs(inputX)>.01||Math.abs(inputZ)>.01;
   if(_taMoving){
     walkT+=dt*8;
@@ -12639,35 +12829,134 @@ function updTelAviv(dt){
     if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
   }
   if(_taMoving)PB.rotation.y=Math.atan2(-inputX,-inputZ);
-
-  // ── מצלמה ──
+  // מצלמה
   if(taCamera){
     const sz=G.dog==='momo'?.58:1,cd=9,ch=5+G.pitch*7;
-    const tpx=TA.playerX,tpy=1.1*sz,tpz=TA.playerZ;
-    _vCamTarget.set(tpx+Math.sin(G.yaw)*cd,tpy+ch,tpz+Math.cos(G.yaw)*cd);
+    _vCamTarget.set(TA.playerX+Math.sin(G.yaw)*cd,1.1*sz+ch,TA.playerZ+Math.cos(G.yaw)*cd);
     taCamera.position.lerp(_vCamTarget,.1);
-    taCamera.lookAt(tpx,tpy+.7,tpz);
+    taCamera.lookAt(TA.playerX,1.1*sz+.7,TA.playerZ);
   }
-
-  // ── עדכון פנסים ──
+  // LOD zones + פנסים + אויבים + triggers
+  _taUpdZones();
   _taUpdLamps();
-
-  // ── אויבים + triggers ──
   _updTAEnemies(dt);
   _checkTAMissionTriggers();
 }
+
+// ════════════════════════════════════════════════
+// MINIMAP תל אביב
+// ════════════════════════════════════════════════
+function drawMMTelAviv(){
+  const ctx=mmCtx,W=120,H=120;
+  const sc=0.22; // TA world ±230 → ~50px offset each side → fits in 120px
+  const px=TA.playerX,pz=TA.playerZ;
+  const cx=W/2-px*sc, cy=H/2-pz*sc;
+  ctx.clearRect(0,0,W,H);
+
+  // רקע — ים בצד מערב
+  ctx.fillStyle='#141c24';ctx.fillRect(0,0,W,H);
+  // ים
+  ctx.fillStyle='#1a5580';
+  const seaX=cx+160*sc;
+  if(seaX<W)ctx.fillRect(Math.max(0,seaX),0,W-Math.max(0,seaX),H);
+
+  // שכונות בצבעים שונים
+  const zones=[
+    {x:-40,z:-20,w:160,d:120,col:'rgba(200,190,160,0.35)',label:'בוז׳אוס'},
+    {x:-120,z:120,w:130,d:150,col:'rgba(180,140,80,0.35)',label:'כרמל'},
+    {x:-20,z:-150,w:200,d:130,col:'rgba(150,170,200,0.35)',label:'צפון'},
+    {x:165,z:-155,w:90,d:120,col:'rgba(100,110,120,0.4)',label:'נמל'},
+    {x:-60,z:170,w:150,d:110,col:'rgba(190,160,100,0.35)',label:'יפו'},
+  ];
+  zones.forEach(z=>{
+    ctx.fillStyle=z.col;
+    ctx.fillRect(cx+(z.x-z.w/2)*sc,cy+(z.z-z.d/2)*sc,z.w*sc,z.d*sc);
+  });
+
+  // כבישים E-W
+  ctx.fillStyle='#4a4a4a';
+  [80,30,-30,-80,-130,-175,140].forEach(z=>{
+    ctx.fillRect(0,cy+z*sc-1.5,W,3);
+  });
+  // כבישים N-S
+  [-60,0,55,115,-120,-180].forEach(x=>{
+    ctx.fillRect(cx+x*sc-1.5,0,3,H);
+  });
+
+  // נקודות עניין
+  // כיכר דיזנגוף
+  if(G._taDizengoffSq){
+    ctx.fillStyle='#44aaff';ctx.beginPath();ctx.arc(cx+G._taDizengoffSq.x*sc,cy+G._taDizengoffSq.z*sc,4,0,Math.PI*2);ctx.fill();
+  }
+  // שוק הכרמל
+  if(G._taMarketPos){
+    ctx.fillStyle='#ff8822';ctx.beginPath();ctx.arc(cx+G._taMarketPos.x*sc,cy+G._taMarketPos.z*sc,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ff8822';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.fillText('שוק',cx+G._taMarketPos.x*sc,cy+G._taMarketPos.z*sc-5);
+  }
+  // בניין APEX
+  if(G._taApexBldPos){
+    ctx.fillStyle='#cc44ff';ctx.beginPath();ctx.arc(cx+G._taApexBldPos.x*sc,cy+G._taApexBldPos.z*sc,4,0,Math.PI*2);ctx.fill();
+  }
+  // נמל
+  if(G._taPortPos){
+    ctx.fillStyle='#4488cc';ctx.beginPath();ctx.arc(cx+G._taPortPos.x*sc,cy+G._taPortPos.z*sc,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#4488cc';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.fillText('נמל',cx+G._taPortPos.x*sc,cy+G._taPortPos.z*sc-5);
+  }
+  // כיכר רבין
+  if(G._taRabinPos){
+    ctx.fillStyle='#88ff44';ctx.beginPath();ctx.arc(cx+G._taRabinPos.x*sc,cy+G._taRabinPos.z*sc,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#88ff44';ctx.font='bold 7px Arial';ctx.textAlign='center';ctx.fillText('רבין',cx+G._taRabinPos.x*sc,cy+G._taRabinPos.z*sc-5);
+  }
+  // נירה
+  if(G._taNiraPos&&G.mission<=55){
+    ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(cx+G._taNiraPos.x*sc,cy+G._taNiraPos.z*sc,3,0,Math.PI*2);ctx.fill();
+  }
+
+  // אויבים
+  ctx.fillStyle='#ff3322';
+  taEnemies.forEach(e=>{
+    if(e.hp<=0||!e.mesh||!e.mesh.visible)return;
+    ctx.fillRect(cx+e.mesh.position.x*sc-2,cy+e.mesh.position.z*sc-2,4,4);
+  });
+
+  // יעד GPS — מהבהב
+  if(_navTargetWorld){
+    const tx2=cx+_navTargetWorld.x*sc,tz2=cy+_navTargetWorld.z*sc;
+    if(Math.sin(Date.now()*.006)>.0){
+      ctx.strokeStyle='#f5c518';ctx.lineWidth=1.5;const r=5;
+      ctx.beginPath();ctx.moveTo(tx2-r,tz2-r);ctx.lineTo(tx2+r,tz2+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(tx2+r,tz2-r);ctx.lineTo(tx2-r,tz2+r);ctx.stroke();
+      ctx.beginPath();ctx.arc(tx2,tz2,r+2,0,Math.PI*2);ctx.stroke();
+    }
+  }
+
+  // שחקן — עיגול לבן + חץ
+  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(cx+px*sc,cy+pz*sc,5,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#f5c518';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx+px*sc,cy+pz*sc);
+  ctx.lineTo(cx+px*sc-Math.sin(G.yaw)*8,cy+pz*sc-Math.cos(G.yaw)*8);ctx.stroke();
+
+  // כיתוב "תל אביב" למעלה
+  ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,13);
+  ctx.fillStyle='#88ddff';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+  ctx.fillText('🌆 תל אביב',W/2,10);
+  ctx.strokeStyle='#335566';ctx.lineWidth=1;ctx.strokeRect(0,0,W,H);
+}
+
+// hook drawMM to use TA version
+// drawMM מוגדרת כבר ב-engine — נדרוס אותה עם גרסת TA-aware
+// (function declaration hoisting = הגרסה הזו שולטת)
 
 // ════════════════════════════════════════════════
 // TRIGGERS — missions 53-62
 // ════════════════════════════════════════════════
 function _checkTAMissionTriggers(){
   if(!TA.inTA)return;
-  const px=TA.playerX, pz=TA.playerZ;
+  const px=TA.playerX,pz=TA.playerZ;
 
-  // 53 → הגיע לשוק הכרמל
   if(G.mission===53&&!G._ta53done){
-    const mp=G._taMarketPos||{x:-90,z:90};
-    if(d2(px,pz,mp.x,mp.z)<22){
+    const mp=G._taMarketPos||{x:-90,z:100};
+    if(d2(px,pz,mp.x,mp.z)<24){
       G._ta53done=true;
       showCut('ch9_tel_aviv_arrive',()=>{
         G.mission=54;MISSIONS[54].unlock();updateMissionHUD();updateNavArrow();saveGame();
@@ -12676,131 +12965,117 @@ function _checkTAMissionTriggers(){
     }
   }
 
-  // 54 → פגשו נירה
   if(G.mission===54&&!G._ta54done){
-    const np=G._taNiraPos||{x:-118,z:112};
-    if(d2(px,pz,np.x,np.z)<9){
+    const np=G._taNiraPos||{x:-122,z:126};
+    if(d2(px,pz,np.x,np.z)<10){
       G._ta54done=true;
       G.mission=55;MISSIONS[55].unlock();updateMissionHUD();updateNavArrow();saveGame();
       showN(`📋 ${MISSIONS[55].txt}`);
     }
   }
 
-  // 55 → קאטסין נירה + מקדם ל-56
   if(G.mission===55&&!G._ta55done){
-    const np=G._taNiraPos||{x:-118,z:112};
-    if(d2(px,pz,np.x,np.z)<7){
+    const np=G._taNiraPos||{x:-122,z:126};
+    if(d2(px,pz,np.x,np.z)<8){
       G._ta55done=true;
-      setTimeout(()=>showCut('ch9_carmel_market',()=>{
+      showCut('ch9_carmel_market',()=>{
         G.mission=56;MISSIONS[56].unlock();updateMissionHUD();updateNavArrow();saveGame();
         showN(`📋 ${MISSIONS[56].txt}`);
-      }),400);
+      });
     }
   }
 
-  // 56 → הגיע לבניין APEX פינסקר
   if(G.mission===56&&!G._ta56done){
     const ap=G._taApexBldPos||{x:70,z:-130};
-    if(d2(px,pz,ap.x,ap.z)<12){
+    if(d2(px,pz,ap.x,ap.z)<14){
       G._ta56done=true;
-      setTimeout(()=>showCut('ch9_dizengoff_approach',()=>{
+      showCut('ch9_dizengoff_approach',()=>{
         G.mission=57;MISSIONS[57].unlock();updateMissionHUD();updateNavArrow();saveGame();
         showN(`📋 ${MISSIONS[57].txt}`);
-      }),400);
+      });
     }
   }
 
-  // 57 → גג הבניין
   if(G.mission===57&&!G._ta57done){
     const rp=G._taLabRoofEntry||{x:70,z:-123};
-    if(d2(px,pz,rp.x,rp.z)<8){
+    if(d2(px,pz,rp.x,rp.z)<9){
       G._ta57done=true;
-      setTimeout(()=>showCut('ch9_apex_lab_found',()=>{
+      showCut('ch9_apex_lab_found',()=>{
         G.mission=58;MISSIONS[58].unlock();updateMissionHUD();updateNavArrow();saveGame();
         showN(`📋 ${MISSIONS[58].txt}`);
-      }),400);
+      });
     }
   }
 
-  // 58 → כץ מופיע — שרשרת קאטסינים
   if(G.mission===58&&!G._ta58done){
-    const lp=G._taLabInteriorPos||{x:70,z:-110};
-    if(d2(px,pz,lp.x,lp.z)<11){
+    const lp=G._taLabInteriorPos||{x:70,z:-148};
+    if(d2(px,pz,lp.x,lp.z)<12){
       G._ta58done=true;
-      forceDog('zippo','זיפו מוביל — כץ מדבר');
-      setTimeout(()=>showCut('ch9_katz_appears',()=>{
-        setTimeout(()=>showCut('ch9_katz_truth',()=>{
-          setTimeout(()=>showCut('ch9_apex_soldiers',()=>{
-            G.mission=59;MISSIONS[59].unlock();updateMissionHUD();updateNavArrow();saveGame();
-            showN(`📋 ${MISSIONS[59].txt}`);
-          }),400);
-        }),400);
-      }),600);
+      forceDog('zippo','זיפו מוביל');
+      showCut('ch9_katz_appears',()=>{
+        showCut('ch9_katz_truth',()=>{
+          G.mission=59;MISSIONS[59].unlock();updateMissionHUD();updateNavArrow();saveGame();
+          showN(`📋 ${MISSIONS[59].txt}`);
+          // spawn אויבים יוצאים מהבניין
+          const ap=G._taApexBldPos||{x:70,z:-130};
+          [[ap.x-14,ap.z-8],[ap.x+14,ap.z-8],[ap.x-8,ap.z-16],[ap.x+8,ap.z-16],[ap.x,ap.z-20]]
+            .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+        });
+      });
     }
   }
 
-  // 59 → יצאו מהבניין — spawn אויבים בדרך לנמל
   if(G.mission===59&&!G._ta59done){
-    const ap=G._taApexBldPos||{x:70,z:-130};
-    if(d2(px,pz,ap.x,ap.z-20)<9){
+    // הפגש עם Colin לפני הנמל
+    if(taEnemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible).length===0&&taEnemies.length>0){
       G._ta59done=true;
       forceDog('colin','קולין מוביל');
-      showN('⚔️ APEX בחוץ! לנמל — מהר!');
-      // spawn 4 אויבים בדרך
-      [[ap.x-12,ap.z-15],[ap.x+12,ap.z-15],[ap.x-8,ap.z-22],[ap.x+8,ap.z-22]]
-        .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+      showN('🏃 קולין: "הנמל! לנמל!"');
       G.mission=60;MISSIONS[60].unlock();updateMissionHUD();updateNavArrow();saveGame();
-      showN(`📋 ${MISSIONS[60].txt}`);
     }
   }
 
-  // 60 → הגיע לנמל — spawn קרב נמל
   if(G.mission===60&&!G._ta60done){
-    const pp=G._taPortPos||{x:168,z:-150};
-    if(d2(px,pz,pp.x,pp.z)<22){
+    const pp=G._taPortPos||{x:168,z:-155};
+    if(d2(px,pz,pp.x,pp.z)<25){
       G._ta60done=true;
-      setTimeout(()=>showCut('ch9_port_battle',()=>{
-        // spawn אויבי נמל
-        const PP=G._taPortPos||{x:168,z:-150};
-        [[PP.x-18,PP.z-12],[PP.x+14,PP.z-10],[PP.x-12,PP.z+8],[PP.x+10,PP.z+8],
-         [PP.x,PP.z-20],[PP.x-5,PP.z-8],[PP.x+5,PP.z-8]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+      showCut('ch9_port_battle',()=>{
+        const PP=G._taPortPos||{x:168,z:-155};
+        [[PP.x-18,PP.z-10],[PP.x+14,PP.z-8],[PP.x-12,PP.z+8],[PP.x+10,PP.z+8],
+         [PP.x,PP.z-18],[PP.x-5,PP.z-6],[PP.x+5,PP.z-6]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
         G.mission=61;MISSIONS[61].unlock();updateMissionHUD();updateNavArrow();saveGame();
         showN(`📋 ${MISSIONS[61].txt}`);
-      }),400);
+      });
     }
   }
 
-  // 61 → הגיע לכיכר רבין
   if(G.mission===61&&!G._ta61done){
-    const rp=G._taRabinPos||{x:0,z:-60};
-    if(d2(px,pz,rp.x,rp.z)<24){
+    // המשך רק אחרי שמנקים את הנמל
+    if(taEnemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible).length===0&&taEnemies.length>0){
       G._ta61done=true;
-      forceDog('zippo','זיפו מוביל את ההקפה');
-      setTimeout(()=>showCut('ch9_rabin_square',()=>{
-        G.mission=62;MISSIONS[62].unlock();updateMissionHUD();updateNavArrow();saveGame();
-        showN(`📋 ${MISSIONS[62].txt}`);
-        setTimeout(()=>_spawnTARabinFight(),800);
-      }),600);
+      forceDog('zippo','זיפו מוביל');
+      showN('🏛️ זיפו: "הבוס נסוג לכיכר רבין!"');
+      G.mission=62;MISSIONS[62].unlock();updateMissionHUD();updateNavArrow();saveGame();
+      showN(`📋 ${MISSIONS[62].txt}`);
+      setTimeout(()=>_spawnTARabinFight(),1000);
     }
   }
 
-  // 62 → בוס מת — כץ מקריב
   if(G.mission===62&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
     G._taKatzSacDone=true;
-    setTimeout(()=>showCut('ch9_katz_sacrifice',()=>{
-      setTimeout(()=>showCut('ch9_ending',()=>{
+    showCut('ch9_katz_sacrifice',()=>{
+      showCut('ch9_ending',()=>{
         G.mission=63;MISSIONS[63].unlock();updateMissionHUD();updateNavArrow();saveGame();
         exitTelAviv();
-      }),500);
-    }),600);
+      });
+    });
   }
 }
 
 // ════════════════════════════════════════════════
-// ENEMIES — אויבי APEX בתל אביב
+// ENEMIES
 // ════════════════════════════════════════════════
-const _TA_ENEMY_HP=55, _TA_ENEMY_SPD=5.8, _TA_ENEMY_ATK=12;
-
 function _spawnTAEnemy(x,z){
   if(!taScene)return;
   const mesh=new THREE.Group();
@@ -12815,9 +13090,8 @@ function _spawnTAEnemy(x,z){
   const bg=new THREE.Mesh(new THREE.BoxGeometry(2,.18,.05),new THREE.MeshLambertMaterial({color:0x333333}));
   bg.position.set(0,2.4,0);mesh.add(bg);
   const fill=new THREE.Mesh(new THREE.BoxGeometry(2,.14,.06),new THREE.MeshLambertMaterial({color:0xff3300}));
-  fill.position.set(0,2.4,.01);mesh.add(fill);fill._mhp=_TA_ENEMY_HP;
-  const e={mesh,bar:fill,hp:_TA_ENEMY_HP,mhp:_TA_ENEMY_HP,spd:_TA_ENEMY_SPD,atk:_TA_ENEMY_ATK,
-    atkT:0,state:'patrol',homeX:x,homeZ:z,_alertT:0};
+  fill.position.set(0,2.4,.01);mesh.add(fill);
+  const e={mesh,bar:fill,hp:55,mhp:55,spd:5.8,atk:12,atkT:0,state:'patrol',homeX:x,homeZ:z,_alertT:0};
   taEnemies.push(e);return e;
 }
 
@@ -12826,12 +13100,11 @@ function _updTAEnemies(dt){
   const px=TA.playerX,pz=TA.playerZ;
   const dog=G.dogs[G.dog];
   taEnemies.forEach(e=>{
-    if(e.hp<=0||!e.mesh.visible)return;
+    if(e.hp<=0||!e.mesh||!e.mesh.visible)return;
     const ex=e.mesh.position.x,ez=e.mesh.position.z;
     const dd=d2(ex,ez,px,pz);
     e.atkT=Math.max(0,e.atkT-dt);
-    if(dd<20)e.state='chase';
-    else if(dd>35)e.state='patrol';
+    if(dd<22)e.state='chase';else if(dd>38)e.state='patrol';
     if(e.state==='chase'){
       const ang=Math.atan2(px-ex,pz-ez);
       e.mesh.position.x+=Math.sin(ang)*e.spd*dt;
@@ -12840,39 +13113,43 @@ function _updTAEnemies(dt){
       if(dd<2.2&&e.atkT<=0){
         e.atkT=1.1;
         const _dog=G.dogs[G.dog];
-        _dog.hp=Math.max(0,_dog.hp-e.atk);
-        haptic(25);
+        _dog.hp=Math.max(0,_dog.hp-e.atk);haptic(25);
         e.mesh.rotation.z=.3;setTimeout(()=>{if(e.mesh)e.mesh.rotation.z=0;},200);
         if(_dog.hp<=0)playerDeath();
       }
     } else {
       e._alertT=(e._alertT||0)+dt;
-      if(e._alertT>2){e._alertT=0;
-        const a=Math.random()*Math.PI*2;
-        e.mesh.position.x=e.homeX+Math.cos(a)*4;
-        e.mesh.position.z=e.homeZ+Math.sin(a)*4;
-      }
+      if(e._alertT>2.5){e._alertT=0;const a=Math.random()*Math.PI*2;e.mesh.position.x=e.homeX+Math.cos(a)*4;e.mesh.position.z=e.homeZ+Math.sin(a)*4;}
     }
-    // פגיעת שחקן
     if((G.keys['KeyF']||G._taAtkFrame)&&dd<2.8&&G.atkCD<=0){
       e.hp-=dog.atk;
-      if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);}
-      if(e.hp<=0){
-        e.mesh.visible=false;sBark();addXP(30);G.coins+=15;updCoins();
-        spawnBlood(e.mesh.position.x,1,e.mesh.position.z,8);
-      }
+      if(e.bar)e.bar.scale.x=Math.max(0,e.hp/e.mhp);
+      if(e.hp<=0){e.mesh.visible=false;sBark();addXP(30);G.coins+=15;updCoins();spawnBlood(e.mesh.position.x,1,e.mesh.position.z,8);}
     }
   });
+  // עדכן בוס
+  if(G._taBossMgr&&!G._taBossMgr.dead){
+    const b=G._taBossMgr;
+    if(b.hp<=0){b.dead=true;if(b.mesh)b.mesh.visible=false;sBark();addXP(200);G.coins+=100;updCoins();}
+    else{
+      const bd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
+      b.atkT=Math.max(0,b.atkT-dt);
+      if(bd<25){const ang=Math.atan2(px-b.mesh.position.x,pz-b.mesh.position.z);b.mesh.position.x+=Math.sin(ang)*b.spd*dt;b.mesh.position.z+=Math.cos(ang)*b.spd*dt;}
+      if(bd<2.5&&b.atkT<=0){b.atkT=1.4;const _dog=G.dogs[G.dog];_dog.hp=Math.max(0,_dog.hp-b.atk);haptic(40);if(_dog.hp<=0)playerDeath();}
+      if((G.keys['KeyF']||G._taAtkFrame)&&bd<3.2&&G.atkCD<=0){b.hp-=dog.atk;if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);}
+    }
+  }
 }
 
 function _spawnTARabinFight(){
   if(!taScene)return;
   showN('⚔️ חיילי APEX — הקיפו!');
   const R=G._taRabinPos||{x:0,z:-60};
-  [[R.x-16,R.z-12],[R.x+16,R.z-12],[R.x-16,R.z+12],
-   [R.x+16,R.z+12],[R.x,R.z-20],[R.x,R.z+20],[R.x-8,R.z-8],[R.x+8,R.z-8]]
+  taEnemies.length=0; // נקה אויבים קודמים
+  [[R.x-16,R.z-12],[R.x+16,R.z-12],[R.x-16,R.z+12],[R.x+16,R.z+12],
+   [R.x,R.z-22],[R.x,R.z+22],[R.x-8,R.z-6],[R.x+8,R.z-6]]
     .forEach(([x,z])=>_spawnTAEnemy(x,z));
-  _spawnTACommander(R.x,R.z-5);
+  _spawnTACommander(R.x,R.z-4);
 }
 
 function _spawnTACommander(x,z){
@@ -12882,25 +13159,18 @@ function _spawnTACommander(x,z){
   body.position.y=.8;mesh.add(body);
   const head=new THREE.Mesh(new THREE.BoxGeometry(.9,.85,.85),new THREE.MeshLambertMaterial({color:0x0a0a1e}));
   head.position.y=1.93;mesh.add(head);
-  [-1,1].forEach(s=>{
-    const sh=new THREE.Mesh(new THREE.BoxGeometry(.5,.2,.8),new THREE.MeshLambertMaterial({color:0xcc0000}));
-    sh.position.set(s*.8,1.5,0);mesh.add(sh);
-  });
+  [-1,1].forEach(s=>{const sh=new THREE.Mesh(new THREE.BoxGeometry(.5,.2,.8),new THREE.MeshLambertMaterial({color:0xcc0000}));sh.position.set(s*.8,1.5,0);mesh.add(sh);});
   mesh.position.set(x,0,z);taScene.add(mesh);taObjects.push(mesh);
-  const BOSS_HP=220;
+  const BOSS_HP=250;
   const bg=new THREE.Mesh(new THREE.BoxGeometry(2.4,.2,.06),new THREE.MeshLambertMaterial({color:0x222222}));
   bg.position.set(0,2.8,0);mesh.add(bg);
   const fill=new THREE.Mesh(new THREE.BoxGeometry(2.4,.16,.07),new THREE.MeshLambertMaterial({color:0xff0000}));
-  fill.position.set(0,2.8,.01);mesh.add(fill);fill._mhp=BOSS_HP;
-  const bossE={mesh,bar:fill,hp:BOSS_HP,mhp:BOSS_HP,dead:false,atkT:0,spd:4.5,atk:25,
-    homeX:x,homeZ:z,_alertT:0,state:'chase'};
-  G._taBossMgr=bossE;taEnemies.push(bossE);
+  fill.position.set(0,2.8,.01);mesh.add(fill);
+  G._taBossMgr={mesh,bar:fill,hp:BOSS_HP,mhp:BOSS_HP,dead:false,atkT:0,spd:4,atk:28,homeX:x,homeZ:z};
+  taEnemies.push(G._taBossMgr);
   showN('⚠️ מפקד APEX — בוס!');
 }
 
-// ════════════════════════════════════════════════
-// UPD CH9 — proximity triggers בלוד (missions 48-53)
-// ════════════════════════════════════════════════
 function updCh9(dt){
   if(G.mission<48||G.mission>53)return;
   if(TA.inTA)return;
