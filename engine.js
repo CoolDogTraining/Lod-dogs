@@ -11765,7 +11765,7 @@ function _taRd(cx,cz,w,len,vert){
   // קו מרכזי
   const ylMat=new THREE.MeshLambertMaterial({color:0xffdd00});
   if(!vert){
-    _taAdd(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(len,.01,.1),ylMat),{position:{x:cx,y:.14,z:cz}}));
+    (()=>{const _ym=new THREE.Mesh(new THREE.BoxGeometry(len,.01,.1),ylMat);_ym.position.set(cx,.14,cz);_taAdd(_ym);})();
     const wMat=new THREE.MeshLambertMaterial({color:0xeeeeee});
     for(let i=cx-len/2+5;i<cx+len/2-4;i+=9){
       const m=new THREE.Mesh(new THREE.BoxGeometry(4,.01,.18),wMat);
@@ -12091,7 +12091,7 @@ function buildTelAvivScene(){
   sun.shadow.camera.far=600;sun.shadow.bias=-0.0002;
   taScene.add(sun);
   taScene.add(new THREE.HemisphereLight(0xa8c8e8,0x607848,.9));
-  taScene.add(new THREE.DirectionalLight(0x8ab0d8,.25).position.set(-80,50,-40)||new THREE.DirectionalLight(0x8ab0d8,.25));
+  const fill3=new THREE.DirectionalLight(0x8ab0d8,.25);fill3.position.set(-80,50,-40);taScene.add(fill3);
 
   // הוסף fill מצפון
   const fill2=new THREE.DirectionalLight(0x8ab0d8,.25);fill2.position.set(-80,50,-40);taScene.add(fill2);
@@ -12300,7 +12300,7 @@ function buildTelAvivScene(){
     body.position.set(AX,11,AZ);body.castShadow=true;body.receiveShadow=true;_taAdd(body);
     _taBldList.push({x:AX,z:AZ,w:18,d:16});
     // פרפט גג
-    _taAdd(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(18.6,.5,16.6),new THREE.MeshLambertMaterial({color:0x222228})),{position:{x:AX,y:22.25,z:AZ}}));
+    (()=>{const _pm=new THREE.Mesh(new THREE.BoxGeometry(18.6,.5,16.6),new THREE.MeshLambertMaterial({color:0x222228}));_pm.position.set(AX,22.25,AZ);_taAdd(_pm);})();
     // חלונות מרושתים — 5x4
     const eyeM=new THREE.MeshStandardMaterial({color:0x1a1a2e,emissive:0x0a0a1a,roughness:.1,transparent:true,opacity:.8});
     for(let r=0;r<5;r++) for(let c=-2;c<=2;c++){
@@ -12321,7 +12321,7 @@ function buildTelAvivScene(){
     const door=new THREE.Mesh(new THREE.BoxGeometry(2.8,3.2,.12),new THREE.MeshStandardMaterial({color:0x1a1a1e,roughness:.4,metalness:.7}));
     door.position.set(AX,1.6,AZ-8.06);_taAdd(door);
     // כניסת גג (לנסיון כניסה מהגג)
-    _taAdd(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(16,.4,2),new THREE.MeshLambertMaterial({color:0x202028})),{position:{x:AX,y:22.2,z:AZ+7}}));
+    (()=>{const _rm=new THREE.Mesh(new THREE.BoxGeometry(16,.4,2),new THREE.MeshLambertMaterial({color:0x202028}));_rm.position.set(AX,22.2,AZ+7);_taAdd(_rm);})();
 
     G._taApexBldPos={x:AX,z:AZ};
     G._taLabRoofEntry={x:AX,z:AZ+7};
