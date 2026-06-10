@@ -712,32 +712,44 @@ const MISSIONS=[
    hint:'רחוב הרצל — כניסה לשכונה',
    targetFn:()=>({x:-30,z:55}),
    unlock:()=>{
-     forceDog('colin','קולין ראה את הכלב הלבן');
+     // ספאון כלב לבן פיזי ליד הכניסה לשכונה
+     if(typeof _spawnMessengerDog==='function')_spawnMessengerDog();
+     showN('🤍 כלב לבן עומד ברחוב הרצל. ניגש אליו.');
+     setTimeout(()=>setMission(49),1000);
+   }},
+
+  // 49 — קאטסין עם השליח (מופעל ע"י proximity ב-updCh9)
+  {txt:'4️⃣9️⃣ ניגשו לכלב הלבן 🤍',
+   hint:'רחוב הרצל — הכלב הלבן',
+   targetFn:()=>({x:-30,z:55}),
+   unlock:()=>{
+     forceDog('colin','קולין ניגש לכלב הלבן');
      setTimeout(()=>showCut('ch9_open',()=>{
        setTimeout(()=>showCut('ch9_messenger',()=>{
-         setTimeout(()=>setMission(49),600);
+         if(typeof _removeMessengerDog==='function')_removeMessengerDog();
+         setTimeout(()=>setMission(50),600);
        }),400);
      }),800);
    }},
 
-  // 49 — זיפו מחליט — לך לבסיס
-  {txt:'4️⃣9️⃣ חזרו לבסיס — זיפו צריך להחליט 📄',
+  // 50 — זיפו מחליט — לך לבסיס (מופעל ע"י proximity ב-updCh9)
+  {txt:'5️⃣0️⃣ חזרו לבסיס — זיפו צריך להחליט 📄',
    hint:'בסיס כלבי לוד',
    targetFn:()=>({x:105,z:25}),
    unlock:()=>{
      forceDog('zippo','זיפו קורא את המכתב');
      setTimeout(()=>showCut('ch9_zippo_reads',()=>{
-       setTimeout(()=>setMission(50),600);
+       setTimeout(()=>setMission(51),600);
      }),600);
    }},
 
-  // 50 — חזרו למחסן APEX
-  {txt:'5️⃣0️⃣ חזרו למחסן APEX — יש שם עוד מידע 🗺️',
+  // 51 — חזרו למחסן APEX (מופעל ע"י proximity ב-updCh9)
+  {txt:'5️⃣1️⃣ חזרו למחסן APEX — יש שם עוד מידע 🗺️',
    hint:'מחסן APEX — אזור תעשייה',
    targetFn:()=>({x:205,z:-114}),
    unlock:()=>showN('🏭 המחסן נראה זנוח — אבל יש שם עוד.')},
 
-  // 51 — מפה בחדר הפנימי
+  // orig 51 → now 52 — מפה בחדר הפנימי
   {txt:'5️⃣1️⃣ מצאו את המפה בחדר הפנימי 📌',
    hint:'חדר פנימי במחסן',
    targetFn:()=>({x:215,z:-125}),
@@ -748,7 +760,7 @@ const MISSIONS=[
   // 52 — תחנת הרכבת לוד — קאטסין Z-18, ואז מקדם ל-53
   {txt:'5️⃣2️⃣ הגיעו לתחנת הרכבת של לוד 🚉',
    hint:'תחנת הרכבת לוד — דרום העיר',
-   targetFn:()=>({x:-40,z:150}),
+   targetFn:()=>({x:0,z:-150}),
    unlock:()=>{
      forceDog('zippo','זיפו מוביל לתחנה');
      setTimeout(()=>showCut('ch9_z18_shadow',()=>{
@@ -759,7 +771,7 @@ const MISSIONS=[
   // 53 — עלו על הרכבת
   {txt:'5️⃣3️⃣ עלו על הרכבת לתל אביב 🚆',
    hint:'תחנת הרכבת לוד — עמדו ליד הרכבת',
-   targetFn:()=>({x:-40,z:150}),
+   targetFn:()=>({x:0,z:-150}),
    unlock:()=>showN('🚆 הרכבת מגיעה. ריח הים כבר באוויר.')},
 
   // 54 — שוק הכרמל
