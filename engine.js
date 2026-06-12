@@ -2457,8 +2457,9 @@ function buildTrainStation(){
     const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.35,.45,6,8),wallMat);
     pillar.position.set(SX+ox,3,SZ+7.3);pillar.castShadow=true;scene.add(pillar);
   }
-  // קשת כניסה
-  const entrArch=new THREE.Mesh(new THREE.TorusGeometry(3,.25,8,16,Math.PI),metalMat);
+  // --- קשת כניסה (דקורטיבית בלבד — ללא collision) ---
+  const entrArchGeo = new THREE.TorusGeometry(3,.2,8,16,Math.PI);
+  const entrArch=new THREE.Mesh(entrArchGeo,metalMat);
   entrArch.rotation.z=Math.PI;entrArch.position.set(SX,5.5,SZ+7.2);scene.add(entrArch);
 
   // --- רציף (פלטפורמה) ---

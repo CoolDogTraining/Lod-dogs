@@ -707,18 +707,17 @@ const MISSIONS=[
   // פרק ט׳ — "מקור" (missions 48-62)
   // ══════════════════════════════════════════════
 
-  // 48 — פתיחת פרק ט׳: קאטסין מיידי עם שרשרת
+  // 48 — פתיחת פרק ט׳: ספאון כלב לבן, ואז updCh9 מקדם ל-49
   {txt:'4️⃣8️⃣ פרק ט׳: כלב לבן מחכה ברחוב הרצל 🤍',
    hint:'רחוב הרצל — כניסה לשכונה',
    targetFn:()=>({x:-30,z:55}),
    unlock:()=>{
-     // ספאון כלב לבן פיזי ליד הכניסה לשכונה
      if(typeof _spawnMessengerDog==='function')_spawnMessengerDog();
      showN('🤍 כלב לבן עומד ברחוב הרצל. ניגש אליו.');
-     setTimeout(()=>setMission(49),1000);
+     setTimeout(()=>setMission(49),500);
    }},
 
-  // 49 — קאטסין עם השליח (מופעל ע"י proximity ב-updCh9)
+  // 49 — ניגש לכלב הלבן (proximity ב-updCh9 → unlock)
   {txt:'4️⃣9️⃣ ניגשו לכלב הלבן 🤍',
    hint:'רחוב הרצל — הכלב הלבן',
    targetFn:()=>({x:-30,z:55}),
@@ -732,7 +731,7 @@ const MISSIONS=[
      }),800);
    }},
 
-  // 50 — זיפו מחליט — לך לבסיס (מופעל ע"י proximity ב-updCh9)
+  // 50 — חזרו לבסיס (proximity ב-updCh9 → unlock)
   {txt:'5️⃣0️⃣ חזרו לבסיס — זיפו צריך להחליט 📄',
    hint:'בסיס כלבי לוד',
    targetFn:()=>({x:105,z:25}),
@@ -743,11 +742,11 @@ const MISSIONS=[
      }),600);
    }},
 
-  // 51 — חזרו למחסן APEX (מופעל ע"י proximity ב-updCh9)
+  // 51 — חזרו למחסן APEX (proximity ב-updCh9 → unlock → setMission(52))
   {txt:'5️⃣1️⃣ חזרו למחסן APEX — יש שם עוד מידע 🗺️',
    hint:'מחסן APEX — אזור תעשייה',
    targetFn:()=>({x:205,z:-114}),
-   unlock:()=>{showN('🏭 המחסן נראה זנוח — אבל יש שם עוד.');setTimeout(()=>setMission(52),800);}},
+   unlock:()=>{showN('🏭 המחסן נראה זנוח — כנסו פנימה.');setTimeout(()=>setMission(52),800);}},
 
   // orig 51 → now 52 — מפה בחדר הפנימי
   {txt:'5️⃣2️⃣ מצאו את המפה בחדר הפנימי 📌',
@@ -764,7 +763,7 @@ const MISSIONS=[
    unlock:()=>{
      forceDog('zippo','זיפו מוביל לתחנה');
      setTimeout(()=>showCut('ch9_z18_shadow',()=>{
-       setTimeout(()=>setMission(53),600);
+       setTimeout(()=>setMission(54),600);
      }),1000);
    }},
 
