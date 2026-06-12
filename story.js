@@ -747,14 +747,14 @@ const MISSIONS=[
   {txt:'5️⃣1️⃣ חזרו למחסן APEX — יש שם עוד מידע 🗺️',
    hint:'מחסן APEX — אזור תעשייה',
    targetFn:()=>({x:205,z:-114}),
-   unlock:()=>showN('🏭 המחסן נראה זנוח — אבל יש שם עוד.')},
+   unlock:()=>{showN('🏭 המחסן נראה זנוח — אבל יש שם עוד.');setTimeout(()=>setMission(52),800);}},
 
   // orig 51 → now 52 — מפה בחדר הפנימי
-  {txt:'5️⃣1️⃣ מצאו את המפה בחדר הפנימי 📌',
+  {txt:'5️⃣2️⃣ מצאו את המפה בחדר הפנימי 📌',
    hint:'חדר פנימי במחסן',
-   targetFn:()=>({x:215,z:-125}),
+   targetFn:()=>({x:205,z:-133}),
    unlock:()=>setTimeout(()=>showCut('ch9_warehouse_map',()=>{
-     setTimeout(()=>setMission(52),600);
+     setTimeout(()=>setMission(53),600);
    }),800)},
 
   // 52 — תחנת הרכבת לוד — קאטסין Z-18, ואז מקדם ל-53

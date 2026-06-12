@@ -13398,11 +13398,11 @@ function updCh9(dt){
   }
   // 51 — חזרה למחסן APEX
   if(G.mission===51&&!G._ch9_51done){
-    if(d2(px,pz,205,-114)<12){G._ch9_51done=true;setMission(52);}
+    if(d2(px,pz,205,-114)<12){G._ch9_51done=true;MISSIONS[51].unlock();}
   }
-  // 52 — מפה בחדר הפנימי
+  // 52 — מפה בחדר הפנימי (מרכז המחסן מבפנים)
   if(G.mission===52&&!G._ch9_52done){
-    if(d2(px,pz,215,-125)<8){G._ch9_52done=true;MISSIONS[52].unlock();}
+    if(d2(px,pz,205,-133)<14){G._ch9_52done=true;MISSIONS[52].unlock();}
   }
   // 53 — הגיעו לתחנת הרכבת
   if(G.mission===53&&!G._ch9_53done){
