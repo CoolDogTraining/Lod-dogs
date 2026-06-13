@@ -4968,6 +4968,7 @@ function loop(){
   if(TA.inTA){
     updTelAviv(dt);updPfx(dt);
     updateNavDirection();
+    drawMM();
     if(taCamera)renderer.render(taScene,taCamera);
     updHUD();
     return;
@@ -13197,7 +13198,7 @@ function _updTANPCs(dt){
   const px=TA.playerX,pz=TA.playerZ;
   _taNPCList.forEach(n=>{
     const dist=Math.hypot(n.position.x-px,n.position.z-pz);
-    n.visible=dist<130;
+    n.visible=dist<180;
     if(!n.visible)return;
 
     if(n._sitting){
@@ -13378,7 +13379,7 @@ function _checkTAMissionTriggers(){
   if(!TA.inTA)return;
   const px=TA.playerX,pz=TA.playerZ;
 
-  // 55 → הגעה לת"א → cutscene → G.mission=56
+  // 55 → הגעה לשוק הכרמל → cutscene → G.mission=56
   if(G.mission===55&&!G._ta55done){
     const mp=G._taMarketPos||{x:-90,z:100};
     if(d2(px,pz,mp.x,mp.z)<30){
@@ -13387,14 +13388,16 @@ function _checkTAMissionTriggers(){
         G.mission=56;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[56].txt);
       });
     }
+    return;
   }
-  // 56 → שוק הכרמל → מצא נירה → G.mission=57
+  // 56 → מצא נירה → G.mission=57
   if(G.mission===56&&!G._ta56done){
     const np=G._taNiraPos||{x:-122,z:126};
     if(d2(px,pz,np.x,np.z)<10){
       G._ta56done=true;
       G.mission=57;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[57].txt);
     }
+    return;
   }
   // 57 → פגשו נירה → cutscene → G.mission=58
   if(G.mission===57&&!G._ta57done){
@@ -13405,6 +13408,7 @@ function _checkTAMissionTriggers(){
         G.mission=58;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[58].txt);
       });
     }
+    return;
   }
   // 58 → בניין APEX → cutscene → G.mission=59
   if(G.mission===58&&!G._ta58done){
@@ -13415,6 +13419,7 @@ function _checkTAMissionTriggers(){
         G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
       });
     }
+    return;
   }
   // 59 → גג → cutscene → G.mission=60
   if(G.mission===59&&!G._ta59done){
@@ -13425,6 +13430,7 @@ function _checkTAMissionTriggers(){
         G.mission=60;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[60].txt);
       });
     }
+    return;
   }
   // 60 → כץ במעבדה → cutscene → spawn אויבים → G.mission=61
   if(G.mission===60&&!G._ta60done){
@@ -13442,6 +13448,7 @@ function _checkTAMissionTriggers(){
         });
       });
     }
+    return;
   }
   // 61 → נקה אויבים → G.mission=62
   if(G.mission===61&&!G._ta61done){
@@ -13451,6 +13458,7 @@ function _checkTAMissionTriggers(){
       showN('🏃 קולין: "הנמל! לנמל!"');
       G.mission=62;updateMissionHUD();updateNavArrow();saveGame();
     }
+    return;
   }
   // 62 → הגיע לנמל → cutscene → spawn → G.mission=63
   if(G.mission===62&&!G._ta62done){
@@ -13464,6 +13472,7 @@ function _checkTAMissionTriggers(){
         G.mission=63;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[63].txt);
       });
     }
+    return;
   }
   // 63 → נקה נמל → G.mission=64
   if(G.mission===63&&!G._ta63done){
@@ -13474,6 +13483,7 @@ function _checkTAMissionTriggers(){
       G.mission=64;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[64].txt);
       setTimeout(()=>_spawnTARabinFight(),1000);
     }
+    return;
   }
   // 64 → בוס מת → סיום
   if(G.mission===64&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
