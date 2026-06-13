@@ -2388,6 +2388,13 @@ function saveGame(){
         momo:{...G.dogs.momo},
       },
       pos:PB?{x:Math.round(PB.position.x),y:0,z:Math.round(PB.position.z)}:{x:0,y:0,z:60},
+      ch9:{
+        done48:!!G._ch9_48done,done49:!!G._ch9_49done,done50:!!G._ch9_50done,
+        done51:!!G._ch9_51done,done52:!!G._ch9_52done,done53:!!G._ch9_53done,
+        ta54:!!G._ta54done,ta55:!!G._ta55done,ta56:!!G._ta56done,ta57:!!G._ta57done,
+        ta58:!!G._ta58done,ta59:!!G._ta59done,ta60:!!G._ta60done,ta61:!!G._ta61done,
+        ta62:!!G._ta62done,
+      },
     };
     // שמירה כפולה: קודם העתק הגרסה הנוכחית לbackup, אז כתוב חדשה
     try{const old=localStorage.getItem(SAVE_KEY);if(old)localStorage.setItem(SAVE_KEY_BACKUP,old);}catch(_){}
@@ -2428,6 +2435,26 @@ function loadGame(){
       G._ch6FactoryVisited=!!s.ch6.factoryVisited;
       G._ch6FireDone=!!s.ch6.fireDone;
       G._shadowBossDead=!!s.ch6.shadowBossDead;
+    }
+    // ── שחזר state פרק ט׳ ──
+    if(s.ch9){
+      G._ch9_48done=!!s.ch9.done48; G._ch9_49done=!!s.ch9.done49;
+      G._ch9_50done=!!s.ch9.done50; G._ch9_51done=!!s.ch9.done51;
+      G._ch9_52done=!!s.ch9.done52; G._ch9_53done=!!s.ch9.done53;
+      G._ta54done=!!s.ch9.ta54; G._ta55done=!!s.ch9.ta55;
+      G._ta56done=!!s.ch9.ta56; G._ta57done=!!s.ch9.ta57;
+      G._ta58done=!!s.ch9.ta58; G._ta59done=!!s.ch9.ta59;
+      G._ta60done=!!s.ch9.ta60; G._ta61done=!!s.ch9.ta61;
+      G._ta62done=!!s.ch9.ta62;
+    } else if(G.mission>48){
+      // save ישן — הגדר flags לפי mission כדי למנוע ריצה מחדש
+      G._ch9_48done=G.mission>48; G._ch9_49done=G.mission>49;
+      G._ch9_50done=G.mission>50; G._ch9_51done=G.mission>51;
+      G._ch9_52done=G.mission>52; G._ch9_53done=G.mission>53;
+      G._ta54done=G.mission>54; G._ta55done=G.mission>55;
+      G._ta56done=G.mission>56; G._ta57done=G.mission>57;
+      G._ta58done=G.mission>58; G._ta59done=G.mission>59;
+      G._ta60done=G.mission>60; G._ta61done=G.mission>61; G._ta62done=G.mission>62;
     }
     // שחזר gateMarker אם היינו בפרק ב׳
     if(G.ch2Active&&G.mission>=8&&G.mission<=10)G.gateMarker={x:-51,z:-100};

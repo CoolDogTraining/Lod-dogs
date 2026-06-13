@@ -12957,6 +12957,17 @@ function enterTelAviv(){
     if(taCamera){taCamera.position.set(0,7,126);taCamera.lookAt(0,1,115);}
     scene.remove(PB);taScene.add(PB);
     PB.position.set(TA.playerX,0,TA.playerZ);
+    // קבע פוזיציות POI מיד (לא תלוי ב-zone loading)
+    if(!G._taMarketPos)  G._taMarketPos  ={x:-100,z:120};
+    if(!G._taNiraPos)    G._taNiraPos    ={x:-120,z:140};
+    if(!G._taApexBldPos) G._taApexBldPos ={x:70,  z:-130};
+    if(!G._taLabRoofEntry)G._taLabRoofEntry={x:70, z:-123};
+    if(!G._taLabInteriorPos)G._taLabInteriorPos={x:70,z:-148};
+    if(!G._taPortPos)    G._taPortPos    ={x:168, z:-155};
+    if(!G._taRabinPos)   G._taRabinPos   ={x:30,  z:-30};
+    if(!G._taDizengoffSq)G._taDizengoffSq={x:-30, z:-20};
+    // init crowd מיידי
+    setTimeout(()=>_initTACrowd(),100);
     showN('🌆 תל אביב.\nזיפו: "אני יודע לאן ללכת."');
     G.paused=false;fadeIn();
   });
@@ -13062,65 +13073,117 @@ function updTelAviv(dt){
 // MINIMAP תל אביב
 // ════════════════════════════════════════════════
 // ════════════════════════════════════════════════
-// NPCs ומכוניות — תל אביב
+// NPCs, מכוניות, חיי רחוב — תל אביב
 // ════════════════════════════════════════════════
 const _taNPCList=[];
 const _taCarList=[];
+let _taAmbientTimer=0;
+const _TA_AMBIENT_SOUNDS=['☕','🛒','📱','🎵','🗣️','👋','🐕','🌊'];
 
 function _initTACrowd(){
   if(_taNPCList.length)return;
   if(!taScene)return;
-  const skinCols=[0xffd8b1,0xc68642,0x8d5524,0xffe0bd,0xffcd94];
-  const shirtCols=[0x3a7bd5,0xe74c3c,0x27ae60,0x8e44ad,0xf39c12,0xecf0f1,0x2c3e50,0xd35400];
-  const pants=[0x222233,0x334422,0x332222,0x223344,0x443322];
-  const spawns=[
-    {x:-30,z:-30},{x:10,z:10},{x:-60,z:-10},{x:20,z:-50},{x:-10,z:30},
-    {x:40,z:20},{x:-40,z:50},{x:0,z:-70},{x:60,z:-40},{x:-80,z:20},
-    {x:-100,z:110},{x:-130,z:90},{x:-110,z:130},{x:-90,z:150},{x:-70,z:120},
-    {x:30,z:-120},{x:-30,z:-160},{x:0,z:-140},{x:50,z:-180},{x:-50,z:-200},
-    {x:130,z:50},{x:160,z:20},{x:140,z:80},{x:170,z:-10},{x:120,z:-30},
-    {x:160,z:-140},{x:180,z:-160},{x:145,z:-170},
+  const skinCols=[0xffd8b1,0xc68642,0x8d5524,0xffe0bd,0xffcd94,0xe8c49a,0xd4956a,0xf5deb3];
+  const topCols=[0x3a7bd5,0xe74c3c,0x27ae60,0x8e44ad,0xf39c12,0xecf0f1,0x2c3e50,0xd35400,
+                 0x16a085,0x8e44ad,0xc0392b,0x2980b9,0x1abc9c,0xf1c40f,0xe67e22,0x95a5a6];
+  const pntsCols=[0x222233,0x334422,0x332222,0x223344,0x443322,0x111111,0x3d3d3d,0x4a3728];
+
+  // 60 הולכי רגל בכל הרחוב
+  const areas=[
+    // מרכז / בוז׳אוס — הכי צפוף
+    ...Array.from({length:16},(_,i)=>({x:(i%4-1.5)*30+Math.random()*15-7,z:(Math.floor(i/4)-1)*25+Math.random()*12-6})),
+    // שוק הכרמל
+    ...Array.from({length:12},(_,i)=>({x:-100+Math.random()*60-30,z:110+Math.random()*60-30})),
+    // דיזנגוף / רוטשילד
+    ...Array.from({length:10},(_,i)=>({x:-60+Math.random()*80-40,z:-50+Math.random()*80-40})),
+    // צפון
+    ...Array.from({length:8},(_,i)=>({x:-30+Math.random()*100-50,z:-130+Math.random()*60-30})),
+    // טיילת
+    ...Array.from({length:8},(_,i)=>({x:110+Math.random()*80-40,z:30+Math.random()*80-40})),
+    // נמל
+    ...Array.from({length:6},(_,i)=>({x:150+Math.random()*40-20,z:-150+Math.random()*40-20})),
   ];
-  spawns.forEach((sp,i)=>{
+
+  areas.forEach((sp,i)=>{
     const g=new THREE.Group();
-    const sm=new THREE.MeshLambertMaterial({color:skinCols[i%skinCols.length]});
-    const cm=new THREE.MeshLambertMaterial({color:shirtCols[i%shirtCols.length]});
-    const pm=new THREE.MeshLambertMaterial({color:pants[i%pants.length]});
-    const body=new THREE.Mesh(new THREE.BoxGeometry(.5,.8,.3),cm);body.position.y=.9;g.add(body);
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.36,.36,.36),sm);head.position.y=1.48;g.add(head);
-    const lL=new THREE.Mesh(new THREE.BoxGeometry(.22,.7,.22),pm);lL.position.set(-.13,.35,0);g.add(lL);g._legL=lL;
-    const lR=new THREE.Mesh(new THREE.BoxGeometry(.22,.7,.22),pm);lR.position.set(.13,.35,0);g.add(lR);g._legR=lR;
-    g.position.set(sp.x+Math.random()*4-2,0,sp.z+Math.random()*4-2);
+    const si=i%skinCols.length, ti=i%topCols.length, pi=i%pntsCols.length;
+    const sm=new THREE.MeshLambertMaterial({color:skinCols[si]});
+    const cm=new THREE.MeshLambertMaterial({color:topCols[ti]});
+    const pm=new THREE.MeshLambertMaterial({color:pntsCols[pi]});
+    // גוף
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.5,.82,.28),cm);body.position.y=.91;g.add(body);
+    // ראש
+    const head=new THREE.Mesh(new THREE.BoxGeometry(.38,.38,.38),sm);head.position.y=1.5;g.add(head);
+    // שיער — גוון כהה יותר מהעור
+    const hairCol=(skinCols[si]&0xfefefe)>>1;
+    const hair=new THREE.Mesh(new THREE.BoxGeometry(.4,.15,.4),new THREE.MeshLambertMaterial({color:hairCol}));
+    hair.position.y=1.72;g.add(hair);
+    // רגליים
+    const lL=new THREE.Mesh(new THREE.BoxGeometry(.22,.72,.22),pm);lL.position.set(-.14,.36,0);g.add(lL);g._legL=lL;
+    const lR=new THREE.Mesh(new THREE.BoxGeometry(.22,.72,.22),pm);lR.position.set(.14,.36,0);g.add(lR);g._legR=lR;
+    // ידיים
+    const aL=new THREE.Mesh(new THREE.BoxGeometry(.18,.6,.18),cm);aL.position.set(-.35,.88,0);g.add(aL);g._armL=aL;
+    const aR=new THREE.Mesh(new THREE.BoxGeometry(.18,.6,.18),cm);aR.position.set(.35,.88,0);g.add(aR);g._armR=aR;
+
+    g.position.set(sp.x+Math.random()*6-3,0,sp.z+Math.random()*6-3);
     g._walkT=Math.random()*Math.PI*2;
-    g._speed=0.8+Math.random()*1.2;
+    g._speed=(1.0+Math.random()*1.8)*2.5;
     g._dir=Math.random()*Math.PI*2;
-    g._turnT=1+Math.random()*3;
+    g._turnT=1.5+Math.random()*4;
     g._hx=sp.x; g._hz=sp.z;
+    g._sitting=Math.random()<0.12; // 12% יושבים
+    g._sitTimer=Math.random()*8+4;
+    g.castShadow=true;
     taScene.add(g);
     _taNPCList.push(g);
   });
-  const carCols=[0xc0392b,0x2980b9,0x27ae60,0xf39c12,0x8e44ad,0xffffff,0x2c3e50,0x1abc9c];
+
+  // 14 מכוניות — גדלים ודגמים שונים
+  const carCols=[0xc0392b,0x2980b9,0x27ae60,0xf39c12,0x8e44ad,0xfafafa,0x2c3e50,0x1abc9c,
+                 0xe74c3c,0x3498db,0xe67e22,0xbdc3c7,0x16a085,0xf39c12];
   const routes=[
-    {x1:-200,z1:-30,x2:200,z2:-30,ax:1},{x1:-200,z1:30,x2:200,z2:30,ax:1},
-    {x1:-200,z1:-80,x2:200,z2:-80,ax:1},{x1:-200,z1:80,x2:200,z2:80,ax:1},
-    {x1:0,z1:-270,x2:0,z2:210,ax:0},{x1:55,z1:-270,x2:55,z2:210,ax:0},
-    {x1:-60,z1:-270,x2:-60,z2:210,ax:0},
+    // E-W
+    {x1:-220,z1:-30,x2:220,z2:-30,ax:1,spd:1},{x1:220,z1:30,x2:-220,z2:30,ax:1,spd:-1},
+    {x1:-220,z1:-80,x2:220,z2:-80,ax:1,spd:1},{x1:220,z1:80,x2:-220,z2:80,ax:1,spd:-1},
+    {x1:-220,z1:-130,x2:220,z2:-130,ax:1,spd:1},{x1:220,z1:130,x2:-220,z2:130,ax:1,spd:-1},
+    // N-S
+    {x1:0,z1:-280,x2:0,z2:220,ax:0,spd:1},{x1:55,z1:220,x2:55,z2:-280,ax:0,spd:-1},
+    {x1:-60,z1:-280,x2:-60,z2:220,ax:0,spd:1},{x1:115,z1:220,x2:115,z2:-280,ax:0,spd:-1},
+    {x1:-120,z1:-280,x2:-120,z2:220,ax:0,spd:1},
+    // כבישי נמל
+    {x1:130,z1:-280,x2:130,z2:-80,ax:0,spd:1},{x1:200,z1:-80,x2:200,z2:-280,ax:0,spd:-1},
+    {x1:-220,z1:-175,x2:220,z2:-175,ax:1,spd:1},
   ];
   routes.forEach((r,ci)=>{
     const g=new THREE.Group();
     const bm=new THREE.MeshLambertMaterial({color:carCols[ci%carCols.length]});
-    const gm=new THREE.MeshLambertMaterial({color:0x88ccff,transparent:true,opacity:.5});
+    const gm=new THREE.MeshLambertMaterial({color:0x88ccff,transparent:true,opacity:.55});
     const wm=new THREE.MeshLambertMaterial({color:0x111111});
-    const cb=new THREE.Mesh(new THREE.BoxGeometry(2.2,.9,4.2),bm);cb.position.y=.55;g.add(cb);
-    const rf=new THREE.Mesh(new THREE.BoxGeometry(1.8,.65,2.4),bm);rf.position.set(0,.95,.1);g.add(rf);
-    const wf=new THREE.Mesh(new THREE.BoxGeometry(1.75,.55,.05),gm);wf.position.set(0,.9,1.25);g.add(wf);
-    [[-1.1,.28,1.4],[1.1,.28,1.4],[-1.1,.28,-1.4],[1.1,.28,-1.4]].forEach(([wx,wy,wz])=>{
-      const w=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.22,8),wm);w.rotation.z=Math.PI/2;w.position.set(wx,wy,wz);g.add(w);
+    const hm=new THREE.MeshLambertMaterial({color:0xffffcc,emissive:0xffffcc,emissiveIntensity:.3});
+    const tm=new THREE.MeshLambertMaterial({color:0xff2200,emissive:0xff2200,emissiveIntensity:.3});
+    // גוף
+    const cb=new THREE.Mesh(new THREE.BoxGeometry(2.2,.9,4.4),bm);cb.position.y=.55;g.add(cb);
+    const rf=new THREE.Mesh(new THREE.BoxGeometry(1.8,.68,2.5),bm);rf.position.set(0,.95,.05);g.add(rf);
+    // שמשות
+    const wf=new THREE.Mesh(new THREE.BoxGeometry(1.75,.58,.04),gm);wf.position.set(0,.92,1.26);g.add(wf);
+    const wb=new THREE.Mesh(new THREE.BoxGeometry(1.75,.58,.04),gm);wb.position.set(0,.92,-1.26);g.add(wb);
+    // פנסים קדמיים
+    [-.7,.7].forEach(ox=>{
+      const hl=new THREE.Mesh(new THREE.BoxGeometry(.3,.18,.05),hm);hl.position.set(ox,.62,2.22);g.add(hl);
+    });
+    // פנסים אחוריים
+    [-.7,.7].forEach(ox=>{
+      const tl=new THREE.Mesh(new THREE.BoxGeometry(.3,.18,.05),tm);tl.position.set(ox,.62,-2.22);g.add(tl);
+    });
+    // גלגלים
+    [[-1.1,.3,1.5],[1.1,.3,1.5],[-1.1,.3,-1.5],[1.1,.3,-1.5]].forEach(([wx,wy,wz])=>{
+      const w=new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.24,10),wm);w.rotation.z=Math.PI/2;w.position.set(wx,wy,wz);g.add(w);
     });
     const t=Math.random();
-    if(r.ax===1){g.position.set(r.x1+(r.x2-r.x1)*t,0,r.z1);g.rotation.y=Math.PI/2;}
-    else{g.position.set(r.x1,0,r.z1+(r.z2-r.z1)*t);}
-    g._route=r; g._spd=(5+Math.random()*4)*(Math.random()>.5?1:-1); g._ax=r.ax;
+    const startX=r.ax===1?r.x1+(r.x2-r.x1)*t:r.x1;
+    const startZ=r.ax===0?r.z1+(r.z2-r.z1)*t:r.z1;
+    g.position.set(startX,0,startZ);
+    g._route=r; g._spd=(6+Math.random()*5)*r.spd; g._ax=r.ax;
     taScene.add(g);
     _taCarList.push(g);
   });
@@ -13132,17 +13195,53 @@ function _updTANPCs(dt){
   const px=TA.playerX,pz=TA.playerZ;
   _taNPCList.forEach(n=>{
     const dist=Math.hypot(n.position.x-px,n.position.z-pz);
-    if(dist>110){n.visible=false;return;} n.visible=true;
-    if(dist<3) n._dir+=Math.PI+Math.random()-.5;
-    if(Math.hypot(n._hx-n.position.x,n._hz-n.position.z)>25) n._dir=Math.atan2(n._hx-n.position.x,n._hz-n.position.z);
+    n.visible=dist<130;
+    if(!n.visible)return;
+
+    if(n._sitting){
+      // יושב — רק מנופף לפעמים
+      n._sitTimer-=dt;
+      if(n._sitTimer<0){n._sitting=false;n._sitTimer=0;}
+      n._legL.rotation.x=.9; n._legR.rotation.x=.9;
+      n.position.y=-.45;
+      return;
+    }
+    n.position.y=0;
+
+    // בריחה מהשחקן
+    if(dist<4) n._dir=Math.atan2(n.position.x-px,n.position.z-pz);
+    // חזרה הביתה אם רחוק מדי
+    const hd=Math.hypot(n._hx-n.position.x,n._hz-n.position.z);
+    if(hd>35) n._dir=Math.atan2(n._hx-n.position.x,n._hz-n.position.z)+( Math.random()-.5)*.5;
     n._turnT-=dt;
-    if(n._turnT<0){n._dir+=(Math.random()-.5)*1.4;n._turnT=1+Math.random()*2.5;}
+    if(n._turnT<0){
+      n._dir+=(Math.random()-.5)*1.6;
+      n._turnT=1.5+Math.random()*3.5;
+      // 8% סיכוי לשבת
+      if(Math.random()<.08&&hd<20){n._sitting=true;n._sitTimer=4+Math.random()*10;}
+    }
     const spd=n._speed*dt;
-    n.position.x+=Math.sin(n._dir)*spd; n.position.z+=Math.cos(n._dir)*spd;
-    n.rotation.y=n._dir; n._walkT+=dt*6;
-    if(n._legL)n._legL.rotation.x=Math.sin(n._walkT)*.4;
-    if(n._legR)n._legR.rotation.x=Math.sin(n._walkT+Math.PI)*.4;
+    n.position.x+=Math.sin(n._dir)*spd;
+    n.position.z+=Math.cos(n._dir)*spd;
+    n.rotation.y=n._dir;
+    n._walkT+=dt*(n._speed/2.5)*5;
+    if(n._legL)n._legL.rotation.x=Math.sin(n._walkT)*.45;
+    if(n._legR)n._legR.rotation.x=Math.sin(n._walkT+Math.PI)*.45;
+    if(n._armL)n._armL.rotation.x=Math.sin(n._walkT+Math.PI)*.3;
+    if(n._armR)n._armR.rotation.x=Math.sin(n._walkT)*.3;
   });
+
+  // ambient chat notifications מדי פעם
+  _taAmbientTimer-=dt;
+  if(_taAmbientTimer<0){
+    _taAmbientTimer=6+Math.random()*10;
+    // הצג emoji רנדומלי מקרוב
+    const near=_taNPCList.filter(n=>Math.hypot(n.position.x-px,n.position.z-pz)<18);
+    if(near.length&&Math.random()<.4){
+      const emoji=_TA_AMBIENT_SOUNDS[Math.floor(Math.random()*_TA_AMBIENT_SOUNDS.length)];
+      showN(emoji);
+    }
+  }
 }
 
 function _updTACars(dt){
@@ -13153,16 +13252,19 @@ function _updTACars(dt){
     const r=c._route,spd=c._spd*dt;
     if(c._ax===1){
       c.position.x+=spd;
-      if(c._spd>0&&c.position.x>r.x2+15)c.position.x=r.x1-15;
-      if(c._spd<0&&c.position.x<r.x1-15)c.position.x=r.x2+15;
+      if(c._spd>0&&c.position.x>r.x2+20)c.position.x=r.x1-20;
+      if(c._spd<0&&c.position.x<r.x1-20)c.position.x=r.x2+20;
       c.rotation.y=c._spd>0?Math.PI/2:-Math.PI/2;
     } else {
       c.position.z+=spd;
-      if(c._spd>0&&c.position.z>r.z2+15)c.position.z=r.z1-15;
-      if(c._spd<0&&c.position.z<r.z1-15)c.position.z=r.z2+15;
+      if(c._spd>0&&c.position.z>r.z2+20)c.position.z=r.z1-20;
+      if(c._spd<0&&c.position.z<r.z1-20)c.position.z=r.z2+20;
       c.rotation.y=c._spd>0?0:Math.PI;
     }
-    c.visible=Math.hypot(c.position.x-px,c.position.z-pz)<170;
+    // honk כשעוברים קרוב לשחקן
+    const d=Math.hypot(c.position.x-px,c.position.z-pz);
+    c.visible=d<180;
+    if(d<6&&!c._honked){c._honked=true;showN('🚗💨');setTimeout(()=>{c._honked=false;},3000);}
   });
 }
 
