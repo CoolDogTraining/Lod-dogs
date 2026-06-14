@@ -311,7 +311,7 @@ function buildRain(){
   _rainPoints._opacity=0; // target opacity, for fade
 }
 function updWeather(dt){
-  if(VILLA.inVilla||CITY.inCity)return;
+  if(VILLA.inVilla||CITY.inCity||TA.inTA)return;
   G.weatherT-=dt;
   if(G.weatherT<=0){
     const r=Math.random();

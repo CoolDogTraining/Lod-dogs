@@ -4966,6 +4966,13 @@ function loop(){
     return;
   }
   if(TA.inTA){
+    // קדם זמן יום + שעון HUD גם בתל אביב
+    G.dayTime=(G.dayTime+dt/600)%1;
+    const _tah=Math.floor(G.dayTime*24),_tam=Math.floor((G.dayTime*24-_tah)*60);
+    const _taClk=document.getElementById('day-clock');
+    if(_taClk&&G.hud){_taClk.style.display='block';_taClk.textContent=`${String(_tah).padStart(2,'0')}:${String(_tam).padStart(2,'0')} ${(G.dayTime>0.75||G.dayTime<0.27)?'🌙':'☀️'}`;}
+    // כבה גשם לוד אם פעיל
+    if(G.rainOn){G.rainOn=false;const rov=document.getElementById('rain-ov');if(rov)rov.style.opacity='0';setRainVolume(0);if(_rainPoints)_rainPoints.visible=false;}
     updTelAviv(dt);updPfx(dt);
     updateNavDirection();
     drawMM();

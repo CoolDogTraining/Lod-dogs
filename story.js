@@ -707,68 +707,32 @@ const MISSIONS=[
   // פרק ט׳ — "מקור" (missions 48-62)
   // ══════════════════════════════════════════════
 
-  // 48 — פתיחת פרק ט׳: ספאון כלב לבן, ואז updCh9 מקדם ל-49
+  // 48-53 — unlock ריק! כל ההתקדמות דרך updCh9 / G.mission= ישיר
   {txt:'4️⃣8️⃣ פרק ט׳: כלב לבן מחכה ברחוב הרצל 🤍',
    hint:'רחוב הרצל — כניסה לשכונה',
    targetFn:()=>({x:-30,z:55}),
-   unlock:()=>{
-     if(typeof _spawnMessengerDog==='function')_spawnMessengerDog();
-     showN('🤍 כלב לבן עומד ברחוב הרצל. ניגש אליו.');
-     setTimeout(()=>setMission(49),500);
-   }},
-
-  // 49 — ניגש לכלב הלבן (proximity ב-updCh9 → unlock)
+   unlock:()=>{}},
   {txt:'4️⃣9️⃣ ניגשו לכלב הלבן 🤍',
    hint:'רחוב הרצל — הכלב הלבן',
    targetFn:()=>({x:-30,z:55}),
-   unlock:()=>{
-     forceDog('colin','קולין ניגש לכלב הלבן');
-     setTimeout(()=>showCut('ch9_open',()=>{
-       setTimeout(()=>showCut('ch9_messenger',()=>{
-         if(typeof _removeMessengerDog==='function')_removeMessengerDog();
-         setTimeout(()=>setMission(50),600);
-       }),400);
-     }),800);
-   }},
-
-  // 50 — חזרו לבסיס (proximity ב-updCh9 → unlock)
+   unlock:()=>{}},
   {txt:'5️⃣0️⃣ חזרו לבסיס — זיפו צריך להחליט 📄',
    hint:'בסיס כלבי לוד',
    targetFn:()=>({x:105,z:25}),
-   unlock:()=>{
-     forceDog('zippo','זיפו קורא את המכתב');
-     setTimeout(()=>showCut('ch9_zippo_reads',()=>{
-       setTimeout(()=>setMission(51),600);
-     }),600);
-   }},
-
-  // 51 — חזרו למחסן APEX (proximity ב-updCh9 → unlock → setMission(52))
+   unlock:()=>{}},
   {txt:'5️⃣1️⃣ חזרו למחסן APEX — יש שם עוד מידע 🗺️',
    hint:'מחסן APEX — אזור תעשייה',
    targetFn:()=>({x:205,z:-114}),
-   unlock:()=>{showN('🏭 המחסן נראה זנוח — כנסו פנימה.');setTimeout(()=>setMission(52),800);}},
-
-  // orig 51 → now 52 — מפה בחדר הפנימי
+   unlock:()=>{}},
   {txt:'5️⃣2️⃣ מצאו את המפה בחדר הפנימי 📌',
    hint:'חדר פנימי במחסן',
    targetFn:()=>({x:205,z:-133}),
-   unlock:()=>setTimeout(()=>showCut('ch9_warehouse_map',()=>{
-     setTimeout(()=>setMission(53),600);
-   }),800)},
-
-  // 52 — תחנת הרכבת לוד — קאטסין Z-18, ואז מקדם ל-53
-  {txt:'5️⃣2️⃣ הגיעו לתחנת הרכבת של לוד 🚉',
+   unlock:()=>{}},
+  {txt:'5️⃣3️⃣ הגיעו לתחנת הרכבת של לוד 🚉',
    hint:'תחנת הרכבת לוד — דרום העיר',
    targetFn:()=>({x:0,z:-150}),
-   unlock:()=>{
-     forceDog('zippo','זיפו מוביל לתחנה');
-     setTimeout(()=>showCut('ch9_z18_shadow',()=>{
-       setTimeout(()=>setMission(54),600);
-     }),1000);
-   }},
-
-  // 53 — עלו על הרכבת
-  {txt:'5️⃣3️⃣ עלו על הרכבת לתל אביב 🚆',
+   unlock:()=>{}},
+  {txt:'5️⃣4️⃣ עלו על הרכבת לתל אביב 🚆',
    hint:'תחנת הרכבת לוד — עמדו ליד הרכבת',
    targetFn:()=>({x:0,z:-150}),
    unlock:()=>showN('🚆 הרכבת מגיעה. ריח הים כבר באוויר.')},
@@ -816,7 +780,7 @@ const MISSIONS=[
   // 58 — כץ במעבדה
   {txt:'5️⃣8️⃣ כץ כאן — שמעו אותו 🧪\nהאמת על APEX.',
    hint:'המעבדה — מאחורי הבניין',
-   targetFn:()=>G._taLabInteriorPos||({x:70,z:-110}),
+   targetFn:()=>G._taLabInteriorPos||({x:70,z:-148}),
    unlock:()=>{}},
 
   // 59 — צאו לנמל
