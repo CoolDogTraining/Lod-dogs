@@ -2393,7 +2393,7 @@ function saveGame(){
         done51:!!G._ch9_51done,done52:!!G._ch9_52done,done53:!!G._ch9_53done,
         ta54:!!G._ta54done,ta55:!!G._ta55done,ta56:!!G._ta56done,ta57:!!G._ta57done,
         ta58:!!G._ta58done,ta59:!!G._ta59done,ta60:!!G._ta60done,ta61:!!G._ta61done,
-        ta62:!!G._ta62done,ta63:!!G._ta63done,
+        ta62:!!G._ta62done,
       },
     };
     // שמירה כפולה: קודם העתק הגרסה הנוכחית לbackup, אז כתוב חדשה
@@ -2445,7 +2445,7 @@ function loadGame(){
       G._ta56done=!!s.ch9.ta56; G._ta57done=!!s.ch9.ta57;
       G._ta58done=!!s.ch9.ta58; G._ta59done=!!s.ch9.ta59;
       G._ta60done=!!s.ch9.ta60; G._ta61done=!!s.ch9.ta61;
-      G._ta62done=!!s.ch9.ta62; G._ta63done=!!s.ch9.ta63;
+      G._ta62done=!!s.ch9.ta62;
     } else if(G.mission>48){
       // save ישן — הגדר flags לפי mission כדי למנוע ריצה מחדש
       G._ch9_48done=G.mission>48; G._ch9_49done=G.mission>49;
@@ -2454,7 +2454,7 @@ function loadGame(){
       G._ta54done=G.mission>54; G._ta55done=G.mission>55;
       G._ta56done=G.mission>56; G._ta57done=G.mission>57;
       G._ta58done=G.mission>58; G._ta59done=G.mission>59;
-      G._ta60done=G.mission>60; G._ta61done=G.mission>61; G._ta62done=G.mission>62; G._ta63done=G.mission>63;
+      G._ta60done=G.mission>60; G._ta61done=G.mission>61; G._ta62done=G.mission>62;
     }
     // שחזר gateMarker אם היינו בפרק ב׳
     if(G.ch2Active&&G.mission>=8&&G.mission<=10)G.gateMarker={x:-51,z:-100};
@@ -2612,6 +2612,7 @@ function _devJump(n){
       G._ta53done=false;G._ta54done=false;G._ta55done=false;
       G._ta56done=false;G._ta57done=false;G._ta58done=false;
       G._ta59done=false;G._ta60done=false;G._ta61done=false;
+      G._ta62done=false;
       G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
       // וודא שלא נשארים בתל אביב
       if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
@@ -2639,6 +2640,7 @@ function csStartChapter(n){
       G._ta53done=false;G._ta54done=false;G._ta55done=false;
       G._ta56done=false;G._ta57done=false;G._ta58done=false;
       G._ta59done=false;G._ta60done=false;G._ta61done=false;
+      G._ta62done=false;
       G._taRabinBattleDone=false;G._taKatzSacDone=false;G._taBossMgr=null;
       if(typeof TA!=='undefined'&&TA.inTA&&typeof exitTelAviv==='function')exitTelAviv();
       setTimeout(()=>{if(typeof PB!=='undefined')PB.position.set(-30,0,55);},300);

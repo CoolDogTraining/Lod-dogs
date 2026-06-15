@@ -13717,97 +13717,78 @@ function _checkTAMissionTriggers(){
     }
     return;
   }
-  // 58 → בניין APEX → cutscene → G.mission=59
+  // 58 → בניין APEX → גג → כץ (שרשרת) → G.mission=59
   if(G.mission===58&&!G._ta58done){
     const ap=G._taApexBldPos||{x:70,z:-130};
     if(d2(px,pz,ap.x,ap.z)<14){
       G._ta58done=true;
-      // שומרים ליד כניסת APEX
       [[ap.x-10,ap.z-8],[ap.x+10,ap.z-8],[ap.x-6,ap.z+5],[ap.x+6,ap.z+5]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
       showCut('ch9_dizengoff_approach',()=>{
-        G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
-      });
-    }
-    return;
-  }
-  // 59 → גג → cutscene → G.mission=60
-  if(G.mission===59&&!G._ta59done){
-    const rp=G._taLabRoofEntry||{x:70,z:-114};
-    if(d2(px,pz,rp.x,rp.z)<14){
-      G._ta59done=true;
-      showCut('ch9_apex_lab_found',()=>{
-        G.mission=60;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[60].txt);
-      });
-    }
-    return;
-  }
-  // 60 → כץ במעבדה → cutscene → spawn אויבים → G.mission=61
-  if(G.mission===60&&!G._ta60done){
-    const lp=G._taLabInteriorPos||{x:70,z:-148};
-    if(d2(px,pz,lp.x,lp.z)<12){
-      G._ta60done=true;
-      forceDog('zippo','זיפו מוביל');
-      // שומרי מעבדה פנימית
-      [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
-        .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-      showCut('ch9_katz_appears',()=>{
-        showCut('ch9_katz_truth',()=>{
-          G.mission=61;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[61].txt);
-          const ap=G._taApexBldPos||{x:70,z:-130};
-          [[ap.x-14,ap.z-8],[ap.x+14,ap.z-8],[ap.x-8,ap.z-16],[ap.x+8,ap.z-16],[ap.x,ap.z-20]]
+        showCut('ch9_apex_lab_found',()=>{
+          const lp=G._taLabInteriorPos||{x:70,z:-148};
+          [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
             .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+          forceDog('zippo','זיפו מוביל');
+          showCut('ch9_katz_appears',()=>{
+            showCut('ch9_katz_truth',()=>{
+              const ap2=G._taApexBldPos||{x:70,z:-130};
+              [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
+                .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+              showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+              G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
+            });
+          });
         });
       });
     }
     return;
   }
-  // 61 → נקה אויבים → G.mission=62
-  if(G.mission===61&&!G._ta61done){
-    if(taEnemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible).length===0&&taEnemies.length>0){
-      G._ta61done=true;
-      forceDog('colin','קולין מוביל');
-      showN('🏃 קולין: "הנמל! לנמל!"');
-      G.mission=62;updateMissionHUD();updateNavArrow();saveGame();
-    }
-    return;
-  }
-  // 62 → הגיע לנמל → cutscene → spawn → G.mission=63
-  if(G.mission===62&&!G._ta62done){
+  // 59 → נמל תל אביב → cutscene → spawn → G.mission=60
+  if(G.mission===59&&!G._ta59done){
     const pp=G._taPortPos||{x:168,z:-155};
     if(d2(px,pz,pp.x,pp.z)<25){
-      G._ta62done=true;
+      G._ta59done=true;
       showCut('ch9_port_battle',()=>{
         const PP=G._taPortPos||{x:168,z:-155};
-        // חיילים על הרציף + שניים בתוך המחסן
         [[PP.x-18,PP.z-10],[PP.x+14,PP.z-8],[PP.x-12,PP.z+8],[PP.x+10,PP.z+8],
          [PP.x,PP.z-18],[PP.x-5,PP.z-6],[PP.x+5,PP.z-6]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-        // שומרי מחסן פנימי
         const WH=G._taPortWarehousePos||{x:PP.x-22,z:PP.z+10};
         [[-5,0],[5,0],[0,-3]].forEach(([ox,oz])=>_spawnTAEnemy(WH.x+ox,WH.z+oz));
-        G.mission=63;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[63].txt);
+        G.mission=60;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[60].txt);
       });
     }
     return;
   }
-  // 63 → נקה נמל → G.mission=64
-  if(G.mission===63&&!G._ta63done){
+  // 60 → נקה אויבים בנמל → G.mission=61
+  if(G.mission===60&&!G._ta60done){
     if(taEnemies.filter(e=>e.hp>0&&e.mesh&&e.mesh.visible).length===0&&taEnemies.length>0){
-      G._ta63done=true;
-      forceDog('zippo','זיפו מוביל');
-      showN('🏛️ זיפו: "הבוס נסוג לכיכר רבין!"');
-      G.mission=64;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[64].txt);
-      setTimeout(()=>_spawnTARabinFight(),1000);
+      G._ta60done=true;
+      forceDog('colin','קולין מוביל');
+      showN('🏛️ קולין: "לכיכר רבין! הבוס שם!"');
+      G.mission=61;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[61].txt);
     }
     return;
   }
-  // 64 → בוס מת → סיום
-  if(G.mission===64&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
+  // 61 → כיכר רבין → spawn בוס → G.mission=62
+  if(G.mission===61&&!G._ta61done){
+    const rp=G._taRabinPos||{x:30,z:-30};
+    if(d2(px,pz,rp.x,rp.z)<20){
+      G._ta61done=true;
+      forceDog('zippo','זיפו מוביל');
+      showCut('ch9_rabin_sq',()=>{
+        G.mission=62;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[62].txt);
+        setTimeout(()=>{if(typeof _spawnTARabinFight==='function')_spawnTARabinFight();},500);
+      });
+    }
+    return;
+  }
+  // 62 → בוס מת → סיום
+  if(G.mission===62&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
     G._taKatzSacDone=true;
     showCut('ch9_katz_sacrifice',()=>{
       showCut('ch9_ending',()=>{
-        G.mission=65;updateMissionHUD();updateNavArrow();saveGame();
+        G.mission=63;updateMissionHUD();updateNavArrow();saveGame();
         exitTelAviv();
       });
     });
