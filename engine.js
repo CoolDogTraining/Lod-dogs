@@ -13679,66 +13679,71 @@ function _checkTAMissionTriggers(){
   if(!TA.inTA)return;
   const px=TA.playerX,pz=TA.playerZ;
 
-  // 55 → הגעה לשוק הכרמל → cutscene → G.mission=56
-  if(G.mission===55&&!G._ta55done){
+  // 54 → הגעה לשוק הכרמל → cutscene → G.mission=55
+  if(G.mission===54&&!G._ta54done){
     const mp=G._taMarketPos||{x:-90,z:100};
     if(d2(px,pz,mp.x,mp.z)<30){
-      G._ta55done=true;
+      G._ta54done=true;
       // סיור APEX ראשון — שלושה חיילים סביב השוק
       [[mp.x+22,mp.z-15],[mp.x-20,mp.z-15],[mp.x+15,mp.z+20]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
       showCut('ch9_tel_aviv_arrive',()=>{
+        G.mission=55;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[55].txt);
+      });
+    }
+    return;
+  }
+  // 55 → מצא נירה ליד דוכן → G.mission=56
+  if(G.mission===55&&!G._ta55done){
+    const np=G._taNiraPos||{x:-122,z:126};
+    if(d2(px,pz,np.x,np.z)<10){
+      G._ta55done=true;
+      showCut('ch9_nira_meet',()=>{
         G.mission=56;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[56].txt);
       });
     }
     return;
   }
-  // 56 → מצא נירה → G.mission=57
+  // 56 → בניין APEX פינסקר → proximity לבניין → G.mission=57
   if(G.mission===56&&!G._ta56done){
-    const np=G._taNiraPos||{x:-122,z:126};
-    if(d2(px,pz,np.x,np.z)<10){
+    const ap=G._taApexBldPos||{x:70,z:-130};
+    if(d2(px,pz,ap.x,ap.z)<22){
       G._ta56done=true;
+      // שומרי כניסה
+      [[ap.x-10,ap.z-8],[ap.x+10,ap.z-8],[ap.x-6,ap.z+5],[ap.x+6,ap.z+5]]
+        .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+      showN('🏙️ בניין APEX. שומרים בכניסה — יש לטפס לגג.');
       G.mission=57;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[57].txt);
     }
     return;
   }
-  // 57 → פגשו נירה → cutscene → G.mission=58 + spawn HQ guards
+  // 57 → גג הבניין → cutscene כץ שרשרת → G.mission=58→59
+  // 57 → גג הבניין → cutscene מעבדה → G.mission=58
   if(G.mission===57&&!G._ta57done){
-    const np=G._taNiraPos||{x:-122,z:126};
-    if(d2(px,pz,np.x,np.z)<8){
+    const rp=G._taLabRoofEntry||{x:70,z:-114};
+    if(d2(px,pz,rp.x,rp.z)<16){
       G._ta57done=true;
-      // שומרי HQ דיזנגוף מופיעים
-      const hq=G._taDizengoffHQ||{x:-30,z:-20};
-      [[hq.x-8,hq.z-8],[hq.x+8,hq.z-8],[hq.x,hq.z+8]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-      showN('⚠️ APEX HQ מחזק הגנות!');
-      showCut('ch9_carmel_market',()=>{
+      showCut('ch9_apex_lab_found',()=>{
         G.mission=58;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[58].txt);
       });
     }
     return;
   }
-  // 58 → בניין APEX → גג → כץ (שרשרת) → G.mission=59
+  // 58 → כץ במעבדה → cutscene שרשרת → G.mission=59
   if(G.mission===58&&!G._ta58done){
-    const ap=G._taApexBldPos||{x:70,z:-130};
-    if(d2(px,pz,ap.x,ap.z)<14){
+    const lp=G._taLabInteriorPos||{x:70,z:-148};
+    if(d2(px,pz,lp.x,lp.z)<18){
       G._ta58done=true;
-      [[ap.x-10,ap.z-8],[ap.x+10,ap.z-8],[ap.x-6,ap.z+5],[ap.x+6,ap.z+5]]
+      [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-      showCut('ch9_dizengoff_approach',()=>{
-        showCut('ch9_apex_lab_found',()=>{
-          const lp=G._taLabInteriorPos||{x:70,z:-148};
-          [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
+      forceDog('zippo','זיפו מוביל');
+      showCut('ch9_katz_appears',()=>{
+        showCut('ch9_katz_truth',()=>{
+          const ap2=G._taApexBldPos||{x:70,z:-130};
+          [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
             .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-          forceDog('zippo','זיפו מוביל');
-          showCut('ch9_katz_appears',()=>{
-            showCut('ch9_katz_truth',()=>{
-              const ap2=G._taApexBldPos||{x:70,z:-130};
-              [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
-                .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-              showN('⚔️ APEX רץ לנמל! עצרו אותם!');
-              G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
-            });
-          });
+          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+          G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
         });
       });
     }
