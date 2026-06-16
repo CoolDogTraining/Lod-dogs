@@ -235,6 +235,21 @@ function updDayNight(dt){
 
   if(scene) scene.background.copy(sky);
 
+  // ── עדכן שמיים גם בתל אביב ──
+  if(typeof taScene!=='undefined'&&taScene){
+    taScene.background.copy(sky);
+    if(taScene.fog){taScene.fog.color.copy(sky);}
+    // עדכן תאורה של taScene — מצא אורות ושנה
+    taScene.children.forEach(c=>{
+      if(c.isAmbientLight)c.intensity=_ambLight?_ambLight.intensity*4.5:1.7;
+      if(c.isDirectionalLight&&c.castShadow){
+        c.intensity=_sunLight?_sunLight.intensity*3.3:2.5;
+        const sa=t*Math.PI*2-Math.PI/2;
+        c.position.set(Math.cos(sa)*200,Math.max(10,Math.sin(sa)*160),70);
+      }
+    });
+  }
+
   // ── פנסי רחוב — emissive על כל הנורות ──
   const lampsOn=t>0.70||t<0.30;
   if(_streetLamps.length){

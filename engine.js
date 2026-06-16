@@ -12831,14 +12831,18 @@ function _taBuildMarket(){
   const awningCols=[0xcc2200,0x2255aa,0x228833,0xcc7700,0x882299,0xaa1133,0xdd9900,0x116633];
   for(let row=0;row<5;row++) for(let col=0;col<7;col++){
     const ax=MX-33+col*11, az=MZ-28+row*14;
-    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,2.8,6),new THREE.MeshLambertMaterial({color:0x888880}));
-    pole.position.set(ax,1.4,az);_taAddZ(pole);
-    const aw=new THREE.Mesh(new THREE.BoxGeometry(10,.15,12),new THREE.MeshLambertMaterial({color:awningCols[(row*7+col)%awningCols.length]}));
-    aw.position.set(ax,2.95,az);aw.rotation.x=.08*(row%2?1:-1);_taAddZ(aw);
+    // עמוד — גבוה יותר (3.4) ואוונינג גבוה (y=3.7) כדי לא לחסום
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,3.4,6),new THREE.MeshLambertMaterial({color:0x888880}));
+    pole.position.set(ax,1.7,az);_taAddZ(pole);
+    const aw=new THREE.Mesh(new THREE.BoxGeometry(8,.12,8),new THREE.MeshLambertMaterial({color:awningCols[(row*7+col)%awningCols.length]}));
+    aw.position.set(ax,3.7,az);aw.rotation.x=.06*(row%2?1:-1);_taAddZ(aw);
+    // שולחן ומוצרים על הקרקע
     if(Math.random()<.75){
       const prodCols=[0xff6600,0xffcc00,0x44aa22,0xee2244,0xff8800,0xffee00,0x22aa88];
-      const prod=new THREE.Mesh(new THREE.BoxGeometry(2.5,.7,2),new THREE.MeshLambertMaterial({color:prodCols[Math.floor(Math.random()*prodCols.length)]}));
-      prod.position.set(ax,0.35,az+3.5);_taAddZ(prod);
+      const tbl=new THREE.Mesh(new THREE.BoxGeometry(3,.08,1.5),new THREE.MeshLambertMaterial({color:0x8B6033}));
+      tbl.position.set(ax,0.82,az+2);_taAddZ(tbl);
+      const prod=new THREE.Mesh(new THREE.BoxGeometry(2.4,.5,1.2),new THREE.MeshLambertMaterial({color:prodCols[Math.floor(Math.random()*prodCols.length)]}));
+      prod.position.set(ax,1.1,az+2);_taAddZ(prod);
     }
   }
   // נירה הכלבה
@@ -12854,6 +12858,17 @@ function _taBuildMarket(){
     g.position.set(MX-32,0,MZ+26);taScene.add(g);taObjects.push(g);
     G._taNiraPos={x:MX-32,z:MZ+26};
     G._taMarketPos={x:MX,z:MZ};
+    // פינת הבשר — חדר קטן עם גג מסביב לנירה
+    const roofMeat=new THREE.Mesh(new THREE.BoxGeometry(8,.18,6),new THREE.MeshLambertMaterial({color:0xaa3300}));
+    roofMeat.position.set(MX-32,3.8,MZ+26);_taAddZ(roofMeat);
+    [[0,-3,8,.25,3.6],[0,3,8,.25,3.6],[-4,0,.25,6,3.6]].forEach(([ox,oz,w,d,h])=>{
+      const w2=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x9a8870}));
+      w2.position.set(MX-32+ox,h/2,MZ+26+oz);_taAddZ(w2);
+    });
+    const meatL=new THREE.PointLight(0xffcc88,1.5,8);meatL.position.set(MX-32,3,MZ+26);_taAddZ(meatL);
+    // דוכן בשר
+    const meatCounter=new THREE.Mesh(new THREE.BoxGeometry(4,.9,1),new THREE.MeshLambertMaterial({color:0x882200}));
+    meatCounter.position.set(MX-32,.45,MZ+24);_taAddZ(meatCounter);
   })();
   // שלט שוק
   const sc=document.createElement('canvas');sc.width=400;sc.height=100;
@@ -13005,6 +13020,42 @@ function _taBuildRabinSquare(){
   const rsign=new THREE.Mesh(new THREE.BoxGeometry(6,1.5,.1),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(rsc),side:THREE.DoubleSide}));
   rsign.position.set(RX,3,RZ-26);_taAddZ(rsign);
   G._taRabinPos={x:RX,z:RZ};
+
+  // ── מוצב APEX — צד צפון (mission 61-62) ──
+  const CPX=RX+20, CPZ=RZ-18;
+  // רצפה
+  const cpFloor=new THREE.Mesh(new THREE.PlaneGeometry(16,12),new THREE.MeshLambertMaterial({color:0x181020}));
+  cpFloor.rotation.x=-Math.PI/2;cpFloor.position.set(CPX,.08,CPZ);cpFloor._isGround=true;_taAddZ(cpFloor);
+  // קירות (ג׳ קירות — כניסה מדרום פתוחה)
+  [[0,-6,16,.3,3.5],[0,6,16,.3,3.5],[-8,0,.3,12,3.5]].forEach(([ox,oz,w,d,h])=>{
+    const w2=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x1e1020}));
+    w2.position.set(CPX+ox,h/2,CPZ+oz);_taAddZ(w2);
+  });
+  // גג — מאפשר להגיע לחדר
+  const cpRoof=new THREE.Mesh(new THREE.BoxGeometry(16.2,.25,12.2),new THREE.MeshLambertMaterial({color:0x0a0810}));
+  cpRoof.position.set(CPX,3.62,CPZ);_taAddZ(cpRoof);
+  // תאורה סגולה — APEX command
+  const cpL=new THREE.PointLight(0x8800cc,3,16);cpL.position.set(CPX,2.5,CPZ);_taAddZ(cpL);
+  const cpL2=new THREE.PointLight(0xcc0044,2,10);cpL2.position.set(CPX-4,2,CPZ-2);_taAddZ(cpL2);
+  // שולחן פיקוד
+  const cmdTable=new THREE.Mesh(new THREE.BoxGeometry(5,.8,2.5),new THREE.MeshLambertMaterial({color:0x1a1028}));
+  cmdTable.position.set(CPX-.5,.4,CPZ-3);_taAddZ(cmdTable);
+  // מסך פיקוד
+  const scrC=document.createElement('canvas');scrC.width=200;scrC.height=120;
+  const scrCtx=scrC.getContext('2d');scrCtx.fillStyle='#080010';scrCtx.fillRect(0,0,200,120);
+  scrCtx.fillStyle='#cc00ff';scrCtx.font='bold 14px monospace';
+  ['APEX:CMD','MISSION:Z01','STATUS:HUNT','TA:LOCKDOWN'].forEach((t,i)=>scrCtx.fillText(t,10,20+i*22));
+  const cmdScreen=new THREE.Mesh(new THREE.BoxGeometry(3,2,.05),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(scrC),emissive:0x220033}));
+  cmdScreen.position.set(CPX-5.5,2,CPZ-3.5);cmdScreen.rotation.y=Math.PI/2;_taAddZ(cmdScreen);
+  // שלט מוצב
+  const hqC2=document.createElement('canvas');hqC2.width=280;hqC2.height=70;
+  const hqCtx=hqC2.getContext('2d');hqCtx.fillStyle='#0a0010';hqCtx.fillRect(0,0,280,70);
+  hqCtx.fillStyle='#cc00ff';hqCtx.font='bold 30px Arial';hqCtx.textAlign='center';hqCtx.textBaseline='middle';
+  hqCtx.fillText('APEX — כיכר רבין',140,35);
+  const hqSign2=new THREE.Mesh(new THREE.BoxGeometry(5.5,1.4,.1),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(hqC2),side:THREE.DoubleSide}));
+  hqSign2.position.set(CPX,3.1,CPZ-6.1);_taAddZ(hqSign2);
+  G._taRabinCmdPos={x:CPX,z:CPZ};
+  _taBldList.push({x:CPX,z:CPZ,w:16,d:12}); // לא בלוק מוחלט — כניסה דרומית פתוחה
 }
 
 // ════════════════════════════════════════════════
@@ -13698,7 +13749,7 @@ function _checkTAMissionTriggers(){
     const np=G._taNiraPos||{x:-122,z:126};
     if(d2(px,pz,np.x,np.z)<10){
       G._ta55done=true;
-      showCut('ch9_nira_meet',()=>{
+      showCut('ch9_carmel_market',()=>{
         G.mission=56;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[56].txt);
       });
     }
@@ -13781,7 +13832,7 @@ function _checkTAMissionTriggers(){
     if(d2(px,pz,rp.x,rp.z)<20){
       G._ta61done=true;
       forceDog('zippo','זיפו מוביל');
-      showCut('ch9_rabin_sq',()=>{
+      showCut('ch9_rabin_square',()=>{
         G.mission=62;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[62].txt);
         setTimeout(()=>{if(typeof _spawnTARabinFight==='function')_spawnTARabinFight();},500);
       });
