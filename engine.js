@@ -11465,11 +11465,10 @@ function buildZ18(){
   const bar=hpBar(mesh,2.8,4.0);
   bar.material.color.setHex(0xcc0066);
 
-  // אורות אש משוחזרים (pooled) — נמנעים מ-new PointLight בכל מכה (ביצועים)
+  // אורות אש משוחזרים (pooled object, לא ב-scene עדיין) — נמנעים מ-new PointLight בכל מכה
+  // אך לא מוסיפים ל-scene תמידית כדי לא להעמיס על מגבלת האורות הסימולטניים במובייל
   const flameLight=new THREE.PointLight(0xff5500,0,7);
-  scene.add(flameLight);
   const bigFlameLight=new THREE.PointLight(0xff5500,0,14);
-  scene.add(bigFlameLight);
 
   _z18Enemy={
     mesh,bar,
@@ -11481,8 +11480,8 @@ function buildZ18(){
     _grabDone:false,
     _chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
     _hitT:0,_hitCD:0,
-    _flameLight:flameLight,_flT:-1,
-    _bigFlameLight:bigFlameLight,_bigFlT:-1
+    _flameLight:flameLight,_flT:-1,_flInScene:false,
+    _bigFlameLight:bigFlameLight,_bigFlT:-1,_bigFlInScene:false
   };
   G._z18Enemy=_z18Enemy;
   // הוסף ל-G.bosses כדי ש-LOD לא יסתיר את המודל
@@ -11512,13 +11511,13 @@ function updZ18(dt){
     b._flT+=dt;
     const p=b._flT/0.2; // 200ms
     b._flameLight.intensity=p>=1?0:Math.max(0,14-p*14)*(0.8+Math.random()*0.4);
-    if(p>=1)b._flT=-1;
+    if(p>=1){b._flT=-1;if(b._flInScene){scene.remove(b._flameLight);b._flInScene=false;}}
   }
   if(b._bigFlT>=0){
     b._bigFlT+=dt;
     const p=b._bigFlT/0.8; // 800ms
     b._bigFlameLight.intensity=p>=1?0:Math.max(0,28-p*28)*(0.7+Math.random()*0.6);
-    if(p>=1)b._bigFlT=-1;
+    if(p>=1){b._bigFlT=-1;if(b._bigFlInScene){scene.remove(b._bigFlameLight);b._bigFlInScene=false;}}
   }
 
   // ── הילה מתפשטת — פולס ──
@@ -11634,6 +11633,7 @@ function updZ18(dt){
           1.0+Math.random(),b.mesh.position.z+(Math.random()-.5)*1.5,
           Math.random()>.5?0xffdd00:0xffffff, 2);
       // אור אש — מהמצית (משוחזר, בלי new בכל מכה)
+      if(!b._flInScene){scene.add(b._flameLight);b._flInScene=true;}
       b._flameLight.position.copy(PB.position);b._flameLight.position.y+=0.8;
       b._flameLight.intensity=14;
       b._flT=0;
@@ -11669,6 +11669,7 @@ function updZ18(dt){
         const dist=1.5+Math.random()*6;
         spawnPfx(PB.position.x+Math.sin(ang2+spread)*dist,0.3+Math.random()*2,PB.position.z+Math.cos(ang2+spread)*dist,Math.random()>.4?0xff5500:0xffaa00,5);
       }
+      if(!b._bigFlInScene){scene.add(b._bigFlameLight);b._bigFlInScene=true;}
       b._bigFlameLight.position.copy(PB.position);b._bigFlameLight.position.y+=1;
       b._bigFlameLight.intensity=28;
       b._bigFlT=0;
@@ -11690,8 +11691,8 @@ function updZ18(dt){
       if(b.mesh._aura)b.mesh._aura.intensity=0;
       if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=0;
       if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=0;
-      if(b._flameLight)b._flameLight.intensity=0;
-      if(b._bigFlameLight)b._bigFlameLight.intensity=0;
+      if(b._flameLight){b._flameLight.intensity=0;if(b._flInScene){scene.remove(b._flameLight);b._flInScene=false;}}
+      if(b._bigFlameLight){b._bigFlameLight.intensity=0;if(b._bigFlInScene){scene.remove(b._bigFlameLight);b._bigFlInScene=false;}}
       _hideZ18WeaponMode(); // הסתר מצית + דאודורנט
       sCapture();haptic([120,50,100,30,120]);
       addXP(400);G.score+=3000;G.coins+=200;updCoins();
