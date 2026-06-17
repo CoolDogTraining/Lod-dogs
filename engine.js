@@ -9159,6 +9159,7 @@ function _owe_spawn(){
   OWE.active={type,x:sx,z:sz,done:false};
   OWE.mesh=mesh;
   OWE.ind=ind;
+  OWE._emissiveColor=new THREE.Color(type.color); // נשמר ומשמש מחדש ב-updOWE (ביצועים — בלי new בכל פריים)
   OWE._timer=90; // 90 שניות לפני שהאירוע מסתיים לבד
   showN(`${type.emoji} ${type.title} — ${type.desc}`);
 }
@@ -9182,7 +9183,7 @@ function updOWE(dt){
   if(OWE.mesh){
     OWE.mesh.position.y=1.5+Math.sin(Date.now()*.003)*0.3;
     OWE.mesh.rotation.y+=dt*1.5;
-    OWE.mesh.material.emissive=new THREE.Color(ev.type.color).multiplyScalar(0.3+Math.sin(Date.now()*.004)*.2);
+    OWE.mesh.material.emissive=OWE._emissiveColor.setHex(ev.type.color).multiplyScalar(0.3+Math.sin(Date.now()*.004)*.2);
   }
   // מיקום אינדיקטור
   if(OWE.ind&&OWE.mesh){
@@ -11464,6 +11465,12 @@ function buildZ18(){
   const bar=hpBar(mesh,2.8,4.0);
   bar.material.color.setHex(0xcc0066);
 
+  // אורות אש משוחזרים (pooled) — נמנעים מ-new PointLight בכל מכה (ביצועים)
+  const flameLight=new THREE.PointLight(0xff5500,0,7);
+  scene.add(flameLight);
+  const bigFlameLight=new THREE.PointLight(0xff5500,0,14);
+  scene.add(bigFlameLight);
+
   _z18Enemy={
     mesh,bar,
     hp:Z18_HP,mhp:Z18_HP,spd:Z18_SPD,
@@ -11473,7 +11480,9 @@ function buildZ18(){
     _darkFlameT:0,
     _grabDone:false,
     _chargeT:0,_chargeActive:false,_cvx:0,_cvz:0,
-    _hitT:0,_hitCD:0
+    _hitT:0,_hitCD:0,
+    _flameLight:flameLight,_flT:-1,
+    _bigFlameLight:bigFlameLight,_bigFlT:-1
   };
   G._z18Enemy=_z18Enemy;
   // הוסף ל-G.bosses כדי ש-LOD לא יסתיר את המודל
@@ -11497,6 +11506,20 @@ function updZ18(dt){
   b._chargeT=Math.max(0,b._chargeT-dt);
   b._hitT=Math.max(0,b._hitT-dt);
   b._hitCD=Math.max(0,b._hitCD-dt);
+
+  // ── דעיכת אורות אש משוחזרים (מצית + להבה גדולה) ──
+  if(b._flT>=0){
+    b._flT+=dt;
+    const p=b._flT/0.2; // 200ms
+    b._flameLight.intensity=p>=1?0:Math.max(0,14-p*14)*(0.8+Math.random()*0.4);
+    if(p>=1)b._flT=-1;
+  }
+  if(b._bigFlT>=0){
+    b._bigFlT+=dt;
+    const p=b._bigFlT/0.8; // 800ms
+    b._bigFlameLight.intensity=p>=1?0:Math.max(0,28-p*28)*(0.7+Math.random()*0.6);
+    if(p>=1)b._bigFlT=-1;
+  }
 
   // ── הילה מתפשטת — פולס ──
   if(b.mesh._aura){
@@ -11610,12 +11633,10 @@ function updZ18(dt){
         spawnPfx(b.mesh.position.x+(Math.random()-.5)*1.5,
           1.0+Math.random(),b.mesh.position.z+(Math.random()-.5)*1.5,
           Math.random()>.5?0xffdd00:0xffffff, 2);
-      // אור אש — מהמצית
-      const fl=new THREE.PointLight(0xff5500,14,7);
-      fl.position.copy(PB.position).y+=0.8;
-      scene.add(fl);
-      let _flt=0;
-      const _flI=setInterval(()=>{_flt+=16;fl.intensity=Math.max(0,14-(_flt/200)*14)*(0.8+Math.random()*0.4);if(_flt>=200){clearInterval(_flI);scene.remove(fl);}},16);
+      // אור אש — מהמצית (משוחזר, בלי new בכל מכה)
+      b._flameLight.position.copy(PB.position);b._flameLight.position.y+=0.8;
+      b._flameLight.intensity=14;
+      b._flT=0;
       // המצית מבזיקה
       if(_zippoLighterMesh){
         if(_zippoLighterMesh._flameLight)_zippoLighterMesh._flameLight.intensity=9;
@@ -11648,9 +11669,9 @@ function updZ18(dt){
         const dist=1.5+Math.random()*6;
         spawnPfx(PB.position.x+Math.sin(ang2+spread)*dist,0.3+Math.random()*2,PB.position.z+Math.cos(ang2+spread)*dist,Math.random()>.4?0xff5500:0xffaa00,5);
       }
-      const bigL=new THREE.PointLight(0xff5500,28,14);
-      bigL.position.copy(PB.position).y+=1;scene.add(bigL);
-      let _bT=0;const _bI=setInterval(()=>{_bT+=16;bigL.intensity=Math.max(0,28-(_bT/800)*28)*(0.7+Math.random()*0.6);if(_bT>=800){clearInterval(_bI);scene.remove(bigL);}},16);
+      b._bigFlameLight.position.copy(PB.position);b._bigFlameLight.position.y+=1;
+      b._bigFlameLight.intensity=28;
+      b._bigFlT=0;
       if(dd<9){
         const flameDmg=Math.round(dog.pow*55*(1+dog.lv*.12));
         b.hp-=flameDmg;b._hitT=0.8;b._hitCD=0.8;
@@ -11669,6 +11690,8 @@ function updZ18(dt){
       if(b.mesh._aura)b.mesh._aura.intensity=0;
       if(b.mesh._eyeLLight)b.mesh._eyeLLight.intensity=0;
       if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=0;
+      if(b._flameLight)b._flameLight.intensity=0;
+      if(b._bigFlameLight)b._bigFlameLight.intensity=0;
       _hideZ18WeaponMode(); // הסתר מצית + דאודורנט
       sCapture();haptic([120,50,100,30,120]);
       addXP(400);G.score+=3000;G.coins+=200;updCoins();
@@ -13761,7 +13784,7 @@ function _checkTAMissionTriggers(){
     if(d2(px,pz,ap.x,ap.z)<22){
       G._ta56done=true;
       // שומרי כניסה
-      [[ap.x-10,ap.z-8],[ap.x+10,ap.z-8],[ap.x-6,ap.z+5],[ap.x+6,ap.z+5]]
+      [[ap.x-10,ap.z-8],[ap.x+10,ap.z-8],[ap.x-9,ap.z-1],[ap.x+9,ap.z-1]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
       showN('🏙️ בניין APEX. שומרים בכניסה — יש לטפס לגג.');
       G.mission=57;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[57].txt);
@@ -13772,7 +13795,7 @@ function _checkTAMissionTriggers(){
   // 57 → גג הבניין → cutscene מעבדה → G.mission=58
   if(G.mission===57&&!G._ta57done){
     const rp=G._taLabRoofEntry||{x:70,z:-114};
-    if(d2(px,pz,rp.x,rp.z)<16){
+    if(d2(px,pz,rp.x,rp.z)<20){
       G._ta57done=true;
       showCut('ch9_apex_lab_found',()=>{
         G.mission=58;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[58].txt);
