@@ -13771,7 +13771,9 @@ function _checkTAMissionTriggers(){
   // 55 → מצא נירה ליד דוכן → G.mission=56
   if(G.mission===55&&!G._ta55done){
     const np=G._taNiraPos||{x:-122,z:126};
-    if(d2(px,pz,np.x,np.z)<10){
+    // בדוק גם מול המיקום הקשיח למקרה ש-_taNiraPos לא אותחל
+    const close=d2(px,pz,np.x,np.z)<20||d2(px,pz,-122,126)<20||d2(px,pz,-90,100)<35;
+    if(close){
       G._ta55done=true;
       showCut('ch9_carmel_market',()=>{
         G.mission=56;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[56].txt);
