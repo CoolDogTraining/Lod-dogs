@@ -2456,7 +2456,9 @@ function loadGame(){
       G._ch9_48done=!!s.ch9.done48; G._ch9_49done=!!s.ch9.done49;
       G._ch9_50done=!!s.ch9.done50; G._ch9_51done=!!s.ch9.done51;
       G._ch9_52done=!!s.ch9.done52; G._ch9_53done=!!s.ch9.done53;
-      G._ta54done=!!s.ch9.ta54; G._ta55done=!!s.ch9.ta55;
+      G._ta54done=!!s.ch9.ta54;
+      // תיקון: אם המשימה עדיין 55, אל תסמן ta55done — אחרת הטריגר לא יפעל
+      G._ta55done=(G.mission>55)?!!s.ch9.ta55:false;
       G._ta56done=!!s.ch9.ta56; G._ta57done=!!s.ch9.ta57;
       G._ta58done=!!s.ch9.ta58; G._ta59done=!!s.ch9.ta59;
       G._ta60done=!!s.ch9.ta60; G._ta61done=!!s.ch9.ta61;

@@ -5027,7 +5027,7 @@ function loop(){
       if(d2(px,pz,0,-150)<10)enterTelAviv();
     }
   }
-  updCamera();updHUD();drawMM();_updLOD();renderer.render(scene,camera);
+  updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);renderer.render(scene,camera);
 }
 
 // ════════════════════════════════════════════════
@@ -5349,6 +5349,33 @@ function _initLODStatics(){
     _lodStaticObjs.push(obj);
     _lodShadowObjs.push(obj); // כל mesh סטטי — לvisibility culling + shadow
   });
+}
+
+// ════════════════════════════════════════════════
+// LIGHT BUDGET — מגביל כמות PointLights פעילים בו-זמנית
+// כדי למנוע חריגה מ-MAX_VERTEX_UNIFORM_VECTORS על מכשירים חלשים
+// (שורש הבאג: "shader error... uniforms count exceeds" + WebGL context lost
+//  בקרב Z-18 — יותר מדי אורות פעילים בו-זמנית קרוב לבסיס)
+// ════════════════════════════════════════════════
+const MAX_ACTIVE_LIGHTS=14;
+let _lightBudgetT=0;
+const _lbVec=new THREE.Vector3();
+function _updLightBudget(dt){
+  _lightBudgetT+=dt;
+  if(_lightBudgetT<0.4)return; // throttle — 2.5 בדיקות לשנייה מספיק
+  _lightBudgetT=0;
+  if(!PB)return;
+  const px=PB.position.x,pz=PB.position.z;
+  const lights=[];
+  scene.traverse(o=>{if(o.isPointLight)lights.push(o);});
+  if(lights.length<=MAX_ACTIVE_LIGHTS)return;
+  lights.forEach(l=>{
+    l.getWorldPosition(_lbVec);
+    const dx=_lbVec.x-px,dz=_lbVec.z-pz;
+    l._budgetD2=dx*dx+dz*dz;
+  });
+  lights.sort((a,b)=>a._budgetD2-b._budgetD2);
+  lights.forEach((l,i)=>{l.visible=i<MAX_ACTIVE_LIGHTS;});
 }
 
 function _updLOD(){
@@ -13221,8 +13248,16 @@ function enterTelAviv(){
     if(!G._taDizengoffSq)G._taDizengoffSq={x:-30, z:-20};
     // init crowd מיידי
     setTimeout(()=>_initTACrowd(),100);
-    // קדם mission מ-54 ("עלו על הרכבת") ל-55 ("שוק הכרמל")
-    if(G.mission===54){G.mission=55;updateMissionHUD();updateNavArrow();saveGame();}
+    // קדם mission מ-54 ("עלו על הרכבת") ל-55 ("מצאו את נירה")
+    if(G.mission===54){
+      G.mission=55;updateMissionHUD();updateNavArrow();saveGame();
+      showN('🐾 מומו: "יש פה כלבים שיודעים. אני מרגישה."');
+      setTimeout(()=>{
+        if(!TA.inTA)return;
+        [[-20,75],[ 20,75],[-20,50],[ 15,55]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+        showN('⚠️ סיור APEX ברחוב אלנבי!');
+      },3000);
+    }
     showN('🌆 תל אביב.\nזיפו: "אני יודע לאן ללכת."');
     G.paused=false;fadeIn();
   });
@@ -13769,6 +13804,8 @@ function _checkTAMissionTriggers(){
     return;
   }
   // 55 → מצא נירה ליד דוכן → G.mission=56
+  // תיקון באג: אם _ta55done=true אבל mission עדיין 55 — אפס
+  if(G.mission===55&&G._ta55done)G._ta55done=false;
   if(G.mission===55&&!G._ta55done){
     const np=G._taNiraPos||{x:-122,z:126};
     // בדוק גם מול המיקום הקשיח למקרה ש-_taNiraPos לא אותחל
