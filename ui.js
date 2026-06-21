@@ -2097,6 +2097,10 @@ function updTitan(dt){
       setTimeout(()=>{
         showN('רקס עומד בשקט. מסתכל על לוד מלמטה...');
       },2000);
+      // שלב א.5: רגע מוזר — רמז לזיכרון שלא שלו
+      setTimeout(()=>{
+        showCut('rex_strange_moment',()=>{});
+      },3800);
       // שלב ב׳: מצלמה סינמטית + רקס מתחיל לקרוס + overlay
       setTimeout(()=>{
         G._reksCollapsing=true;
@@ -2152,7 +2156,7 @@ function updTitan(dt){
           updateMissionHUD();updateNavArrow();saveGame();
         });
       },8500);
-      },1500); // סגירת setTimeout שלב ב׳
+      },1500+4000); // סגירת setTimeout שלב ב׳ — נדחה כדי לפנות מקום לרגע המוזר
     }
   }
 }

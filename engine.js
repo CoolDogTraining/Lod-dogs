@@ -5306,7 +5306,7 @@ function doAtk(){
         if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x3a2010);}
         mosqueBlds=mosqueBlds.filter(b=>!(Math.abs(b.x+2)<1&&Math.abs(b.z-15.8)<1));
         showN('🔓 הדלת נפתחה! ברח מהמסגד!');
-        setTimeout(()=>showCut('win2',()=>{exitMosque(true);setTimeout(()=>setMission(11),800);}),1200);
+        setTimeout(()=>showCut('win2',()=>{exitMosque(true);setTimeout(()=>showCut('ch2_plato_hint',()=>setMission(11)),800);}),1200);
       }
     }
     return;
@@ -8798,7 +8798,7 @@ function updCh6(dt){
   if(G.mission===27&&!G._ch6PortVisited){
     if(d2(px,pz,25,-125)<8){
       G._ch6PortVisited=true;
-      showCut('ch6_shadow_zippo',()=>setMission(28));
+      showCut('ch6_momo_trusts',()=>showCut('ch6_shadow_zippo',()=>setMission(28)));
     }
   }
 
@@ -11897,7 +11897,7 @@ function updCh8(dt){
     const dist=d2(px,pz,105,25);
     if(dist<10&&!G._ch8HomeReached){
       G._ch8HomeReached=true;
-      showCut('ch8_they_know',()=>setMission(44));
+      showCut('ch8_they_know',()=>showCut('ch8_z18_help',()=>setMission(44)));
     }
   }
 
