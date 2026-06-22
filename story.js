@@ -148,7 +148,10 @@ function closeCut(){
   // אם הטייפרייטר עדיין רץ — לחיצה ראשונה מסיימת אותו
   if(_cutTypeInterval&&!_currentCutDone){skipTypewriter();return;}
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
-  document.getElementById('cut').style.display='none';G.paused=false;G.cutOpen=false;document.getElementById('mm-wrap').style.display='block';if(cutCb){cutCb();cutCb=null;}
+  document.getElementById('cut').style.display='none';G.paused=false;G.cutOpen=false;document.getElementById('mm-wrap').style.display='block';
+  // ── תיקון קריטי: אם cutCb פותח showCut נוסף (שרשרת קאטסינים), השורה הבאה
+  // לא תקבע cutCb=null על ה-callback הישן — היא תאפס את החדש שנקבע בתוך cutCb() ──
+  const _cb=cutCb;cutCb=null;if(_cb)_cb();
 }
 function openDlg(av,sp,tx,choices){
   G.dlgOpen=true;
