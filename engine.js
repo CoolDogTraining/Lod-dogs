@@ -4528,7 +4528,12 @@ function updVilla(dt){
           spawnVFX(-2,1.5,17,0xff3300,22);
           spawnVFX(-2,1,16,0xff6600,14);
           if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x1a0404);}
-          showN('💢 BOOM! ברונו שובר את הדלת!\nברונו: "אַנْتُمْ مَيِّتُون!" (אתם מתים!)');
+          // ── סינמטי: wide shot מהצד → zoom על ברונו → POV כניסה ──
+          _playCinema([
+            {cam:[-8,  2.5, 17],   look:[-2, 1.5, 15.8], dur:700, note:'💢 BOOM! ברונו שובר את הדלת!'},
+            {cam:[-2,  1.8, 20],   look:[-2, 1.5, 15.8], dur:900},
+            {cam:[-2,  1.4, 16.5], look:[-2, 0.8, 10],   dur:800, note:'ברונו: "אַנْتُمْ مَيِّتُون!" (אתם מתים!)'}
+          ],()=>{});
         }
       },1500);
     }
@@ -6132,6 +6137,48 @@ function cacheHUD(){
   _hudIP=document.getElementById('ip');
 }
 
+// ══════════════════════════════════════════════════════════════
+// _playCinema — סצנה סינמטית מרכזית
+//   steps: [{cam:[x,y,z], look:[x,y,z], dur:ms, note?:str}]
+//   onDone: callback אחרי כל הסצנה
+//   useTA: האם להשתמש ב-taCamera (פרק ט׳ תל אביב)
+// ══════════════════════════════════════════════════════════════
+function _playCinema(steps, onDone, useTA){
+  G._cinemaMode=true;
+  G.paused=true;
+  // סגור כל dialog/notif פתוח
+  const dlgEl=document.getElementById('dialogBox')||document.getElementById('cutscene');
+  if(dlgEl)dlgEl.style.display='none';
+  G.cutOpen=false; G.dlgOpen=false;
+  const cam=useTA?taCamera:camera;
+  let i=0;
+  function doStep(){
+    if(i>=steps.length){
+      G._cinemaMode=false;
+      G.paused=false;
+      if(onDone)onDone();
+      return;
+    }
+    const s=steps[i++];
+    if(s.note)showN(s.note);
+    const target=new THREE.Vector3(...s.cam);
+    const lookPt=new THREE.Vector3(...s.look);
+    const dur=s.dur||1800;
+    const t0=performance.now();
+    const startPos=cam.position.clone();
+    function tick(){
+      if(!G._cinemaMode)return;
+      const alpha=Math.min((performance.now()-t0)/dur,1);
+      cam.position.lerpVectors(startPos,target,alpha);
+      cam.lookAt(lookPt);
+      if(alpha<1)requestAnimationFrame(tick);
+      else setTimeout(doStep,80);
+    }
+    requestAnimationFrame(tick);
+  }
+  doStep();
+}
+
 function updCamera(){
   if(G._cinemaMode)return; // אנימציה סינמטית — לא נגעים במצלמה
   const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
@@ -6585,9 +6632,9 @@ function showN(t){
 }
 function _processNotifQueue(){
   if(!_notifQueue.length){_notifActive=false;return;}
-  // ── עדיפות לסצנות סינמטיות: בזמן שהמצלמה ננעלת על cutscene, לא מציגים הודעות שמסיחות ──
-  if(G._cinemaMode||G.cutOpen){
-    setTimeout(_processNotifQueue,300);
+  // ── עדיפות לסצנות סינמטיות: בזמן שהמצלמה ננעלת, לא מציגים הודעות שמסיחות ──
+  if(G._cinemaMode||G.cutOpen||G._grabPaused){
+    setTimeout(_processNotifQueue,400);
     return;
   }
   _notifActive=true;
@@ -8048,7 +8095,14 @@ function updCh3Entities(dt){
         G._kikarArrived=true;
         showN('🔴 פישקה הגיעה לכיכר! הקרב מתחיל!');
         G.paused=true;
-        setTimeout(()=>showCut('kikar_battle',()=>{G.paused=false;}),200);
+        // ── סצנה סינמטית: pan נמוך מעל הכיכר לפני הקרב ──
+        const kx=targetX,kz=targetZ;
+        _playCinema([
+          {cam:[kx-10, 1.2, kz+8],  look:[kx, 0.5, kz],    dur:900,  note:'⚔️ פישקה מגייסת את הכנופייה...'},
+          {cam:[kx+8,  0.9, kz+5],  look:[kx, 0.5, kz],    dur:1000},
+          {cam:[kx,    1.6, kz-10], look:[kx, 0.8, kz],    dur:1000},
+          {cam:[kx+2,  5.0, kz+2],  look:[kx, 0.0, kz],    dur:900}   // עילי לרגע לפני הוראה
+        ],()=>{ showCut('kikar_battle',()=>{G.paused=false;}); });
       }
       return;
     }
@@ -8825,7 +8879,14 @@ function _startBigFire(){
       // ── שאריות שרופות סטטיות ──
       _buildBurntRuins(BX,BZ);
       G.paused=true;
-      setTimeout(()=>showCut('ch6_fire',()=>{
+      // ── סינמטי: המחסן קורס — מצלמה רחבה ← עשן ← עילי ──
+      _playCinema([
+        {cam:[BX+15, 4,  BZ+18],  look:[BX, 2, BZ],    dur:1000, note:'🔥 המעבדה בוערת...'},
+        {cam:[BX-12, 2.5,BZ+12],  look:[BX, 1, BZ],    dur:1200},
+        {cam:[BX,    8,  BZ-20],  look:[BX, 0, BZ],    dur:1100, note:'💔 רקס... לא היה לו סיכוי.'},
+        {cam:[BX,    18, BZ],     look:[BX, 0, BZ],    dur:1400}  // עילי — אפר ועשן
+      ],()=>{
+        showCut('ch6_fire',()=>{
         setTimeout(()=>showCut('ch6_ending',()=>{
           G.paused=false;
           G._gameComplete=false;
@@ -8834,7 +8895,8 @@ function _startBigFire(){
           showN('🏁 פרק ו׳ הסתיים! פרק ז׳ מתחיל...');
           setTimeout(()=>setMission(33),2000);
         }),1500);
-      }),600);
+      });
+      }); // סוף _playCinema callback
     }
   },80);
 }
@@ -11788,19 +11850,39 @@ function updZ18(dt){
       if(b.mesh._eyeRLight)b.mesh._eyeRLight.intensity=0;
       if(b._flameLight){b._flameLight.intensity=0;if(b._flInScene){scene.remove(b._flameLight);b._flInScene=false;}}
       if(b._bigFlameLight){b._bigFlameLight.intensity=0;if(b._bigFlInScene){scene.remove(b._bigFlameLight);b._bigFlInScene=false;}}
-      _hideZ18WeaponMode(); // הסתר מצית + דאודורנט
       sCapture();haptic([120,50,100,30,120]);
       addXP(400);G.score+=3000;G.coins+=200;updCoins();
       for(let i=0;i<16;i++)spawnPfx(
         b.mesh.position.x+(Math.random()-.5)*5,0.5+Math.random()*3,
         b.mesh.position.z+(Math.random()-.5)*5, 0xcc0066,3
       );
+      // ── סינמטי: זיפו שורף את Z-18 עם מצית + דאודורנט ──
       G.paused=true;
-      setTimeout(()=>showCut('ch8_ending',()=>{
-        G.paused=false;
-        setMission(47);
-        showN('🔜 APEX נמשך. פרק ט׳ בקרוב.');
-      }),1000);
+      _showZ18WeaponMode(); // הצג מצית + דאודורנט לסצנת שריפה
+      const bx=b.mesh.position.x, bz=b.mesh.position.z;
+      _playCinema([
+        // שלב 1: wide shot — z-18 שוכב, זיפו ניגש
+        {cam:[bx+6,  3.0, bz+8],  look:[bx, 0.5, bz],   dur:900,  note:'🐾 זיפו מתקרב...'},
+        // שלב 2: מבט אמצע — זיפו פותח מצית
+        {cam:[bx+2,  1.5, bz+4],  look:[bx, 0.8, bz],   dur:1000, note:'🔥 המצית נפתחת...'},
+        // שלב 3: close-up מהצד על האש + הדאודורנט
+        {cam:[bx-1,  1.2, bz+2.5],look:[bx, 0.6, bz],   dur:1200, note:'💨 שרוף. הכל נגמר.'},
+        // שלב 4: אש מתפשטת — מצלמה נסוגה ועולה
+        {cam:[bx,    2.5, bz+6],  look:[bx, 0.5, bz],   dur:1000},
+        // שלב 5: עילי — גוף Z-18 שרוף, זיפו מסתלק
+        {cam:[bx,    7.0, bz+4],  look:[bx, 0.0, bz],   dur:1400, note:'🐾 זיפו: "שום כלב לא ייפגע שוב."'}
+      ],()=>{
+        _hideZ18WeaponMode(); // הסתר אחרי הסצנה
+        // VFX שריפה נוסף
+        for(let i=0;i<20;i++) setTimeout(()=>{
+          spawnPfx(bx+(Math.random()-.5)*4,0.3+Math.random()*2,bz+(Math.random()-.5)*4,0xff4400,4);
+        },Math.random()*600);
+        showCut('ch8_ending',()=>{
+          G.paused=false;
+          setMission(47);
+          showN('🔜 APEX נמשך. פרק ט׳ בקרוב.');
+        });
+      });
     }
   }
   if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
@@ -11953,9 +12035,18 @@ function updCh8(dt){
     const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
     if(insideWH&&!G._ch8WarehouseReached){
       G._ch8WarehouseReached=true;
-      showCut('ch8_warehouse',()=>{
-        showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
-        setTimeout(()=>{if(G.mission===42)setMission(43);},2500);
+      // ── סינמטי: pan איטי על פנים המחסן — לוגו APEX בקיר ──
+      const wx=wPos.x,wz=wPos.z;
+      _playCinema([
+        {cam:[wx-8,  1.5, wz+6],  look:[wx,   1.8, wz],   dur:1200, note:'📦 מחסן APEX...'},
+        {cam:[wx+6,  2.5, wz-2],  look:[wx,   2.0, wz-8], dur:1400},  // scan לעבר הקיר עם הלוגו
+        {cam:[wx,    3.0, wz-10], look:[wx,   2.5, wz-14], dur:1200}, // close-up לוגו APEX
+        {cam:[wx,    5.0, wz],    look:[wx,   0.5, wz],   dur:1000}   // עילי — גלה את המחסן כולו
+      ],()=>{
+        showCut('ch8_warehouse',()=>{
+          showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
+          setTimeout(()=>{if(G.mission===42)setMission(43);},2500);
+        });
       });
     }
   }
@@ -13409,8 +13500,8 @@ function updTelAviv(dt){
     if(dogTail)dogTail.rotation.z=Math.sin(Date.now()*.002)*.1;
   }
   if(_taMoving)PB.rotation.y=Math.atan2(-inputX,-inputZ);
-  // מצלמה
-  if(taCamera){
+  // מצלמה — חסום אם סצנה סינמטית פעילה
+  if(taCamera&&!G._cinemaMode){
     const sz=G.dog==='momo'?.58:1,cd=9,ch=5+G.pitch*7;
     _vCamTarget.set(TA.playerX+Math.sin(G.yaw)*cd,1.1*sz+ch,TA.playerZ+Math.cos(G.yaw)*cd);
     taCamera.position.lerp(_vCamTarget,.1);
@@ -13866,9 +13957,18 @@ function _checkTAMissionTriggers(){
       // סיור APEX ראשון — שלושה חיילים סביב השוק
       [[mp.x+22,mp.z-15],[mp.x-20,mp.z-15],[mp.x+15,mp.z+20]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-      showCut('ch9_tel_aviv_arrive',()=>{
-        G.mission=55;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[55].txt);
-      });
+      // ── סינמטי: drone — קו הים, גגות, ואז נחיתה לשוק ──
+      const bx=0,bz=115; // קו חוף TA
+      _playCinema([
+        {cam:[bx,    22, bz+40],  look:[bx, 0, bz],      dur:1200, note:'🌊 תל אביב... עיר אחרת. עולם אחר.'},
+        {cam:[bx+20, 18, bz+20],  look:[bx, 2, bz-10],   dur:1400}, // סחרור מעל קו הים
+        {cam:[mp.x,  15, mp.z+35],look:[mp.x,1,mp.z],    dur:1200}, // flight לכיוון השוק
+        {cam:[mp.x,   6, mp.z+15],look:[mp.x,0.5,mp.z],  dur:900}   // נחיתה — שוק הכרמל
+      ],()=>{
+        showCut('ch9_tel_aviv_arrive',()=>{
+          G.mission=55;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[55].txt);
+        });
+      }, null, true); // useTA=true
     }
     return;
   }
@@ -13920,15 +14020,25 @@ function _checkTAMissionTriggers(){
       [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
       forceDog('zippo','זיפו מוביל');
-      showCut('ch9_katz_appears',()=>{
-        showCut('ch9_katz_truth',()=>{
-          const ap2=G._taApexBldPos||{x:70,z:-130};
-          [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
-            .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
-          G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
+      // ── סינמטי: מסתובבים מאחורי כץ לפרצופו ──
+      const kp=G._taLabInteriorPos||{x:70,z:-148};
+      _playCinema([
+        {cam:[kp.x+6,  2.0, kp.z+8],  look:[kp.x, 1.7, kp.z],   dur:1000, note:'⚗️ ד"ר כץ...'},
+        {cam:[kp.x+3,  1.8, kp.z+3],  look:[kp.x, 1.7, kp.z],   dur:1000}, // zoom in מאחור
+        {cam:[kp.x-4,  1.9, kp.z+4],  look:[kp.x, 1.7, kp.z],   dur:1200}, // חצי סיבוב — פרצוף מתגלה
+        {cam:[kp.x-7,  2.1, kp.z+2],  look:[kp.x, 1.7, kp.z],   dur:1000}, // מלפנים
+        {cam:[kp.x,    3.5, kp.z+6],  look:[kp.x, 1.5, kp.z],   dur:800}   // wide reveal
+      ],()=>{
+        showCut('ch9_katz_appears',()=>{
+          showCut('ch9_katz_truth',()=>{
+            const ap2=G._taApexBldPos||{x:70,z:-130};
+            [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
+              .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+            showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+            G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
+          });
         });
-      });
+      }, null, true); // useTA=true — taCamera
     }
     return;
   }

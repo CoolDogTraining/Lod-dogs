@@ -2101,35 +2101,28 @@ function updTitan(dt){
       setTimeout(()=>{
         showCut('rex_strange_moment',()=>{});
       },3800);
-      // שלב ב׳: מצלמה סינמטית + רקס מתחיל לקרוס + overlay
+      // שלב ב׳: מצלמה סינמטית + רקס קורס
       setTimeout(()=>{
         G._reksCollapsing=true;
         G._reksCollapseT=0;
-        // ── נעילת מצלמה סינמטית על רקס ──
-        if(camera&&G._reksAlly&&G._reksAlly.mesh&&PB){
-          const reksPos=G._reksAlly.mesh.position;
-          const origCamPos=camera.position.clone();
-          const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1,PB.position.z);
-          // מצלמה: מהצד הנמוך, ברמת הגובה של רקס הקורס
-          const rexCam=new THREE.Vector3(reksPos.x+4, 2.2, reksPos.z+5);
-          const rexLook=new THREE.Vector3(reksPos.x, 0.6, reksPos.z);
-          G._cinemaMode=true;
-          // lerp חד לנקודת הפתיחה
-          let _lT=0;
-          const _lI=setInterval(()=>{
-            _lT+=16;
-            const p=Math.min(_lT/600,1),e=1-Math.pow(1-p,3);
-            camera.position.lerpVectors(origCamPos,rexCam,e);
-            camera.lookAt(new THREE.Vector3().lerpVectors(origLookAt,rexLook,e));
-            if(_lT>=600)clearInterval(_lI);
-          },16);
-          // אחרי ה-cutscene — שחרר מצלמה
-          setTimeout(()=>{ G._cinemaMode=false; },8500);
+        // ── סצנה סינמטית עם _playCinema ──
+        if(G._reksAlly&&G._reksAlly.mesh){
+          const rp=G._reksAlly.mesh.position;
+          _playCinema([
+            {cam:[rp.x+5,3.0,rp.z+6],  look:[rp.x,1.2,rp.z], dur:900},
+            {cam:[rp.x+3,1.8,rp.z+4],  look:[rp.x,0.8,rp.z], dur:1200},
+            {cam:[rp.x+1.5,0.9,rp.z+2],look:[rp.x,0.3,rp.z], dur:1400},
+            {cam:[rp.x-2,2.5,rp.z+3],  look:[rp.x,0.5,rp.z], dur:1200},
+            {cam:[rp.x,6.0,rp.z+2],    look:[rp.x,0.2,rp.z], dur:2000, note:'💔 רקס...'}
+          ],()=>{
+            showCut('rex_heart_attack',()=>{
+              G.mission=24;
+              if(MISSIONS[24])MISSIONS[24].unlock();
+              updateMissionHUD();updateNavArrow();saveGame();
+            });
+          });
         }
       setTimeout(()=>{
-        G._reksCollapsing=true;
-        G._reksCollapseT=0;
-        // הבהובים אדומים בלבד — ללא החשכת מסך
         // הבהובים אדומים
         const fl=document.createElement('div');
         fl.style.cssText='position:fixed;inset:0;background:rgba(200,0,0,0);z-index:8501;pointer-events:none;transition:background 0.15s;';
@@ -2148,14 +2141,7 @@ function updTitan(dt){
         setTimeout(()=>txt.style.opacity='0',3600);
         setTimeout(()=>txt.remove(),4100);
       },4500);
-      // שלב ג׳: cutscene
-      setTimeout(()=>{
-        showCut('rex_heart_attack',()=>{
-          G.mission=24;
-          if(MISSIONS[24])MISSIONS[24].unlock();
-          updateMissionHUD();updateNavArrow();saveGame();
-        });
-      },8500);
+      // שלב ג׳: cutscene — מופעל מתוך _playCinema callback למעלה
       },1500+4000); // סגירת setTimeout שלב ב׳ — נדחה כדי לפנות מקום לרגע המוזר
     }
   }
