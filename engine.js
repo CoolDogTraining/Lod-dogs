@@ -4941,7 +4941,7 @@ function loop(){
   if(document.hidden) return;
   if(VILLA.inVilla){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updVilla(dt);
-    updPfx(dt);
+    updPfx(dt);_updLightBudget(dt,mosqueScene);
     updateNavDirection();
     if(mosqueCamera)renderer.render(mosqueScene,mosqueCamera);
     updHUD();
@@ -4949,7 +4949,7 @@ function loop(){
   }
   if(LAB.inLab){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updLab(dt);
-    updPfx(dt);
+    updPfx(dt);_updLightBudget(dt,labScene);
     updateNavDirection();
     if(labCamera)renderer.render(labScene,labCamera);
     updHUD();
@@ -4957,14 +4957,14 @@ function loop(){
   }
   if(HOSP.inHosp){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updHosp(dt);
-    updPfx(dt);
+    updPfx(dt);_updLightBudget(dt,hospScene);
     updateNavDirection();
     if(hospCamera)renderer.render(hospScene,hospCamera);
     updHUD();
     return;
   }
   if(CITY.inCity){
-    updCityHall(dt);updPfx(dt);
+    updCityHall(dt);updPfx(dt);_updLightBudget(dt,cityScene);
     updateNavDirection();
     if(cityCamera)renderer.render(cityScene,cityCamera);
     updHUD();
@@ -4975,7 +4975,7 @@ function loop(){
     G.dayTime=(G.dayTime+dt/600)%1;
     // כבה גשם לוד אם פעיל
     if(G.rainOn){G.rainOn=false;const rov=document.getElementById('rain-ov');if(rov)rov.style.opacity='0';setRainVolume(0);if(_rainPoints)_rainPoints.visible=false;}
-    updTelAviv(dt);updPfx(dt);
+    updTelAviv(dt);updPfx(dt);_updLightBudget(dt,taScene);
     updateNavDirection();
     drawMM();
     if(taCamera)renderer.render(taScene,taCamera);
@@ -5362,17 +5362,19 @@ function _initLODStatics(){
 // (שורש הבאג: "shader error... uniforms count exceeds" + WebGL context lost
 //  בקרב Z-18 — יותר מדי אורות פעילים בו-זמנית קרוב לבסיס)
 // ════════════════════════════════════════════════
-const MAX_ACTIVE_LIGHTS=14;
+const MAX_ACTIVE_LIGHTS=isMob?10:14;
 let _lightBudgetT=0;
 const _lbVec=new THREE.Vector3();
-function _updLightBudget(dt){
+function _updLightBudget(dt,targetScene){
   _lightBudgetT+=dt;
   if(_lightBudgetT<0.4)return; // throttle — 2.5 בדיקות לשנייה מספיק
   _lightBudgetT=0;
   if(!PB)return;
+  const sc=targetScene||scene;
+  if(!sc)return;
   const px=PB.position.x,pz=PB.position.z;
   const lights=[];
-  scene.traverse(o=>{if(o.isPointLight)lights.push(o);});
+  sc.traverse(o=>{if(o.isPointLight)lights.push(o);});
   if(lights.length<=MAX_ACTIVE_LIGHTS)return;
   lights.forEach(l=>{
     l.getWorldPosition(_lbVec);
@@ -5415,6 +5417,8 @@ function _updLOD(){
 
   // ── כל 45 frames (~0.75s): shadow culling ──
   if(_lodFrame%45!==0)return;
+  // ── תיקון קריטי: _initLODStatics הייתה מוגדרת אך לעולם לא נקראה — shadow culling לא פעל אף פעם ──
+  if(!_lodStaticObjs)_initLODStatics();
   if(!_lodShadowObjs)return;
 
   _lodShadowObjs.forEach(obj=>{
@@ -5934,7 +5938,15 @@ function updEnemies(dt){
   if(G.mission>=3&&!VILLA.inVilla){
     G.enemies.forEach(e=>{
       if(e.hp<=0||!e.mesh.visible)return;
-      // LOD disabled
+      // ── LOD: אויבים רחוקים מתעדכנים בתדירות נמוכה יותר (מחושב ב-_updLOD) ──
+      // לעולם לא מדלגים על אויב שכבר ב-chase/search — רק patrol רחוק
+      let edt=dt;
+      if(e._lodSkip>1&&e.state==='patrol'){
+        if(!e._lodCounter)e._lodCounter=0;
+        e._lodCounter++;
+        if(e._lodCounter%e._lodSkip!==0)return;
+        edt=dt*e._lodSkip; // השלם את הזמן שדולג כדי שהאנימציה לא תיראה מואטת
+      }
       const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
       const sees=canSeePlayer(e,px,pz)||dd<6;
       // מעברי state
@@ -5974,12 +5986,12 @@ function updEnemies(dt){
         // סוף חיפוש
         if(e.state==='search'){e.searchT-=dt;if(e.searchT<=0){e.state='patrol';e.patT=0;}}
       } else {
-        // סיור — תנועה אקראית
-        e.patT-=dt;
+        // סיור — תנועה אקראית (edt מפצה על דילוג frames כשרחוק)
+        e.patT-=edt;
         if(e.patT<=0){e.patAng=Math.random()*Math.PI*2;e.patT=2+Math.random()*3;}
         const patX=e.homeX+Math.sin(e.patAng)*9,patZ=e.homeZ+Math.cos(e.patAng)*9;
         const dx=patX-e.mesh.position.x,dz=patZ-e.mesh.position.z,l=Math.sqrt(dx*dx+dz*dz)||1;
-        if(l>1.5){e.mesh.position.x+=dx/l*(e.spd*.3)*dt;e.mesh.position.z+=dz/l*(e.spd*.3)*dt;
+        if(l>1.5){e.mesh.position.x+=dx/l*(e.spd*.3)*edt;e.mesh.position.z+=dz/l*(e.spd*.3)*edt;
           e.mesh.rotation.y+=(Math.atan2(dx,dz)-e.mesh.rotation.y)*.08;} // סיבוב חלק
       }
       if(e.bar){e.bar.scale.x=Math.max(0,e.hp/e.mhp);e.bar.material.color.setHex(e.state==='chase'?0xff4400:e.hp/e.mhp>.5?0xe74c3c:0xffff00);}
@@ -12607,9 +12619,9 @@ function buildTelAvivScene(){
   const amb=new THREE.AmbientLight(0xfff8f0,1.7);taScene.add(amb);
   const sun=new THREE.DirectionalLight(0xfffbe8,2.5);
   sun.position.set(90,160,70);sun.castShadow=true;
-  sun.shadow.mapSize.set(2048,2048);
-  sun.shadow.camera.left=-320;sun.shadow.camera.right=320;
-  sun.shadow.camera.top=320;sun.shadow.camera.bottom=-320;
+  sun.shadow.mapSize.set(isMob?1024:2048,isMob?1024:2048); // תוקן: היה קבוע 2048 גם בנייד — כבד מדי
+  sun.shadow.camera.left=-260;sun.shadow.camera.right=260;
+  sun.shadow.camera.top=260;sun.shadow.camera.bottom=-260;
   sun.shadow.camera.far=700;sun.shadow.bias=-0.0002;
   taScene.add(sun);
   const hemi=new THREE.HemisphereLight(0xadd4f0,0x5a7848,0.85);taScene.add(hemi);

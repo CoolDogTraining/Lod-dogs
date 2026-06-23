@@ -718,11 +718,25 @@ function updHumanNPCs(dt){
   const t=Date.now()*.001;
   const isRaining=G.rainOn;
   const isNight=G.dayTime>0.72||G.dayTime<0.27;
+  const _dtBase=dt; // שמירת ה-dt המקורי לפני shadow מקומי בתוך הלולאה
 
   G.humanNPCs.forEach((n,i)=>{
     const shouldBeVisible=!isNight||(i%4===0);
     n.mesh.visible=shouldBeVisible;
     if(!shouldBeVisible) return;
+
+    // ── LOD: NPC רחוק מהשחקן מתעדכן בתדירות מופחתת (state-machine מלא מדלג) ──
+    // dt מוצנע (shadow) מקומית כדי שזמן שדולג יושלם בפעימה הבאה, בלי לשנות 100+ שורות בהמשך
+    let dt=_dtBase;
+    if(!n._smoker){
+      const farD2=d2(n.x,n.z,PB.position.x,PB.position.z);
+      if(farD2>8100){ // >90 יחידות
+        if(!n._farCounter)n._farCounter=0;
+        n._farCounter++;
+        if(n._farCounter%4!==0)return; // 1/4 מהפריימים בלבד — עדיין "חי" אבל הרבה יותר זול
+        dt=dt*4; // השלמת הזמן שדולג כדי שהתנועה לא תיראה מואטת מרחוק
+      }
+    }
 
     // ── מעשן יושב קבוע — יד לפה, עשן מהסיגריה ומהפה ──
     if(n._smoker){
