@@ -327,7 +327,7 @@ function init(){
   // אפס מערכי state כדי שלא ישתכפלו
   G.enemies=[];G.bosses=[];G.pickups=[];G.npcs=[];G.particles=[];
   G.terrs=[];G.terrCnt=0;G.guardDogs=[];G.cityHallGuards=[];
-  G._fishkaEnemy=null;G.bruno=null;G.palto=null;G.reks=null;
+  G._fishkaEnemy=null;G.bruno=null;G.palto=null;G.reks=null;G._reksChoiceShown=false;
   G._reksAlly=null;G._titanEnemy=null;G._titanScoutsSpawned=false;G._ch5ScoutsDone=false;
   G._poolCutPlaying=false;G._reksJoinCutPlaying=false;G._titanWarnShown=false;
 
@@ -5188,7 +5188,7 @@ function doAtk(){
       }
     });
     // בוס TA
-    if(G._taBossMgr&&!G._taBossMgr.dead){
+    if(G._taBossMgr&&!G._taBossMgr.dead&&G._taBossMgr.mesh){
       const b=G._taBossMgr;
       const bd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
       if(bd<4.5){
@@ -6585,6 +6585,11 @@ function showN(t){
 }
 function _processNotifQueue(){
   if(!_notifQueue.length){_notifActive=false;return;}
+  // ── עדיפות לסצנות סינמטיות: בזמן שהמצלמה ננעלת על cutscene, לא מציגים הודעות שמסיחות ──
+  if(G._cinemaMode||G.cutOpen){
+    setTimeout(_processNotifQueue,300);
+    return;
+  }
   _notifActive=true;
   const t=_notifQueue.shift();
   const el=document.getElementById('notif');
@@ -6829,7 +6834,8 @@ function spawnGuardDogs(){
   // מפקד רקס — בכניסה הראשית של הכיכר
   const rm=mkCommander(.85);rm.position.set(40,-0,-18);scene.add(rm);
   const rind=new THREE.Mesh(new THREE.SphereGeometry(.32,7,7),new THREE.MeshLambertMaterial({color:0xddaa33,emissive:0x332200}));rind.position.set(0,2.7,0);rm.add(rind);
-  G.reks={mesh:rm,ind:rind,x:40,z:-18,hp:200,mhp:200,hostile:false,turned:false};
+  const rbar=hpBar(rm,1.5,2.5);
+  G.reks={mesh:rm,ind:rind,bar:rbar,x:40,z:-18,hp:200,mhp:200,hostile:false,turned:false};
   showN('🚨 כלבי ביטחון עירוניים הגיעו! המפקד רקס מוביל אותם.');
 }
 
@@ -8102,8 +8108,70 @@ function updCh3Entities(dt){
     return;
   }
 
-  // כלבי ביטחון — הימנעות או קרב (mission 15+)
-  if(G.mission>=15&&G.mission<=18){
+  // ══ מפקד רקס — קרב עם רגש, לא עד המוות (mission 14-17) ══
+  if(G.mission>=14&&G.mission<=17&&G.reks&&!G.reks.resolved){
+    const rk=G.reks;
+    if(rk.resolveHp===undefined){rk.resolveHp=200;rk.resolveMax=200;rk._emoShown={};}
+    const dd=d2(rk.x,rk.z,px,pz);
+    // תנועה — מתקרב לשחקן אם רואה אותו, אחרת פטרול קצר סביב הנקודה שלו
+    if(!rk._spawnX){rk._spawnX=rk.x;rk._spawnZ=rk.z;}
+    if(dd<14){
+      const ang=Math.atan2(px-rk.x,pz-rk.z);
+      if(dd>2.0){
+        rk.x+=Math.sin(ang)*2.6*dt;
+        rk.z+=Math.cos(ang)*2.6*dt;
+        rk.mesh.position.set(rk.x,0,rk.z);
+      }
+      rk.mesh.rotation.y=ang;
+    } else {
+      rk.mesh.rotation.y+=dt*.3;
+    }
+    // תקיפה
+    if(!rk._atkT)rk._atkT=0;
+    rk._atkT=Math.max(0,rk._atkT-dt);
+    if(dd<2.6&&rk._atkT<=0){
+      dmgPlayer(20);rk._atkT=1.6;haptic([30,15,30]);
+    }
+    // השחקן תוקף — פוגע במד ההכנעה, לא ב-hp רגיל. רקס לא מת.
+    if(!rk._hitT)rk._hitT=0;
+    rk._hitT=Math.max(0,rk._hitT-dt);
+    if(dd<3.2&&G._atkFrame&&rk._hitT<=0){
+      const dmg=dog.pow*8;
+      rk.resolveHp=Math.max(0,rk.resolveHp-dmg);
+      rk._hitT=.45;
+      haptic(18);spawnBlood(rk.x,1.3,rk.z,6);showDmg(rk.x,1.3,rk.z,Math.round(dmg));G.atkCD=.55;
+      flash(rk.mesh.children[0]);
+      if(rk.bar)rk.bar.scale.x=Math.max(0,rk.resolveHp/rk.resolveMax);
+      // ── רגעי רגש בדרך — רקס נשבר לאט, לא נמחק ──
+      const pct=rk.resolveHp/rk.resolveMax;
+      if(pct<=.6&&!rk._emoShown.p60){
+        rk._emoShown.p60=true;
+        showN('🫡 רקס: "אני... מצווה. זה התפקיד שלי."');
+      } else if(pct<=.3&&!rk._emoShown.p30){
+        rk._emoShown.p30=true;
+        showN('🫡 רקס (מתנשם): "למה אתם לא עוצרים..? אני לא רוצה—"');
+      }
+      if(rk.resolveHp<=0&&!rk.resolved){
+        rk.resolved=true;
+        rk._atkT=999;
+        // רקס קורס לברכיים — לא מת, לא נעלם
+        rk.mesh.rotation.x=0.25;
+        showN('🫡 רקס נשבר על הברכיים. הוא לא קם.');
+        haptic([60,30,60,30,80]);
+        setTimeout(()=>{
+          if(G._reksChoiceShown)return;
+          G._reksChoiceShown=true;
+          showCut('reks_choice',()=>{
+            // אחרי הבחירה — רקס יוצא מהדרך, לא עוין יותר
+            if(rk.mesh)rk.mesh.visible=false;
+          });
+        },900);
+      }
+    }
+  }
+
+  // כלבי ביטחון — הימנעות או קרב (mission 14+ — נוצרים ב-14, חייבים לזוז כבר אז)
+  if(G.mission>=14&&G.mission<=18){
     G.guardDogs.forEach(gd=>{
       if(gd.hp<=0)return;
       // פטרול בסיסי
@@ -11924,9 +11992,9 @@ function updCh8(dt){
   // ── Mission 45: קרב בבסיס ללא זיפו + grab מומו ──
   if(G.mission===45){
     if(!G._ch8Wave1Done){
-      // ספון גל חיילי APEX שתוקפים את הבסיס
-      forceDog('colin','קולין ומומו מגנים על הבסיס');
       if(!G._ch8WaveSpawned){
+        // ── תיקון: forceDog נקרא פעם אחת בלבד, לא בכל פריים — אחרת ה-showN נספם שוב ושוב ──
+        forceDog('colin','קולין ומומו מגנים על הבסיס');
         G._ch8WaveSpawned=true;
         // אויבים תוקפים מכל כיוון אל הבסיס
         [[95,40],[115,40],[100,8],[110,8],[88,25],[122,25]].forEach(([sx,sz])=>{
@@ -13275,6 +13343,7 @@ function exitTelAviv(){
       if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}
     });
     taObjects.length=0;taEnemies.length=0;_taBldList.length=0;_taLamps.length=0;_taLampPool.length=0;_taZoneGroups.length=0;_taNPCList.length=0;_taCarList.length=0;
+    G._taBossMgr=null; // ── תיקון קריטי: בלי זה, ה-mesh הישן (disposed) נשאר מקושר וגורם ל-TypeError + טקסטורות שחורות בכניסה הבאה ──
     taScene=null;taCamera=null;
     _taRoadTex=null;_taSidewalkTex=null;_taWallTex=null;_taRoofTex=null;
     G.paused=false;fadeIn();
@@ -13965,7 +14034,7 @@ function _updTAEnemies(dt){
 
   });
   // עדכן בוס
-  if(G._taBossMgr&&!G._taBossMgr.dead){
+  if(G._taBossMgr&&!G._taBossMgr.dead&&G._taBossMgr.mesh){
     const b=G._taBossMgr;
     if(b.hp<=0){b.dead=true;if(b.mesh)b.mesh.visible=false;sBark();addXP(200);G.coins+=100;updCoins();}
     else{

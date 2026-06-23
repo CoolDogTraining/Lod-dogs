@@ -161,8 +161,8 @@ canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(
 #map-recenter{font-size:14px;width:auto;padding:0 12px;}
 #map-close{position:absolute;top:18px;right:18px;background:#f5c518;color:#000;border:none;border-radius:8px;padding:8px 18px;font-size:15px;font-weight:bold;cursor:pointer;}
 
-/* notif */
-#notif{position:absolute;top:36%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.94);border:2px solid #f5c518;border-radius:12px;padding:12px 20px;color:#f5c518;font-size:clamp(12px,3.2vw,16px);font-weight:bold;text-align:center;display:none;max-width:85vw;z-index:50;line-height:1.6;}
+/* notif — הוזז מהמרכז (חסם שדה ראייה בקרבות) לפינה עליונה, קטן יותר ולא חוסם gameplay */
+#notif{position:absolute;top:96px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.88);border:2px solid #f5c518;border-radius:10px;padding:7px 16px;color:#f5c518;font-size:clamp(11px,2.6vw,14px);font-weight:bold;text-align:center;display:none;max-width:70vw;z-index:50;line-height:1.4;pointer-events:none;}
 #xpp{position:absolute;top:28%;left:50%;transform:translate(-50%,-50%);color:#3498db;font-size:clamp(14px,4vw,20px);font-weight:bold;display:none;z-index:51;text-shadow:0 0 10px #3498db;}
 @keyframes floatUp{0%{opacity:1;transform:translate(-50%,-50%) scale(1.3);}100%{opacity:0;transform:translate(-50%,-160%) scale(.9);}}
 #ip{position:absolute;bottom:clamp(145px,25vw,190px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,.9);border:1px solid #2ecc71;border-radius:8px;padding:6px 12px;color:#2ecc71;font-size:12px;display:none;white-space:nowrap;}
