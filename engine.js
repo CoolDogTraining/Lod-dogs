@@ -6156,11 +6156,11 @@ function cacheHUD(){
 //   useTA: האם להשתמש ב-taCamera (פרק ט׳ תל אביב)
 // ══════════════════════════════════════════════════════════════
 function _playCinema(steps, onDone, useTA){
+  // ── director: סינמה תמיד ראשונה. דוחפת בעדינות כל cut/dlg פתוח לתור ──
+  _cinemaInterrupt();
+  _director.active='cinema';
   G._cinemaMode=true;
   G.paused=true;
-  // סגור כל dialog/notif פתוח
-  const dlgEl=document.getElementById('dialogBox')||document.getElementById('cutscene');
-  if(dlgEl)dlgEl.style.display='none';
   G.cutOpen=false; G.dlgOpen=false;
   const cam=useTA?taCamera:camera;
   let i=0;
@@ -6168,11 +6168,13 @@ function _playCinema(steps, onDone, useTA){
     if(i>=steps.length){
       G._cinemaMode=false;
       G.paused=false;
+      _director.active=null;
       if(onDone)onDone();
+      _cinemaResume(); // יש cut/dlg שנדחק קודם? תציג אותו עכשיו
       return;
     }
     const s=steps[i++];
-    if(s.note)showN(s.note);
+    if(s.note)showN(s.note,true); // force — הערת הסינמה עצמה, לא חסומה ע"י הסינמה
     const target=new THREE.Vector3(...s.cam);
     const lookPt=new THREE.Vector3(...s.look);
     const dur=s.dur||1800;
@@ -6638,21 +6640,23 @@ function drawBigMap(){
 let NT=null;
 let _notifQueue=[];
 let _notifActive=false;
-function showN(t){
-  _notifQueue.push(t);
+function showN(t,force){
+  _notifQueue.push({t,force:!!force});
   if(!_notifActive) _processNotifQueue();
 }
 function _processNotifQueue(){
   if(!_notifQueue.length){_notifActive=false;return;}
-  // ── עדיפות לסצנות סינמטיות: בזמן שהמצלמה ננעלת, לא מציגים הודעות שמסיחות ──
-  if(G._cinemaMode||G.cutOpen||G._grabPaused){
+  const next=_notifQueue[0];
+  // ── עדיפות לסצנות סינמטיות/קאטסינים: דוחים הודעות רגילות, אבל מציגים
+  //    הערות שמגיעות מתוך הסינמה עצמה (force=true, למשל s.note ב-_playCinema) ──
+  if(!next.force&&(_director.active==='cinema'||_director.active==='cut'||G._grabPaused)){
     setTimeout(_processNotifQueue,400);
     return;
   }
+  _notifQueue.shift();
   _notifActive=true;
-  const t=_notifQueue.shift();
   const el=document.getElementById('notif');
-  el.textContent=t;
+  el.textContent=next.t;
   el.style.display='block';
   el.style.animation='none';
   void el.offsetWidth; // force reflow לאנימציה
@@ -8297,31 +8301,29 @@ function updCh3Entities(dt){
     if(dd<4){
       const bellaX=G._bellaMarker.x, bellaZ=G._bellaMarker.z;
       G._bellaMarker=null;
-      // ── מצלמה סינמטית — מסתכלת למטה על מקום בלה ──
+      // ── מצלמה סינמטית — מסתכלת למטה על מקום בלה (עבר ל-_playCinema לתיאום עם director) ──
       if(camera&&PB){
-        const origCamPos=camera.position.clone();
-        const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1,PB.position.z);
-        const bellaCam=new THREE.Vector3(bellaX+3.5, 3.5, bellaZ+5);
-        const bellaLook=new THREE.Vector3(bellaX, 0.3, bellaZ);
-        G._cinemaMode=true;
-        let _lT=0;
-        const _lI=setInterval(()=>{
-          _lT+=16;
-          const p=Math.min(_lT/500,1),e=1-Math.pow(1-p,3);
-          camera.position.lerpVectors(origCamPos,bellaCam,e);
-          camera.lookAt(new THREE.Vector3().lerpVectors(origLookAt,bellaLook,e));
-          if(_lT>=500)clearInterval(_lI);
-        },16);
-        setTimeout(()=>{ G._cinemaMode=false; },4000);
+        const bellaCam=[bellaX+3.5, 3.5, bellaZ+5];
+        const bellaLook=[bellaX, 0.3, bellaZ];
+        _playCinema([{cam:bellaCam,look:bellaLook,dur:500}],()=>{
+          showCut('bella_dead',()=>{
+            // מיד בסיום הדיאלוג — מחליפים לזיפו ופישקה מתחילה לרוץ לכיכר
+            G.dog='zippo';
+            document.getElementById('hdn').textContent=G.dogs['zippo'].name;
+            const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
+            spawnFishkaHostile(); // פישקה כבר רצה לכיכר בזמן ה-fishka_reveal
+            setMission(13);
+          });
+        });
+      } else {
+        showCut('bella_dead',()=>{
+          G.dog='zippo';
+          document.getElementById('hdn').textContent=G.dogs['zippo'].name;
+          const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
+          spawnFishkaHostile();
+          setMission(13);
+        });
       }
-      setTimeout(()=>showCut('bella_dead',()=>{
-        // מיד בסיום הדיאלוג — מחליפים לזיפו ופישקה מתחילה לרוץ לכיכר
-        G.dog='zippo';
-        document.getElementById('hdn').textContent=G.dogs['zippo'].name;
-        const pos=PB.position.clone();buildPlayer();PB.position.copy(pos);
-        spawnFishkaHostile(); // פישקה כבר רצה לכיכר בזמן ה-fishka_reveal
-        setMission(13);
-      }),300);
     }
   }
 
@@ -8940,7 +8942,7 @@ function updCh6(dt){
   if(G.mission===27&&!G._ch6PortVisited){
     if(d2(px,pz,25,-125)<8){
       G._ch6PortVisited=true;
-      showCut('ch6_momo_trusts',()=>showCut('ch6_shadow_zippo',()=>setMission(28)));
+      showCut(['ch6_momo_trusts','ch6_shadow_zippo'],()=>setMission(28));
     }
   }
 
@@ -11320,6 +11322,8 @@ function _triggerZ18GrabScene(){
   const origLookAt=new THREE.Vector3(PB.position.x,PB.position.y+1.2,PB.position.z);
 
   // עצור updCamera — שלטון מלא על המצלמה
+  _cinemaInterrupt(); // דוחף בעדינות כל cut/dlg פתוח, כדי שלא יתנגש עם הסצנה הזו
+  _director.active='cinema';
   G._cinemaMode=true;
   G.paused=true;
 
@@ -11350,7 +11354,7 @@ function _triggerZ18GrabScene(){
   // -- שלב ב (600ms): אחיזה + מומו מורמת --
   setTimeout(()=>{
     haptic([120,30,80,30,60]);
-    showN('😱 Z-18 פרץ לבסיס! מומו!!');
+    showN('😱 Z-18 פרץ לבסיס! מומו!!',true);
     _camPhase=1; // zoom in
 
     let _lT=0;
@@ -11376,7 +11380,7 @@ function _triggerZ18GrabScene(){
       spawnPfx(SCENE_X-0.5+(Math.random()-.5)*2.5, 1.5+Math.random()*2,
         SCENE_Z+1+(Math.random()-.5)*2, 0xff0066, 3);
     haptic([60,20,100,20,60]);
-    showN('💔 מומו: "זיפו—!"');
+    showN('💔 מומו: "זיפו—!"',true);
     for(let i=0;i<8;i++){
       const ang=i/8*Math.PI*2;
       spawnPfx(SCENE_X-0.5+Math.cos(ang)*2, 2.2,
@@ -11387,7 +11391,7 @@ function _triggerZ18GrabScene(){
   // -- שלב ד (2500ms): Z18 נסוג --
   setTimeout(()=>{
     haptic([40,20,80]);
-    showN('⚠️ Z-18 נסוג לאזור APEX עם מומו!');
+    showN('⚠️ Z-18 נסוג לאזור APEX עם מומו!',true);
     let _rT=0;
     const _rI=setInterval(()=>{
       _rT+=16;
@@ -11415,9 +11419,11 @@ function _triggerZ18GrabScene(){
         scene.remove(grabLight);scene.remove(fillL);
         G._cinemaMode=false; // שחרר שליטת מצלמה
         G.paused=false;
+        _director.active=null;
         showCut('ch8_zippo_returns',()=>{
           setMission(46);buildZ18();_lodStaticObjs=null;_lodShadowObjs=null;
         });
+        _cinemaResume(); // יש cut/dlg שנדחק קודם? יוצג כשהקאטסין הזה ייסגר
       }
     },16);
   },3300);
@@ -12068,7 +12074,7 @@ function updCh8(dt){
     const dist=d2(px,pz,105,25);
     if(dist<10&&!G._ch8HomeReached){
       G._ch8HomeReached=true;
-      showCut('ch8_they_know',()=>showCut('ch8_z18_help',()=>setMission(44)));
+      showCut(['ch8_they_know','ch8_z18_help'],()=>setMission(44));
     }
   }
 
@@ -14041,14 +14047,12 @@ function _checkTAMissionTriggers(){
         {cam:[kp.x-7,  2.1, kp.z+2],  look:[kp.x, 1.7, kp.z],   dur:1000}, // מלפנים
         {cam:[kp.x,    3.5, kp.z+6],  look:[kp.x, 1.5, kp.z],   dur:800}   // wide reveal
       ],()=>{
-        showCut('ch9_katz_appears',()=>{
-          showCut('ch9_katz_truth',()=>{
-            const ap2=G._taApexBldPos||{x:70,z:-130};
-            [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
-              .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-            showN('⚔️ APEX רץ לנמל! עצרו אותם!');
-            G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
-          });
+        showCut(['ch9_katz_appears','ch9_katz_truth'],()=>{
+          const ap2=G._taApexBldPos||{x:70,z:-130};
+          [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
+            .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
+          G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
         });
       }, null, true); // useTA=true — taCamera
     }

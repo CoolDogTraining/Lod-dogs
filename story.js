@@ -121,20 +121,64 @@ const CUTS={
   ch9_ending:{ch:'פרק ט׳ — אחרי',ti:'🌊 ליד הים',tx:'הם ישבו על קיר הנמל.\nהים. שמש. גלים שלא שואלים כלום.\n\nמומו: "הוא ידע שהם יהרגו אותו."\nקולין: "כן."\nמומו: "למה?"\n\nזיפו הביט על הגלים.\nזיפו: "כי הוא רצה לסגור משהו. לפני הסוף."\n\nהוא הוציא מהכיס דף — הדף שכץ נתן לו בשקט, לפני הכיכר.\nשם. כתובת. בתל אביב.\n\nזיפו: "הוא אמר שזה איפה שאני מגיע. המקור שלי."\nמומו: "הולכים?"\n\nזיפו קם. הביט על העיר.\n\nזיפו: "אחרי שנסיים עם APEX.\nקודם — נגמור מה שהתחלנו."\n\n🔜 פרק ט׳ הסתיים. האדריכל מחכה.'}
 
 };
-let cutCb=null;
-function showCut(k,cb){
+
+// ════════════════════════════════════════════════
+// DIRECTOR — תור-עדיפויות מרכזי לכל מה שמוצג על המסך
+// ────────────────────────────────────────────────
+// 3 רמות, מהגבוהה לנמוכה:
+//   'cinema' — _playCinema (תזוזת מצלמה). תמיד זוכה ראשון. אם cut/dlg
+//              פתוחים כשהיא מתחילה, הם נדחפים בעדינות לתור וחוזרים בסיומה.
+//   'cut'    — קאטסין/דיאלוג נרטיבי (showCut + openDlg, אותה רמה — תור FIFO
+//              ביניהם כדי שלא ידרסו זה את זה).
+//   'notif'  — showN. מוצג רק אם אין cinema/cut פעילים.
+//
+// כל הפונקציות הציבוריות (showCut, openDlg, _playCinema, showN) שומרות על
+// אותה חתימה חיצונית בדיוק — שום קריאה קיימת בקוד לא צריכה להשתנות.
+// ════════════════════════════════════════════════
+const _director={
+  active:null,        // 'cinema' | 'cut' | null  (notif לא תופס 'active' — הוא תמיד דוחה לעצמו)
+  cutQueue:[],         // תור בקשות ברמת cut: {type:'cut'|'dlg', ...payload, onDone}
+  pendingCut:null,     // ה-cut/dlg שהיה מוצג ונדחף בחזרה כש-cinema התחיל (snapshot להחזרה)
+};
+
+function _directorTryNext(){
+  if(_director.active)return; // מישהו כבר על המסך
+  if(!_director.cutQueue.length)return;
+  const item=_director.cutQueue.shift();
+  if(item.type==='cut')_renderCut(item);
+  else _renderDlg(item);
+}
+
+// ── showCut: מקבל key בודד או מערך מפתחות (שרשור פשוט בלי קינון callbacks) ──
+function showCut(keys,onDone){
+  const list=Array.isArray(keys)?keys.slice():[keys];
+  const item={type:'cut',keys:list,onDone:onDone||null};
+  if(_director.active==='cinema'){
+    // סינמה פעילה — לא מציגים כלום, נכנס לתור ויוצג בסיומה
+    _director.cutQueue.push(item);
+    return;
+  }
+  if(_director.active==='cut'){
+    // קאטסין אחר כבר מוצג — תור FIFO, לא דורסים
+    _director.cutQueue.push(item);
+    return;
+  }
+  _renderCut(item);
+}
+
+function _renderCut(item){
+  _director.active='cut';
+  const k=item.keys[0];
   const c=CUTS[k];
   document.getElementById('cut-ch').textContent=c.ch;
   document.getElementById('cut-ti').textContent=c.ti;
   document.getElementById('cut-tx').textContent='';
   document.getElementById('cut').style.display='flex';
-  // דמות
   const portrait=_CUT_PORTRAITS[k]||'🐕';
   const portEl=document.getElementById('cut-portrait');
   if(portEl)portEl.textContent=portrait;
-  cutCb=cb||null;G.paused=true;G.cutOpen=true;
+  G.paused=true;G.cutOpen=true;
   document.getElementById('mm-wrap').style.display='none';
-  // Typewriter
   _currentCutTx=c.tx;_currentCutDone=false;
   if(_cutTypeInterval)clearInterval(_cutTypeInterval);
   const txEl=document.getElementById('cut-tx');
@@ -143,37 +187,95 @@ function showCut(k,cb){
     if(idx<_currentCutTx.length){txEl.textContent+=_currentCutTx[idx];idx++;}
     else{clearInterval(_cutTypeInterval);_cutTypeInterval=null;_currentCutDone=true;}
   },18);
+  // שמור את שאר המפתחות (אם showCut נקרא עם מערך) לקריאה הבאה ל-closeCut
+  item._remaining=item.keys.slice(1);
+  _director._currentCutItem=item;
 }
+
 function closeCut(){
   // אם הטייפרייטר עדיין רץ — לחיצה ראשונה מסיימת אותו
   if(_cutTypeInterval&&!_currentCutDone){skipTypewriter();return;}
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
-  document.getElementById('cut').style.display='none';G.paused=false;G.cutOpen=false;document.getElementById('mm-wrap').style.display='block';
-  // ── תיקון קריטי: אם cutCb פותח showCut נוסף (שרשרת קאטסינים), השורה הבאה
-  // לא תקבע cutCb=null על ה-callback הישן — היא תאפס את החדש שנקבע בתוך cutCb() ──
-  const _cb=cutCb;cutCb=null;if(_cb)_cb();
+  const item=_director._currentCutItem;
+  _director._currentCutItem=null;
+  // עוד מפתחות בשרשור הזה? הצג את הבא בלי לעבור דרך התור (אותה "בקשה" לוגית)
+  if(item&&item._remaining&&item._remaining.length){
+    const next={type:'cut',keys:item._remaining,onDone:item.onDone};
+    _renderCut(next);
+    return;
+  }
+  document.getElementById('cut').style.display='none';
+  G.paused=false;G.cutOpen=false;
+  document.getElementById('mm-wrap').style.display='block';
+  _director.active=null;
+  if(item&&item.onDone)item.onDone();
+  _directorTryNext(); // יש עוד בתור? תציג את הבא
 }
+
+// ── openDlg: דיאלוג עם בחירות, אותה רמת עדיפות כמו cut ──
 function openDlg(av,sp,tx,choices){
+  const item={type:'dlg',av,sp,tx,choices};
+  if(_director.active==='cinema'||_director.active==='cut'){
+    _director.cutQueue.push(item);
+    return;
+  }
+  _renderDlg(item);
+}
+
+function _renderDlg(item){
+  _director.active='cut'; // אותה רמת עדיפות כמו קאטסין
   G.dlgOpen=true;
   document.getElementById('mm-wrap').style.display='none';
   document.getElementById('dlg-ov').style.display='flex';
-  document.getElementById('dlg-av').textContent=av+' ';
-  document.getElementById('dlg-spn').textContent=sp;
-  document.getElementById('dlg-tx').textContent=tx;
+  document.getElementById('dlg-av').textContent=item.av+' ';
+  document.getElementById('dlg-spn').textContent=item.sp;
+  document.getElementById('dlg-tx').textContent=item.tx;
   const ch=document.getElementById('dlg-ch');
   ch.innerHTML='';
-  choices.forEach(c=>{
+  item.choices.forEach(c=>{
     const b=document.createElement('div');
     b.className='dc';
     b.textContent=c.t;
-    // תיקון באג: click + touchstart גורמים לפונקציה להיקרא פעמיים במובייל
-    // השתמש רק באחד מהם לפי סוג המכשיר
     const evtType = isMob ? 'touchstart' : 'click';
     b.addEventListener(evtType, e => { e.preventDefault(); c.fn(e); });
     ch.appendChild(b);
   });
 }
-function closeDlg(){G.dlgOpen=false;document.getElementById('mm-wrap').style.display='block';document.getElementById('dlg-ov').style.display='none';}
+
+function closeDlg(){
+  G.dlgOpen=false;
+  document.getElementById('mm-wrap').style.display='block';
+  document.getElementById('dlg-ov').style.display='none';
+  _director.active=null;
+  _directorTryNext();
+}
+
+// ── _cinemaInterrupt: קוראת לה _playCinema לפני שהיא מתחילה ──
+// סוגרת בעדינות כל cut/dlg פתוח כרגע (בלי להריץ onDone!) ומחזירה אותו לראש
+// התור כדי שיוצג מיד כש-_cinemaResume נקראת.
+function _cinemaInterrupt(){
+  if(_director.active!=='cut')return;
+  const wasCutVisible=document.getElementById('cut').style.display==='flex';
+  if(wasCutVisible&&_director._currentCutItem){
+    // הקפא את הטייפרייטר במקום בו הוא נמצא, נחזיר את ה-key הנוכחי בראש התור
+    if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
+    document.getElementById('cut').style.display='none';
+    const item=_director._currentCutItem;
+    item.keys=[item.keys[0],...item._remaining]; // התחל את הסצנה הזו מחדש כשנחזור
+    _director.cutQueue.unshift(item);
+    _director._currentCutItem=null;
+  } else if(document.getElementById('dlg-ov').style.display==='flex'){
+    document.getElementById('dlg-ov').style.display='none';
+    G.dlgOpen=false;
+    // לדיאלוג עם בחירות אין onDone לשרשר — פשוט נסגר; השחקן יכול לפתוח אותו שוב
+  }
+  _director.active=null;
+}
+function _cinemaResume(){
+  _directorTryNext();
+}
+
+
 // ════════════════════════════════════════════════
 // AUTO DOG SWITCH — החלפת כלב אוטומטית לפי עלילה
 // ════════════════════════════════════════════════
@@ -370,7 +472,7 @@ const MISSIONS=[
   // 11 — פרק ב׳ הסתיים, פרק ג׳ נפתח
   {txt:'⏳ משהו לא בסדר... לכו לבלה ליד השוק.',hint:'בלה — השוק',
    targetFn:()=>({x:-60,z:60}),
-   unlock:()=>{setTimeout(()=>showCut('ch3_open',()=>showCut('ch3_plato_poster',()=>setMission(12))),1600);}},
+   unlock:()=>{setTimeout(()=>showCut(['ch3_open','ch3_plato_poster'],()=>setMission(12)),1600);}},
   // 12 — מצאו את בלה
   {txt:'1️⃣2️⃣ מצאו את בלה ליד השוק 🔍',hint:'בלה — השוק',
    targetFn:()=>({x:-60,z:60}),
