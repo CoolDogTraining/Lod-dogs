@@ -64,6 +64,8 @@ const G={
 let scene,camera,renderer,clock,mmCtx;
 let PB,dogModel,dogTail,dogLegs=[];
 const blds=[];
+// ── רשימת PointLights של ה-main scene — לכיבוי בכניסה ל-TA (מונע חריגת MAX_LIGHTS) ──
+const _mainPLights=[];
 // Zone Groups — כל אזור עטוף ב-Group. _updLOD מציג רק zones קרובים לשחקן.
 const _zoneGroups=[];  // [{group, cx, cz, r}]
 let _currentZoneGroup=null; // ה-Group הפעיל כרגע ב-buildWorld
@@ -815,7 +817,7 @@ function buildIndustrialZone(){
   const apexM=new THREE.MeshStandardMaterial({color:0x0d001a,emissive:0x330055,roughness:.4});
   const apexS=new THREE.Mesh(new THREE.BoxGeometry(9,2,.15),apexM);
   apexS.position.set(WH_X,WH_H+1.2,WH_Z+WH_D/2+.1);scene.add(apexS);
-  const sL=new THREE.PointLight(0x9900ee,2,16);sL.position.set(WH_X,WH_H+2.5,WH_Z+WH_D/2);scene.add(sL);
+  const sL=new THREE.PointLight(0x9900ee,2,16);sL.position.set(WH_X,WH_H+2.5,WH_Z+WH_D/2);scene.add(sL);_mainPLights.push(sL);
 
   // ── פנים מחסן (מינימלי — מה שנראה מבפנים) ──
   // רצפת מחסן
@@ -824,7 +826,7 @@ function buildIndustrialZone(){
   inFloor.rotation.x=-Math.PI/2;inFloor.position.set(WH_X,.02,WH_Z);inFloor._isGround=true;scene.add(inFloor);
   // תאורת פנים
   [[WH_X-8,8,WH_Z-6],[WH_X+8,8,WH_Z-6],[WH_X,8,WH_Z+4]].forEach(([lx,ly,lz])=>{
-    const il=new THREE.PointLight(0xffe8b0,1.1,20);il.position.set(lx,ly,lz);scene.add(il);
+    const il=new THREE.PointLight(0xffe8b0,1.1,20);il.position.set(lx,ly,lz);scene.add(il);_mainPLights.push(il);
     const lb=new THREE.Mesh(new THREE.BoxGeometry(1.2,.3,1.8),new THREE.MeshStandardMaterial({color:0x333333,roughness:.4,metalness:.8}));
     lb.position.set(lx,ly+.15,lz);scene.add(lb);
   });
@@ -840,7 +842,7 @@ function buildIndustrialZone(){
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(6,2.5),logoM);
   logo.position.set(WH_X,4.5,WH_Z-WH_D/2+.12);scene.add(logo);
   // PointLight מסמן נקודת trigger
-  const trigL=new THREE.PointLight(0x8800cc,.8,8);trigL.position.set(WH_X,2,WH_Z-WH_D*.35);scene.add(trigL);
+  const trigL=new THREE.PointLight(0x8800cc,.8,8);trigL.position.set(WH_X,2,WH_Z-WH_D*.35);scene.add(trigL);_mainPLights.push(trigL);
 
   // שמור trigger
   G.warehouseEntrance={x:WH_X, z:WH_Z+WH_D/2, r:4};
@@ -875,7 +877,7 @@ function buildIndustrialZone(){
     wg.position.set(FX-12.1,5,FZ-6+wi*5);scene.add(wg);
   }
   // ספוט ניצוצות
-  const spkL=new THREE.PointLight(0xff7700,1.5,10);spkL.position.set(FX-4,6,FZ+3);scene.add(spkL);
+  const spkL=new THREE.PointLight(0xff7700,1.5,10);spkL.position.set(FX-4,6,FZ+3);scene.add(spkL);_mainPLights.push(spkL);
   G._indSparkLight=spkL; G._indSparkT=0;
 
   // ══════════════════════════════════════════════
@@ -1001,7 +1003,7 @@ function buildIndustrialZone(){
     arm.position.set(lx+1.5,9.05,lz);scene.add(arm);
     const lh=new THREE.Mesh(new THREE.BoxGeometry(1,.5,1.6),new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.4,metalness:.8}));
     lh.position.set(lx+3,8.8,lz);scene.add(lh);
-    const pl=new THREE.PointLight(0xffe090,.95,32);pl.position.set(lx+3,8.5,lz);scene.add(pl);
+    const pl=new THREE.PointLight(0xffe090,.95,32);pl.position.set(lx+3,8.5,lz);scene.add(pl);_mainPLights.push(pl);
     const glow=new THREE.Mesh(new THREE.SphereGeometry(.5,6,6),
       new THREE.MeshBasicMaterial({color:0xffee88,transparent:true,opacity:.22,depthWrite:false}));
     glow.position.set(lx+3,8.5,lz);scene.add(glow);
@@ -1730,9 +1732,9 @@ function bldSynagogue(x,z){
   // 11. תאורה מקומית — עדינה, לא מסנוורת
   // ══════════════════════════════════════
   const l1=new THREE.PointLight(0xfff4dd,0.9,28);
-  l1.position.set(x,7,F-6);scene.add(l1);
+  l1.position.set(x,7,F-6);scene.add(l1);_mainPLights.push(l1);
   const l2=new THREE.PointLight(0xffe8aa,0.7,14);
-  l2.position.set(x,12,F-2);scene.add(l2);
+  l2.position.set(x,12,F-2);scene.add(l2);_mainPLights.push(l2);
 
   blds.push({x,z,w:13,d:13});
   blds.push({x:x-9,z,w:5,d:12});
@@ -1764,7 +1766,7 @@ function bldMosque(x,z){
   const bandDark=new THREE.Mesh(new THREE.BoxGeometry(18.4,.38,18.4),new THREE.MeshStandardMaterial({color:0xb8aa8e,roughness:.88}));
   bandDark.position.set(x,4.4,z);scene.add(bandDark);
   const bandLight=new THREE.Mesh(new THREE.BoxGeometry(18.4,.22,18.4),new THREE.MeshStandardMaterial({color:0xeee4cc,roughness:.82}));
-  bandLight.position.set(x,4.65,z);scene.add(bandLight);
+  bandLight.position.set(x,4.65,z);scene.add(bandLight);_mainPLights.push(bandLight);
   // כרכוב עליון
   const cornice=new THREE.Mesh(new THREE.BoxGeometry(19,.55,19),marbleTrimM);
   cornice.position.set(x,8.77,z);scene.add(cornice);
@@ -1919,7 +1921,7 @@ function bldMosque(x,z){
 
   // ── תאורת נקודה ──
   const mosqueLight=new THREE.PointLight(0x88ffaa,1.0,20);
-  mosqueLight.position.set(x,4,z-9);scene.add(mosqueLight);
+  mosqueLight.position.set(x,4,z-9);scene.add(mosqueLight);_mainPLights.push(mosqueLight);
 
   blds.push({x,z,w:18,d:18});
 }
@@ -2509,7 +2511,7 @@ function buildTrainStation(){
 
   // --- תאורת לילה ---
   const stLight=new THREE.PointLight(0xfff0cc,0,30);
-  stLight.position.set(SX,8,SZ);scene.add(stLight);
+  stLight.position.set(SX,8,SZ);scene.add(stLight);_mainPLights.push(stLight);
   G._stationLight=stLight;
 }
 
@@ -4455,14 +4457,16 @@ function updVilla(dt){
     if(!bz)VILLA.playerZ=Math.max(-43,Math.min(46,nz));
   }
 
-  // מצלמה מאחורי השחקן — בדיוק כמו העולם הרגיל
-  _vCamTarget.set(
-    VILLA.playerX+Math.sin(G.yaw)*7,
-    4,
-    VILLA.playerZ+Math.cos(G.yaw)*7
-  );
-  mosqueCamera.position.lerp(_vCamTarget,.12);
-  mosqueCamera.lookAt(VILLA.playerX,1,VILLA.playerZ);
+  // מצלמה מאחורי השחקן — חסום בזמן סצנה סינמטית
+  if(!G._cinemaMode){
+    _vCamTarget.set(
+      VILLA.playerX+Math.sin(G.yaw)*7,
+      4,
+      VILLA.playerZ+Math.cos(G.yaw)*7
+    );
+    mosqueCamera.position.lerp(_vCamTarget,.12);
+    mosqueCamera.lookAt(VILLA.playerX,1,VILLA.playerZ);
+  }
 
   PB.position.set(VILLA.playerX,0,VILLA.playerZ);
   // כיוון הכלב — לכיוון ההליכה (ריאליסטי), לא לכיוון המצלמה
@@ -4533,7 +4537,7 @@ function updVilla(dt){
             {cam:[-8,  2.5, 17],   look:[-2, 1.5, 15.8], dur:700, note:'💢 BOOM! ברונו שובר את הדלת!'},
             {cam:[-2,  1.8, 20],   look:[-2, 1.5, 15.8], dur:900},
             {cam:[-2,  1.4, 16.5], look:[-2, 0.8, 10],   dur:800, note:'ברונו: "אַנْتُمْ مَيِّتُون!" (אתם מתים!)'}
-          ],()=>{});
+          ],()=>{},false,true); // useMosque=true
         }
       },1500);
     }
@@ -4741,12 +4745,15 @@ function setupJoy(){
   const ec=()=>{G.cam.on=false;};cz.addEventListener('touchend',ec);cz.addEventListener('touchcancel',ec);
 }
 function mAtk(){
-  if(LAB.inLab){
+  if(LAB.inLab||APEX_LAB.inLab){
     if(G.atkCD<=0){
       const _c=G.dog==='zippo'?0.28:0.5;
       G._labAtk=true;G.atkCD=_c;
       sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     }
+  } else if(PORT_WH.inWH||RABIN_SQ.inRabin){
+    const _c=G.dog==='zippo'?0.28:0.5;
+    if(G.atkCD<=0){G.atkCD=_c;G.keys['KeyF']=true;setTimeout(()=>{G.keys['KeyF']=false;},100);}
   } else if(TA.inTA){
     const _c=G.dog==='zippo'?0.28:0.5;
     if(G.atkCD<=0){G.atkCD=_c;doAtk();}
@@ -4969,6 +4976,24 @@ function loop(){
     if(cityCamera)renderer.render(cityScene,cityCamera);
     updHUD();
     return;
+  }
+  if(APEX_LAB.inLab){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updApexLab(dt);
+    updPfx(dt);updateNavDirection();
+    if(_apexLabCam)renderer.render(_apexLabScene,_apexLabCam);
+    updHUD();return;
+  }
+  if(PORT_WH.inWH){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updPortWH(dt);
+    updPfx(dt);updateNavDirection();
+    if(_portWHCam)renderer.render(_portWHScene,_portWHCam);
+    updHUD();return;
+  }
+  if(RABIN_SQ.inRabin){
+    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updRabinSq(dt);
+    updPfx(dt);updateNavDirection();
+    if(_rabinCam)renderer.render(_rabinScene,_rabinCam);
+    updHUD();return;
   }
   if(TA.inTA){
     // קדם זמן יום גם בתל אביב (השעון מתעדכן ב-updHUD)
@@ -6155,14 +6180,14 @@ function cacheHUD(){
 //   onDone: callback אחרי כל הסצנה
 //   useTA: האם להשתמש ב-taCamera (פרק ט׳ תל אביב)
 // ══════════════════════════════════════════════════════════════
-function _playCinema(steps, onDone, useTA){
+function _playCinema(steps, onDone, useTA, useMosque){
   // ── director: סינמה תמיד ראשונה. דוחפת בעדינות כל cut/dlg פתוח לתור ──
   _cinemaInterrupt();
   _director.active='cinema';
   G._cinemaMode=true;
   G.paused=true;
   G.cutOpen=false; G.dlgOpen=false;
-  const cam=useTA?taCamera:camera;
+  const cam=useTA?taCamera:(useMosque&&mosqueCamera?mosqueCamera:camera);
   let i=0;
   function doStep(){
     if(i>=steps.length){
@@ -7263,7 +7288,7 @@ function buildLabExterior(){
   sign.position.set(x,5.2,z+7.2);sign.rotation.z=0.08;scene.add(sign);
   // זרקור כחול מעל הדלת
   const labLight=new THREE.PointLight(0x4488ff,1.5,12);
-  labLight.position.set(x,5.5,z+6);scene.add(labLight);
+  labLight.position.set(x,5.5,z+6);scene.add(labLight);_mainPLights.push(labLight);
   // marker כניסה — נצנץ כחול
   const ind=new THREE.Mesh(
     new THREE.SphereGeometry(0.35,8,8),
@@ -8723,10 +8748,10 @@ function _startBigFire(){
   // ── 4 אורות אש ממוקמים סביב הבניין ──
   const fireLights=[];
   [[BX,5,BZ+5],[BX-5,4,BZ-3],[BX+5,4,BZ-3],[BX,9,BZ-1]].forEach(([lx,ly,lz])=>{
-    const l=new THREE.PointLight(0xff4400,0,45);l.position.set(lx,ly,lz);scene.add(l);fireLights.push(l);
+    const l=new THREE.PointLight(0xff4400,0,45);l.position.set(lx,ly,lz);scene.add(l);fireLights.push(l);_mainPLights.push(l);
   });
   // אור עשן — לבנבן גבוה
-  const smokeL=new THREE.PointLight(0x887766,0,30);smokeL.position.set(BX,18,BZ);scene.add(smokeL);
+  const smokeL=new THREE.PointLight(0x887766,0,30);smokeL.position.set(BX,18,BZ);scene.add(smokeL);_mainPLights.push(smokeL);
 
   // ── כדורי זוהר ──
   const mkGlow=(r,col,op)=>{
@@ -10994,7 +11019,7 @@ function _spawnCh7DebrisItems(){
   tagGrp.position.set(27,0.4,-123);
   tagGrp.rotation.z=0.18;
   scene.add(tagGrp);
-  const tagLight=new THREE.PointLight(0xccddff,1.5,6);tagLight.position.set(27,1.8,-123);scene.add(tagLight);
+  const tagLight=new THREE.PointLight(0xccddff,1.5,6);tagLight.position.set(27,1.8,-123);scene.add(tagLight);_mainPLights.push(tagLight);
   _ch7DebrisItems.push({mesh:tagGrp,type:'tag',collected:false,light:tagLight});
 
   // קבצים שנחשפו מהשריפה — ניירות חרוכים עם גחלים
@@ -11022,7 +11047,7 @@ function _spawnCh7DebrisItems(){
   });
   fileGrp.position.set(23,0.4,-126);
   scene.add(fileGrp);
-  const fileLight=new THREE.PointLight(0xff5500,1.2,5);fileLight.position.set(23,1.5,-126);scene.add(fileLight);
+  const fileLight=new THREE.PointLight(0xff5500,1.2,5);fileLight.position.set(23,1.5,-126);scene.add(fileLight);_mainPLights.push(fileLight);
   _ch7DebrisItems.push({mesh:fileGrp,type:'files',collected:false,light:fileLight});
 }
 
@@ -12053,13 +12078,15 @@ function updCh8(dt){
     const insideWH = px>wPos.x-15 && px<wPos.x+15 && pz>wPos.z-12 && pz<wPos.z+12;
     if(insideWH&&!G._ch8WarehouseReached){
       G._ch8WarehouseReached=true;
-      // ── סינמטי: pan איטי על פנים המחסן — לוגו APEX בקיר ──
-      const wx=wPos.x,wz=wPos.z;
+      // ── סינמטי: כניסה למחסן APEX ──
+      // מחסן: WH_X=205, WH_Z=-125, גובה ~9, כניסה מצפון (wz+11), קיר דרום (wz-12)
+      const wx=wPos.x, wz=wPos.z;
       _playCinema([
-        {cam:[wx-8,  1.5, wz+6],  look:[wx,   1.8, wz],   dur:1200, note:'📦 מחסן APEX...'},
-        {cam:[wx+6,  2.5, wz-2],  look:[wx,   2.0, wz-8], dur:1400},  // scan לעבר הקיר עם הלוגו
-        {cam:[wx,    3.0, wz-10], look:[wx,   2.5, wz-14], dur:1200}, // close-up לוגו APEX
-        {cam:[wx,    5.0, wz],    look:[wx,   0.5, wz],   dur:1000}   // עילי — גלה את המחסן כולו
+        {cam:[wx,    6.5, wz+9],  look:[wx,   3.0, wz-2],  dur:1100, note:'📦 מחסן APEX...'},   // כניסה — wide
+        {cam:[wx-10, 4.0, wz],    look:[wx,   2.5, wz-6],  dur:1200},                            // שמאל → מרכז
+        {cam:[wx+10, 4.0, wz],    look:[wx,   2.5, wz-6],  dur:1200},                            // ימין → מרכז
+        {cam:[wx,    2.5, wz-4],  look:[wx,   4.5, wz-12], dur:1100, note:'🔺 לוגו APEX.'},     // מבט אל קיר הלוגו
+        {cam:[wx,    9.0, wz],    look:[wx,   0.0, wz],    dur:900}                              // עילי סיכום
       ],()=>{
         showCut('ch8_warehouse',()=>{
           showN('📦 לוגו APEX. ארגון. כסף. תכנית גדולה.');
@@ -12674,7 +12701,7 @@ function buildTelAvivScene(){
 
   // ── pool פנסים ──
   _taLampPool.length=0;
-  for(let i=0;i<14;i++){const pl=new THREE.PointLight(0xffd97a,0,22);taScene.add(pl);_taLampPool.push(pl);}
+  for(let i=0;i<8;i++){const pl=new THREE.PointLight(0xffd97a,0,22);taScene.add(pl);_taLampPool.push(pl);}
 }
 
 // ════════════════════════════════════════════════
@@ -13400,6 +13427,357 @@ function _taBuildDizengoffHQ(){
   G._taDizengoffHQ={x:DX,z:DZ};
 }
 
+// ════════════════════════════════════════════════════════════════════
+// TA INTERIORS — מעבדת APEX, מחסן נמל, כיכר רבין
+// כל חדר: build / enter / exit / upd — תבנית זהה ל-LAB / VILLA
+// ════════════════════════════════════════════════════════════════════
+const APEX_LAB={inLab:false,playerX:0,playerZ:8,enterGrace:0};
+const PORT_WH ={inWH:false, playerX:0,playerZ:8,enterGrace:0};
+const RABIN_SQ={inRabin:false,playerX:0,playerZ:8,enterGrace:0};
+let _apexLabScene=null,_apexLabCam=null,_apexLabObjs=[];
+let _portWHScene =null,_portWHCam =null,_portWHObjs=[];
+let _rabinScene  =null,_rabinCam  =null,_rabinObjs=[];
+let _apexLabFlicker=[],_apexKatzMesh=null,_apexLabT=0;
+let _portEnemies=[],_rabinBoss=null;
+
+// ════════════════════
+// APEX LAB
+// ════════════════════
+function buildApexLabScene(){
+  _apexLabScene=new THREE.Scene();
+  _apexLabScene.background=new THREE.Color(0x020410);
+  _apexLabScene.fog=new THREE.FogExp2(0x020410,.028);
+  _apexLabCam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,120);
+  _apexLabScene.add(_apexLabCam);
+  _apexLabFlicker=[];
+  const _add=m=>{m.castShadow=true;m.receiveShadow=true;_apexLabScene.add(m);_apexLabObjs.push(m);return m;};
+  const _addL=m=>{_apexLabScene.add(m);_apexLabObjs.push(m);return m;};
+  const _box=(w,h,d,col,em,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:col,emissive:em||0}));m.position.set(x,y,z);return _add(m);};
+  const _cyl=(r,h,s,col,em,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),new THREE.MeshLambertMaterial({color:col,emissive:em||0}));m.position.set(x,y,z);return _add(m);};
+  _addL(new THREE.AmbientLight(0x050a1a,4));
+  _addL(new THREE.HemisphereLight(0x001433,0x000814,1.2));
+  const mainL=new THREE.PointLight(0x0066ff,5,35);mainL.position.set(0,7,0);_addL(mainL);
+  _apexLabFlicker.push({light:mainL,base:5,type:'fluorescent',t:0,period:.06});
+  const accentL=new THREE.PointLight(0x00ffff,3,20);accentL.position.set(-8,4,-4);_addL(accentL);
+  _apexLabFlicker.push({light:accentL,base:3,type:'pulse',t:0,period:1.4});
+  const dangerL=new THREE.PointLight(0xff2200,2.5,14);dangerL.position.set(10,3,6);_addL(dangerL);
+  _apexLabFlicker.push({light:dangerL,base:2.5,type:'flicker',t:0,period:.15});
+  // חדר 30×28
+  _box(30,.3,28,0x0a0c14,0,0,-.15,0);_box(30,.3,28,0x050810,0,0,8.15,0);
+  _box(.3,8,28,0x070a18,0,-15,4,0);_box(.3,8,28,0x070a18,0,15,4,0);
+  _box(30,8,.3,0x070a18,0,0,4,14);_box(30,8,.3,0x080c1e,0,0,4,-14);
+  // דלת כניסה
+  _box(4,5,.4,0x1a2040,0x0011ff,0,2.5,-14);_box(3.6,4.6,.2,0x0d1a33,0x0044ff,0,2.3,-13.9);
+  // סמני רצפה
+  for(let i=-6;i<=6;i+=2){_box(.15,.05,.15,0x002288,0x0033ff,i,.02,12);_box(.15,.05,.15,0x002288,0x0033ff,i,.02,-12);}
+  // שולחנות שמאל
+  _box(8,.8,2,0x0c0f1e,0,-9,.4,-6);_box(8,.8,2,0x0c0f1e,0,-9,.4,2);
+  [-11,-8,-5].forEach(x=>{_box(.05,1.8,1.4,0x000511,0x002255,x,1.7,-6);_box(.05,.05,1.45,0x0033cc,0x0088ff,x,1.8,-6);_box(.05,1.8,1.4,0x000511,0x001133,x,1.7,2);});
+  [-10,-7].forEach(x=>{_box(1.2,.1,1.2,0x111830,0,x,.45,-5.2);_box(.1,1.8,.1,0x111830,0,x,.9,-5.6);});
+  // מיכלי ניסוי ימין
+  [8,11].forEach((x,i)=>{
+    _cyl(.9,3.5,12,0x001122,0x004488,x,1.75,-3+i*6);_cyl(.95,.2,12,0x002244,0x0066bb,x,3.45,-3+i*6);_cyl(.85,.05,12,0x000a18,0,x,.05,-3+i*6);
+    const fL=new THREE.PointLight(0x00aaff,2.5,8);fL.position.set(x,1.8,-3+i*6);_addL(fL);
+    _apexLabFlicker.push({light:fL,base:2.5,type:'bubble',t:Math.random()*3,period:0});
+    _cyl(.3,1.2,8,0x334466,0x002244,x,1.8,-3+i*6);_box(.6,.6,.3,0x223355,0x001133,x,2.6,-3+i*6);
+  });
+  // תחנת כץ
+  _box(6,.4,6,0x080c20,0x001144,0,.2,8);_box(5,.9,2.5,0x0a0e22,0x0022aa,0,.65,8);
+  _box(.1,4,6,0x000311,0x001166,0,3.8,12.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,5.8,12.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,1.8,12.5);
+  const spotKatz=new THREE.PointLight(0x4488ff,4,10);spotKatz.position.set(0,5,8);_addL(spotKatz);
+  _apexLabFlicker.push({light:spotKatz,base:4,type:'crt',t:0,period:0});
+  // כץ NPC
+  const katzG=new THREE.Group();
+  const kBody=new THREE.Mesh(new THREE.BoxGeometry(.9,1.4,.6),new THREE.MeshLambertMaterial({color:0xe8ecf0,emissive:0x111111}));kBody.position.y=.7;katzG.add(kBody);
+  const kHead=new THREE.Mesh(new THREE.SphereGeometry(.35,8,6),new THREE.MeshLambertMaterial({color:0xc8a882}));kHead.position.y=1.6;katzG.add(kHead);
+  const kHair=new THREE.Mesh(new THREE.SphereGeometry(.37,8,4),new THREE.MeshLambertMaterial({color:0xf0f0f0,emissive:0x111111}));kHair.position.set(0,1.75,-.05);kHair.scale.set(1,.5,1);katzG.add(kHair);
+  [-0.15,0.15].forEach(ox=>{const lens=new THREE.Mesh(new THREE.TorusGeometry(.1,.015,4,8),new THREE.MeshLambertMaterial({color:0x334466,emissive:0x002244}));lens.position.set(ox,1.6,.35);lens.rotation.y=Math.PI/2;katzG.add(lens);});
+  [-0.55,0.55].forEach(ox=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(.25,1,.25),new THREE.MeshLambertMaterial({color:0xe8ecf0}));arm.position.set(ox,.5,0);katzG.add(arm);});
+  katzG.position.set(0,0,9);katzG.rotation.y=Math.PI;
+  _apexLabScene.add(katzG);_apexLabObjs.push(katzG);_apexKatzMesh=katzG;
+  // כלובים שמאל אחורי
+  for(let i=0;i<3;i++){
+    const cx=-11,cz=-8+i*4;
+    _box(2.5,2,.1,0x1a2233,0,cx,1,cz);_box(.1,2,2.5,0x223344,0,cx-1.25,1,cz-1.25);_box(.1,2,2.5,0x223344,0,cx+1.25,1,cz-1.25);_box(2.5,.1,2.5,0x1a2233,0,cx,2,cz-1.25);
+    for(let b=0;b<5;b++){_box(.06,2,.06,0x334466,0x001133,cx-1+b*.5,1,cz-2.5);}
+    const cd=new THREE.Mesh(new THREE.BoxGeometry(.6,.5,.8),new THREE.MeshLambertMaterial({color:0x8b6914}));cd.position.set(cx,.25,cz-1);_add(cd);
+  }
+  // צינורות תקרה
+  for(let x=-12;x<=12;x+=6){_cyl(.12,.12,28,6,0x0d1525,0x001133,x,7.8,0);const pL=new THREE.PointLight(0x0033aa,1,8);pL.position.set(x,7.2,0);_addL(pL);}
+}
+
+function enterApexLab(){
+  G.paused=true;
+  fadeOut(()=>{
+    if(!_apexLabScene)buildApexLabScene();
+    APEX_LAB.inLab=true;APEX_LAB.playerX=0;APEX_LAB.playerZ=10;APEX_LAB.enterGrace=2.5;
+    G.yaw=Math.PI;
+    if(_apexLabCam){_apexLabCam.position.set(0,5,15);_apexLabCam.lookAt(0,1,0);}
+    if(taScene)taScene.remove(PB);else scene.remove(PB);
+    _apexLabScene.add(PB);PB.position.set(0,0,10);
+    showN('⚗️ מעבדת APEX. הריח כבד. משהו חי כאן.');
+    G.paused=false;fadeIn();
+  });
+}
+function exitApexLab(){
+  G.paused=true;
+  fadeOut(()=>{
+    APEX_LAB.inLab=false;
+    if(_apexLabScene)_apexLabScene.remove(PB);
+    if(taScene)taScene.add(PB);else scene.add(PB);
+    PB.position.set((G._taApexBldPos||{x:70}).x,(G._taApexBldPos||{z:-112}).z||-112,0);
+    _apexLabObjs.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
+    _apexLabObjs.length=0;_apexLabFlicker.length=0;_apexLabScene=null;_apexLabCam=null;_apexKatzMesh=null;
+    G.paused=false;fadeIn();
+  });
+}
+function updApexLab(dt){
+  if(!APEX_LAB.inLab||G.paused||G.dlgOpen||G.cutOpen)return;
+  _apexLabT+=dt;APEX_LAB.enterGrace=Math.max(0,APEX_LAB.enterGrace-dt);
+  if(G.atkCD>0)G.atkCD-=dt;
+  _apexLabFlicker.forEach(fl=>{
+    fl.t+=dt;const L=fl.light;if(!L)return;
+    switch(fl.type){
+      case'fluorescent':if(fl.t>fl.period){fl.t=0;fl.period=.04+Math.random()*.08;L.intensity=Math.random()<.04?0:fl.base*(.85+Math.random()*.3);}break;
+      case'pulse':L.intensity=fl.base*(.5+.5*Math.sin(fl.t*Math.PI*2/fl.period));break;
+      case'flicker':if(fl.t>fl.period){fl.t=0;fl.period=.08+Math.random()*.25;L.intensity=Math.random()<.1?0:fl.base*(.6+Math.random()*.7);}break;
+      case'bubble':L.intensity=fl.base*(.7+.3*Math.sin(fl.t*3.1+fl.base));break;
+      case'crt':L.intensity=fl.base*(.8+.2*Math.sin(fl.t*7));break;
+    }
+  });
+  if(_apexKatzMesh)_apexKatzMesh.rotation.y=Math.PI+Math.sin(_apexLabT*.4)*.15;
+  const spd=G.dogs[G.dog].spd;
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));_vRgt.set(Math.cos(G.yaw),0,-Math.sin(G.yaw));
+  let ix=0,iz=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp']){ix+=_vFwd.x;iz+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']){ix-=_vFwd.x;iz-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']){ix-=_vRgt.x;iz-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){ix+=_vRgt.x;iz+=_vRgt.z;}
+  if(G.joy.on){ix+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;iz+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
+  const iln=Math.hypot(ix,iz)||1;
+  let nx=APEX_LAB.playerX+(ix/iln)*spd*dt,nz=APEX_LAB.playerZ+(iz/iln)*spd*dt;
+  nx=Math.max(-13.5,Math.min(13.5,nx));nz=Math.max(-13.5,Math.min(13.5,nz));
+  if(nx>6&&nz>-9&&nz<9)nx=Math.min(nx,6);
+  APEX_LAB.playerX=nx;APEX_LAB.playerZ=nz;PB.position.set(nx,0,nz);
+  if(Math.abs(ix)>.01||Math.abs(iz)>.01){walkT+=dt*8;dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});if(dogModel){const b=dogModel._baseY||.25;dogModel.position.y=b+Math.abs(Math.sin(walkT))*.09;}PB.rotation.y=Math.atan2(-ix,-iz);}
+  if(_apexLabCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_apexLabCam.position.lerp(_vCamTarget,.1);_apexLabCam.lookAt(nx,1.1*sz+.7,nz);}
+  if(APEX_LAB.enterGrace<=0&&nz>11.5){exitApexLab();return;}
+  if(G.mission===58&&!G._ta58done){
+    if(Math.hypot(nx,nz-9)<4){
+      G._ta58done=true;
+      _playCinema([
+        {cam:[5,2,14],look:[0,1.7,9],dur:900,note:'⚗️ ד"ר כץ...'},
+        {cam:[2.5,1.9,12],look:[0,1.7,9],dur:900},
+        {cam:[-3,2,12],look:[0,1.7,9],dur:1100},
+        {cam:[-5,2.1,11],look:[0,1.7,9],dur:900},
+        {cam:[0,3.5,14],look:[0,1.5,9],dur:800}
+      ],()=>{
+        showCut('ch9_katz_appears',()=>{
+          showCut('ch9_katz_truth',()=>{
+            exitApexLab();
+            setTimeout(()=>{
+              const ap=G._taApexBldPos||{x:70,z:-130};
+              if(TA.inTA)[[ap.x-14,ap.z-8],[ap.x+14,ap.z-8],[ap.x-8,ap.z-16],[ap.x+8,ap.z-16]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+              showN('⚔️ APEX רץ לנמל!');G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
+            },800);
+          });
+        });
+      });
+    }
+  }
+}
+
+// ════════════════════
+// PORT WAREHOUSE
+// ════════════════════
+function buildPortWHScene(){
+  _portWHScene=new THREE.Scene();_portWHScene.background=new THREE.Color(0x050810);_portWHScene.fog=new THREE.FogExp2(0x050810,.022);
+  _portWHCam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,140);_portWHScene.add(_portWHCam);
+  const _add=m=>{m.castShadow=true;m.receiveShadow=true;_portWHScene.add(m);_portWHObjs.push(m);return m;};
+  const _addL=m=>{_portWHScene.add(m);_portWHObjs.push(m);return m;};
+  const _box=(w,h,d,col,em,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:col,emissive:em||0}));m.position.set(x,y,z);return _add(m);};
+  _addL(new THREE.AmbientLight(0x0d0a05,3.5));_addL(new THREE.HemisphereLight(0x1a1205,0x050408,1));
+  const l1=new THREE.PointLight(0xff8833,4,30);l1.position.set(-8,8,0);_addL(l1);
+  const l2=new THREE.PointLight(0xff6600,3.5,25);l2.position.set(8,8,-5);_addL(l2);
+  const l3=new THREE.PointLight(0x4488ff,2,18);l3.position.set(0,5,14);_addL(l3);
+  _box(34,.3,28,0x0d0c09,0,0,-.15,0);_box(34,.3,28,0x0a0905,0,0,10.15,0);
+  _box(.3,10,28,0x0c0b08,0,-17,5,0);_box(.3,10,28,0x0c0b08,0,17,5,0);
+  _box(34,10,.3,0x0c0b08,0,0,5,14);_box(34,10,.3,0x0d0c08,0,0,5,-14);
+  _box(4,5,.3,0x1a1510,0x883300,0,2.5,-13.9);
+  [[-10,1,4],[-10,2.3,4],[-10,1,-5],[-10,2.3,-5],[-5,1,0],[6,1,8],[6,2.3,8],[10,1,3],[10,2.3,3],[10,3.6,3],[10,1,-8],[10,2.3,-8],[2,1,10],[-3,1,-9]].forEach(([x,y,z])=>{
+    _box(2.4,1.2,2.4,[0x3d2e1c,0x2e2218,0x4a3825][Math.floor(Math.random()*3)],0,x,y,z);
+    _box(2.42,.15,2.42,0x002266,0x004499,x,y+.55,z);
+  });
+  _box(.4,9,.4,0x1a1610,0,-14,4.5,-10);_box(.4,9,.4,0x1a1610,0,-14,4.5,10);
+  _box(14,.4,.4,0x1a1610,0,-7,9,-10);_box(14,.4,.4,0x1a1610,0,-7,9,10);
+  _box(.4,.4,20,0x1a1610,0,-14,9,0);_box(.2,1.5,.2,0x334455,0,-14,7.5,-3);
+  _box(5,.3,4,0x151310,0,-13,4,-5);
+  _portEnemies=[];
+}
+function _spawnPortEnemy(x,z){
+  if(!_portWHScene)return;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1,1.2,.8),new THREE.MeshLambertMaterial({color:0x1a1006}));body.position.y=.6;g.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.7,.7,.7),new THREE.MeshLambertMaterial({color:0x1a1006}));head.position.y=1.55;g.add(head);
+  const helm=new THREE.Mesh(new THREE.BoxGeometry(.78,.45,.78),new THREE.MeshLambertMaterial({color:0x2a1f0a,emissive:0x110800}));helm.position.y=1.8;g.add(helm);
+  g.position.set(x,0,z);_portWHScene.add(g);_portWHObjs.push(g);
+  const e={mesh:g,x,z,hp:60,mhp:60,spd:3.5,atk:12,atkT:0,dead:false,alert:false};
+  _portEnemies.push(e);return e;
+}
+function enterPortWH(){
+  G.paused=true;
+  fadeOut(()=>{
+    if(!_portWHScene)buildPortWHScene();
+    PORT_WH.inWH=true;PORT_WH.playerX=0;PORT_WH.playerZ=10;PORT_WH.enterGrace=2;G.yaw=Math.PI;
+    if(_portWHCam){_portWHCam.position.set(0,5,15);_portWHCam.lookAt(0,1,0);}
+    if(taScene)taScene.remove(PB);else scene.remove(PB);
+    _portWHScene.add(PB);PB.position.set(0,0,10);_portEnemies=[];
+    [[-9,2],[9,1],[0,-5],[-7,-9],[8,-8]].forEach(([x,z])=>_spawnPortEnemy(x,z));
+    showN('🚢 מחסן נמל APEX. אויבים בפנים. זהירות.');
+    G.paused=false;fadeIn();
+  });
+}
+function exitPortWH(){
+  G.paused=true;
+  fadeOut(()=>{
+    PORT_WH.inWH=false;if(_portWHScene)_portWHScene.remove(PB);
+    if(taScene)taScene.add(PB);else scene.add(PB);
+    const pp=G._taPortPos||{x:168,z:-155};PB.position.set(pp.x,0,pp.z+8);
+    _portWHObjs.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
+    _portWHObjs.length=0;_portEnemies=[];_portWHScene=null;_portWHCam=null;
+    G.paused=false;fadeIn();
+  });
+}
+function updPortWH(dt){
+  if(!PORT_WH.inWH||G.paused||G.dlgOpen||G.cutOpen)return;
+  PORT_WH.enterGrace=Math.max(0,PORT_WH.enterGrace-dt);if(G.atkCD>0)G.atkCD-=dt;
+  const spd=G.dogs[G.dog].spd;
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));_vRgt.set(Math.cos(G.yaw),0,-Math.sin(G.yaw));
+  let ix=0,iz=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp']){ix+=_vFwd.x;iz+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']){ix-=_vFwd.x;iz-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']){ix-=_vRgt.x;iz-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){ix+=_vRgt.x;iz+=_vRgt.z;}
+  if(G.joy.on){ix+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;iz+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
+  const iln=Math.hypot(ix,iz)||1;
+  let nx=PORT_WH.playerX+(ix/iln)*spd*dt,nz=PORT_WH.playerZ+(iz/iln)*spd*dt;
+  nx=Math.max(-16,Math.min(16,nx));nz=Math.max(-13.5,Math.min(13.5,nz));
+  PORT_WH.playerX=nx;PORT_WH.playerZ=nz;PB.position.set(nx,0,nz);
+  if(Math.abs(ix)>.01||Math.abs(iz)>.01){walkT+=dt*8;dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});if(dogModel){const b=dogModel._baseY||.25;dogModel.position.y=b+Math.abs(Math.sin(walkT))*.09;}PB.rotation.y=Math.atan2(-ix,-iz);}
+  if(_portWHCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_portWHCam.position.lerp(_vCamTarget,.1);_portWHCam.lookAt(nx,1.1*sz+.7,nz);}
+  if(G.atkCD<=0&&G.keys['KeyF']){G.atkCD=G.dog==='zippo'?.28:.5;G._portAtk=true;}
+  _portEnemies.forEach(e=>{
+    if(e.dead)return;const dd=Math.hypot(e.x-nx,e.z-nz);
+    if(dd<18)e.alert=true;
+    if(e.alert&&dd>1.8){const ang=Math.atan2(nx-e.x,nz-e.z);e.x+=Math.sin(ang)*e.spd*dt;e.z+=Math.cos(ang)*e.spd*dt;e.mesh.position.set(e.x,0,e.z);e.mesh.rotation.y=ang;}
+    e.atkT=Math.max(0,e.atkT-dt);if(dd<2.2&&e.atkT<=0){dmgPlayer(e.atk);e.atkT=1.2;haptic([25,10,25]);}
+    if(G._portAtk&&dd<3.5){G._portAtk=false;const dog=G.dogs[G.dog];const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));e.hp-=dmg;spawnBlood(e.x,1,e.z,6);showDmg(e.x,2,e.z,dmg);haptic(18);if(e.hp<=0){e.dead=true;e.mesh.visible=false;addXP(30);G.coins+=15;updCoins();sCapture();}}
+  });
+  G._portAtk=false;
+  if(PORT_WH.enterGrace<=0&&_portEnemies.length>0&&_portEnemies.every(e=>e.dead)){
+    if(!G._portWHCleared){G._portWHCleared=true;showN('✅ המחסן נוקה!');setTimeout(()=>{exitPortWH();setTimeout(()=>{G.mission=60;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[60].txt);},900);},1500);}
+  }
+  if(PORT_WH.enterGrace<=0&&nz>12)exitPortWH();
+}
+
+// ════════════════════
+// RABIN SQUARE
+// ════════════════════
+function buildRabinScene(){
+  _rabinScene=new THREE.Scene();_rabinScene.background=new THREE.Color(0x0a0c18);_rabinScene.fog=new THREE.FogExp2(0x0a0c18,.018);
+  _rabinCam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,160);_rabinScene.add(_rabinCam);
+  const _add=m=>{m.castShadow=true;m.receiveShadow=true;_rabinScene.add(m);_rabinObjs.push(m);return m;};
+  const _addL=m=>{_rabinScene.add(m);_rabinObjs.push(m);return m;};
+  const _box=(w,h,d,col,em,x,y,z)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:col,emissive:em||0}));m.position.set(x,y,z);return _add(m);};
+  const _cyl=(r,h,s,col,em,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,s),new THREE.MeshLambertMaterial({color:col,emissive:em||0}));m.position.set(x,y,z);return _add(m);};
+  _addL(new THREE.AmbientLight(0x08080f,3));_addL(new THREE.HemisphereLight(0x0d0d1f,0x050508,1));
+  const sL1=new THREE.PointLight(0xfff0cc,5,35);sL1.position.set(-15,8,0);_addL(sL1);
+  const sL2=new THREE.PointLight(0xfff0cc,5,35);sL2.position.set(15,8,0);_addL(sL2);
+  const cL=new THREE.PointLight(0x8844ff,4,20);cL.position.set(0,4,0);_addL(cL);
+  // רצפה
+  for(let x=-18;x<=18;x+=2)for(let z=-18;z<=18;z+=2){_box(1.9,.15,1.9,((x+z)/2%2===0)?0x1a1c28:0x14161f,0,x,-.08,z);}
+  _box(44,.3,44,0x0a0c18,0,0,-.2,0);
+  _box(.5,4,44,0x12141e,0,-22,2,0);_box(.5,4,44,0x12141e,0,22,2,0);_box(44,4,.5,0x12141e,0,0,2,-22);_box(44,4,.5,0x12141e,0,0,2,22);
+  // מזרקה
+  _cyl(5,.4,16,0x1c1e2c,0x110f1e,0,.2,0);_cyl(4.8,.1,16,0x003344,0x005566,0,.35,0);_cyl(.5,3,8,0x1a1c2a,0x110f22,0,1.7,0);
+  for(let a=0;a<6;a++){const ang=a/6*Math.PI*2;const wl=new THREE.PointLight(0x44aaff,1.5,6);wl.position.set(Math.cos(ang)*2,1.5,Math.sin(ang)*2);_addL(wl);}
+  // עמודים
+  [0,45,90,135,180,225,270,315].forEach(deg=>{
+    const r=14,a=deg*Math.PI/180;_box(1.2,4.5,1.2,0x1a1c28,0x0a0c1a,Math.cos(a)*r,2.25,Math.sin(a)*r);
+    const pl=new THREE.PointLight(0xffc844,2.5,12);pl.position.set(Math.cos(a)*r,4.5,Math.sin(a)*r);_addL(pl);
+  });
+  // בניינים ברקע
+  [[-25,8,15],[25,12,10],[-20,6,-18],[20,10,-18],[0,15,-22]].forEach(([x,h,z])=>{
+    _box(8,h,5,0x080a12,0,x,h/2,z);
+    for(let wy=2;wy<h-1;wy+=3)for(let wx=-2;wx<=2;wx+=2){if(Math.random()>.3)_box(.7,1,.1,0x001133,0x002244,x+wx,wy,z+2.4);}
+  });
+  _rabinBoss=null;
+}
+function _spawnRabinBoss(){
+  if(!_rabinScene)return;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.8,1),new THREE.MeshLambertMaterial({color:0x0d0f1e,emissive:0x001133}));body.position.y=.9;g.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(.9,.9,.9),new THREE.MeshLambertMaterial({color:0x0d0f1e,emissive:0x001133}));head.position.y=2.15;g.add(head);
+  const visor=new THREE.Mesh(new THREE.BoxGeometry(.85,.2,.1),new THREE.MeshLambertMaterial({color:0xff0000,emissive:0xcc0000}));visor.position.set(0,2.15,.46);g.add(visor);
+  [-0.85,0.85].forEach(ox=>{const sh=new THREE.Mesh(new THREE.BoxGeometry(.6,.4,.6),new THREE.MeshLambertMaterial({color:0x111330,emissive:0x001144}));sh.position.set(ox,1.7,0);g.add(sh);});
+  const barBG=new THREE.Mesh(new THREE.PlaneGeometry(2,.25),new THREE.MeshLambertMaterial({color:0x330000}));barBG.position.set(0,3.2,0);barBG.rotation.x=-Math.PI/6;g.add(barBG);
+  const fill=new THREE.Mesh(new THREE.PlaneGeometry(2,.22),new THREE.MeshLambertMaterial({color:0xff2200,emissive:0x660000}));fill.position.set(0,3.21,0);fill.rotation.x=-Math.PI/6;g.add(fill);
+  g.position.set(0,0,-5);_rabinScene.add(g);_rabinObjs.push(g);
+  _rabinBoss={mesh:g,x:0,z:-5,hp:600,mhp:600,spd:4.2,atk:22,atkT:0,dead:false,bar:fill};
+}
+function enterRabinSq(){
+  G.paused=true;
+  fadeOut(()=>{
+    if(!_rabinScene)buildRabinScene();
+    RABIN_SQ.inRabin=true;RABIN_SQ.playerX=0;RABIN_SQ.playerZ=18;RABIN_SQ.enterGrace=2;G.yaw=Math.PI;
+    if(_rabinCam){_rabinCam.position.set(0,6,24);_rabinCam.lookAt(0,1,0);}
+    if(taScene)taScene.remove(PB);else scene.remove(PB);
+    _rabinScene.add(PB);PB.position.set(0,0,18);
+    showN('🏛️ כיכר רבין. הכל מגיע לכאן.');
+    setTimeout(()=>{if(RABIN_SQ.inRabin)_spawnRabinBoss();},1500);
+    G.paused=false;fadeIn();
+  });
+}
+function exitRabinSq(){
+  G.paused=true;
+  fadeOut(()=>{
+    RABIN_SQ.inRabin=false;if(_rabinScene)_rabinScene.remove(PB);
+    if(taScene)taScene.add(PB);else scene.add(PB);PB.position.set(30,0,-25);
+    _rabinObjs.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
+    _rabinObjs.length=0;_rabinBoss=null;_rabinScene=null;_rabinCam=null;
+    G.paused=false;fadeIn();
+  });
+}
+function updRabinSq(dt){
+  if(!RABIN_SQ.inRabin||G.paused||G.dlgOpen||G.cutOpen)return;
+  RABIN_SQ.enterGrace=Math.max(0,RABIN_SQ.enterGrace-dt);if(G.atkCD>0)G.atkCD-=dt;
+  const spd=G.dogs[G.dog].spd;
+  _vFwd.set(-Math.sin(G.yaw),0,-Math.cos(G.yaw));_vRgt.set(Math.cos(G.yaw),0,-Math.sin(G.yaw));
+  let ix=0,iz=0;
+  if(G.keys['KeyW']||G.keys['ArrowUp']){ix+=_vFwd.x;iz+=_vFwd.z;}
+  if(G.keys['KeyS']||G.keys['ArrowDown']){ix-=_vFwd.x;iz-=_vFwd.z;}
+  if(G.keys['KeyA']||G.keys['ArrowLeft']){ix-=_vRgt.x;iz-=_vRgt.z;}
+  if(G.keys['KeyD']||G.keys['ArrowRight']){ix+=_vRgt.x;iz+=_vRgt.z;}
+  if(G.joy.on){ix+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;iz+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
+  const iln=Math.hypot(ix,iz)||1;
+  let nx=RABIN_SQ.playerX+(ix/iln)*spd*dt,nz=RABIN_SQ.playerZ+(iz/iln)*spd*dt;
+  nx=Math.max(-21,Math.min(21,nx));nz=Math.max(-21,Math.min(21,nz));
+  RABIN_SQ.playerX=nx;RABIN_SQ.playerZ=nz;PB.position.set(nx,0,nz);
+  if(Math.abs(ix)>.01||Math.abs(iz)>.01){walkT+=dt*8;dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});if(dogModel){const b=dogModel._baseY||.25;dogModel.position.y=b+Math.abs(Math.sin(walkT))*.09;}PB.rotation.y=Math.atan2(-ix,-iz);}
+  if(_rabinCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=10,ch=5+G.pitch*7;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_rabinCam.position.lerp(_vCamTarget,.09);_rabinCam.lookAt(nx,1.1*sz+.7,nz);}
+  if(_rabinBoss&&!_rabinBoss.dead){
+    const b=_rabinBoss,dd=Math.hypot(b.x-nx,b.z-nz);
+    if(dd>2){const ang=Math.atan2(nx-b.x,nz-b.z);b.x+=Math.sin(ang)*b.spd*dt;b.z+=Math.cos(ang)*b.spd*dt;b.mesh.position.set(b.x,0,b.z);b.mesh.rotation.y=ang;}
+    b.atkT=Math.max(0,b.atkT-dt);if(dd<2.8&&b.atkT<=0){dmgPlayer(b.atk);b.atkT=1.1;haptic([40,20,40]);}
+    if(G.atkCD<=0&&G.keys['KeyF']&&dd<4){
+      G.atkCD=G.dog==='zippo'?.28:.5;const dog=G.dogs[G.dog];const dmg=Math.round(dog.pow*12*(1+dog.lv*.1));
+      b.hp-=dmg;spawnBlood(b.x,1.5,b.z,10);showDmg(b.x,2.5,b.z,dmg);haptic(25);
+      if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+      if(b.hp<=0){b.dead=true;b.mesh.visible=false;sCapture();haptic([100,40,100,40,120]);addXP(500);G.score+=5000;G.coins+=300;updCoins();showN('🏆 המפקד הובס!');G._taBossMgr={dead:true};setTimeout(()=>exitRabinSq(),2000);}
+    }
+  }
+}
+
 // ════════════════════════════════════════════════
 // ENTER / EXIT
 // ════════════════════════════════════════════════
@@ -13413,6 +13791,8 @@ function enterTelAviv(){
     TA.enterGrace=3.0;
     if(taCamera){taCamera.position.set(0,7,126);taCamera.lookAt(0,1,115);}
     scene.remove(PB);taScene.add(PB);
+    // ── כבה PointLights של main scene — מונע חריגת MAX_LIGHTS ב-WebGL shader ──
+    _mainPLights.forEach(l=>{ if(l&&l.isLight){l._savedI=l.intensity;l.intensity=0;} });
     PB.position.set(TA.playerX,0,TA.playerZ);
     // קבע פוזיציות POI מיד (לא תלוי ב-zone loading)
     if(!G._taMarketPos)  G._taMarketPos  ={x:-100,z:120};
@@ -13425,15 +13805,10 @@ function enterTelAviv(){
     if(!G._taDizengoffSq)G._taDizengoffSq={x:-30, z:-20};
     // init crowd מיידי
     setTimeout(()=>_initTACrowd(),100);
-    // קדם mission מ-54 ("עלו על הרכבת") ל-55 ("מצאו את נירה")
+    // mission 54: הסינמה תופעל מ-_checkTAMissionTriggers כשמגיעים לשוק הכרמל
     if(G.mission===54){
-      G.mission=55;updateMissionHUD();updateNavArrow();saveGame();
-      showN('🐾 מומו: "יש פה כלבים שיודעים. אני מרגישה."');
-      setTimeout(()=>{
-        if(!TA.inTA)return;
-        [[-20,75],[ 20,75],[-20,50],[ 15,55]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-        showN('⚠️ סיור APEX ברחוב אלנבי!');
-      },3000);
+      updateMissionHUD();updateNavArrow();
+      showN('🌆 תל אביב. מצאו את שוק הכרמל.');
     }
     showN('🌆 תל אביב.\nזיפו: "אני יודע לאן ללכת."');
     G.paused=false;fadeIn();
@@ -13446,6 +13821,8 @@ function exitTelAviv(){
     TA.inTA=false;
     if(taScene)taScene.remove(PB);
     scene.add(PB);
+    // ── החזר אורות main scene ──
+    _mainPLights.forEach(l=>{ if(l&&l.isLight&&l._savedI!==undefined){l.intensity=l._savedI;} });
     PB.position.set(0,0,-150);
     taObjects.forEach(o=>{
       if(o.geometry)o.geometry.dispose();
@@ -13976,17 +14353,21 @@ function _checkTAMissionTriggers(){
       [[mp.x+22,mp.z-15],[mp.x-20,mp.z-15],[mp.x+15,mp.z+20]]
         .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
       // ── סינמטי: drone — קו הים, גגות, ואז נחיתה לשוק ──
-      const bx=0,bz=115; // קו חוף TA
-      _playCinema([
-        {cam:[bx,    22, bz+40],  look:[bx, 0, bz],      dur:1200, note:'🌊 תל אביב... עיר אחרת. עולם אחר.'},
-        {cam:[bx+20, 18, bz+20],  look:[bx, 2, bz-10],   dur:1400}, // סחרור מעל קו הים
-        {cam:[mp.x,  15, mp.z+35],look:[mp.x,1,mp.z],    dur:1200}, // flight לכיוון השוק
-        {cam:[mp.x,   6, mp.z+15],look:[mp.x,0.5,mp.z],  dur:900}   // נחיתה — שוק הכרמל
-      ],()=>{
-        showCut('ch9_tel_aviv_arrive',()=>{
-          G.mission=55;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[55].txt);
-        });
-      }, null, true); // useTA=true
+      const bx=0,bz=115;
+      const _doTACinema=()=>{
+        if(!taCamera){setTimeout(_doTACinema,200);return;} // המתן לטעינת taCamera
+        _playCinema([
+          {cam:[bx,    22, bz+40],  look:[bx, 0, bz],      dur:1200, note:'🌊 תל אביב... עיר אחרת. עולם אחר.'},
+          {cam:[bx+20, 18, bz+20],  look:[bx, 2, bz-10],   dur:1400},
+          {cam:[mp.x,  15, mp.z+35],look:[mp.x,1,mp.z],    dur:1200},
+          {cam:[mp.x,   6, mp.z+15],look:[mp.x,0.5,mp.z],  dur:900}
+        ],()=>{
+          showCut('ch9_tel_aviv_arrive',()=>{
+            G.mission=55;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[55].txt);
+          });
+        }, true); // useTA=true
+      };
+      _doTACinema();
     }
     return;
   }
@@ -14018,58 +14399,33 @@ function _checkTAMissionTriggers(){
     }
     return;
   }
-  // 57 → גג הבניין → cutscene כץ שרשרת → G.mission=58→59
-  // 57 → גג הבניין → cutscene מעבדה → G.mission=58
+  // 57 → גג בניין APEX → כניסה למעבדה (חדר פנים)
   if(G.mission===57&&!G._ta57done){
     const rp=G._taLabRoofEntry||{x:70,z:-114};
-    if(d2(px,pz,rp.x,rp.z)<20){
+    if(d2(px,pz,rp.x,rp.z)<18){
       G._ta57done=true;
       showCut('ch9_apex_lab_found',()=>{
         G.mission=58;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[58].txt);
+        setTimeout(()=>enterApexLab(),600);
       });
     }
     return;
   }
-  // 58 → כץ במעבדה → cutscene שרשרת → G.mission=59
-  if(G.mission===58&&!G._ta58done){
-    const lp=G._taLabInteriorPos||{x:70,z:-148};
-    if(d2(px,pz,lp.x,lp.z)<18){
-      G._ta58done=true;
-      [[lp.x-8,lp.z+3],[lp.x+8,lp.z+3],[lp.x-12,lp.z-5],[lp.x+12,lp.z-5]]
-        .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-      forceDog('zippo','זיפו מוביל');
-      // ── סינמטי: מסתובבים מאחורי כץ לפרצופו ──
-      const kp=G._taLabInteriorPos||{x:70,z:-148};
-      _playCinema([
-        {cam:[kp.x+6,  2.0, kp.z+8],  look:[kp.x, 1.7, kp.z],   dur:1000, note:'⚗️ ד"ר כץ...'},
-        {cam:[kp.x+3,  1.8, kp.z+3],  look:[kp.x, 1.7, kp.z],   dur:1000}, // zoom in מאחור
-        {cam:[kp.x-4,  1.9, kp.z+4],  look:[kp.x, 1.7, kp.z],   dur:1200}, // חצי סיבוב — פרצוף מתגלה
-        {cam:[kp.x-7,  2.1, kp.z+2],  look:[kp.x, 1.7, kp.z],   dur:1000}, // מלפנים
-        {cam:[kp.x,    3.5, kp.z+6],  look:[kp.x, 1.5, kp.z],   dur:800}   // wide reveal
-      ],()=>{
-        showCut(['ch9_katz_appears','ch9_katz_truth'],()=>{
-          const ap2=G._taApexBldPos||{x:70,z:-130};
-          [[ap2.x-14,ap2.z-8],[ap2.x+14,ap2.z-8],[ap2.x-8,ap2.z-16],[ap2.x+8,ap2.z-16],[ap2.x,ap2.z-20]]
-            .forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-          showN('⚔️ APEX רץ לנמל! עצרו אותם!');
-          G.mission=59;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[59].txt);
-        });
-      }, null, true); // useTA=true — taCamera
-    }
+  // 58 → כץ מטופל בתוך updApexLab (כניסה הייתה ב-57)
+  // אם עדיין בעולם הפתוח ו-58 — כנס למעבדה שוב (fallback)
+  if(G.mission===58&&!APEX_LAB.inLab&&!G._ta58done&&!G._ta57done){
+    const rp=G._taLabRoofEntry||{x:70,z:-114};
+    if(d2(px,pz,rp.x,rp.z)<18) enterApexLab();
     return;
   }
-  // 59 → נמל תל אביב → cutscene → spawn → G.mission=60
+  // 59 → נמל תל אביב → כניסה למחסן (חדר פנים)
   if(G.mission===59&&!G._ta59done){
     const pp=G._taPortPos||{x:168,z:-155};
     if(d2(px,pz,pp.x,pp.z)<25){
       G._ta59done=true;
+      G._portWHCleared=false;
       showCut('ch9_port_battle',()=>{
-        const PP=G._taPortPos||{x:168,z:-155};
-        [[PP.x-18,PP.z-10],[PP.x+14,PP.z-8],[PP.x-12,PP.z+8],[PP.x+10,PP.z+8],
-         [PP.x,PP.z-18],[PP.x-5,PP.z-6],[PP.x+5,PP.z-6]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
-        const WH=G._taPortWarehousePos||{x:PP.x-22,z:PP.z+10};
-        [[-5,0],[5,0],[0,-3]].forEach(([ox,oz])=>_spawnTAEnemy(WH.x+ox,WH.z+oz));
-        G.mission=60;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[60].txt);
+        setTimeout(()=>enterPortWH(),400);
       });
     }
     return;
@@ -14084,7 +14440,7 @@ function _checkTAMissionTriggers(){
     }
     return;
   }
-  // 61 → כיכר רבין → spawn בוס → G.mission=62
+  // 61 → כיכר רבין → כניסה לכיכר (arena חדר)
   if(G.mission===61&&!G._ta61done){
     const rp=G._taRabinPos||{x:30,z:-30};
     if(d2(px,pz,rp.x,rp.z)<20){
@@ -14092,7 +14448,7 @@ function _checkTAMissionTriggers(){
       forceDog('zippo','זיפו מוביל');
       showCut('ch9_rabin_square',()=>{
         G.mission=62;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[62].txt);
-        setTimeout(()=>{if(typeof _spawnTARabinFight==='function')_spawnTARabinFight();},500);
+        setTimeout(()=>enterRabinSq(),400);
       });
     }
     return;
