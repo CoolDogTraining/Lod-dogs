@@ -5859,26 +5859,25 @@ function doInteract(){
 // ════════════════════════════════════════════════
 function dlgElder(n){
   if(n._dead)return; // בלה מתה — אין דיאלוג
-  if(G.mission>0){openDlg(n.av,n.name,'כבר אמרתי לך — לך ותבצע את המשימות! 🐾',[{t:'בסדר!',fn:closeDlg}]);return;}
-  openDlg(n.av,n.name,'אני בלה. הייתי מלכת הרחוב פעם...\n\nכנופיית "כלבי הגשר" שולטת בכל. כדי לנצח — אכלו, גייסו כלבים, ורק אז לחמו.\n\nהבנתם? אז קדימה!',
-    [{t:'תודה בלה! קדימה',fn:()=>{closeDlg();setMission(1);showN('בלה: "קודם אכלו — כלב רעב לא לוחם!"');}},
-     {t:'עוד שאלה...',fn:()=>{closeDlg();showN('בלה: "אין זמן לשאלות — לכו!"');}},]);
+  if(G.mission>0){playScene('בלה: כבר אמרתי לך — לך ותבצע את המשימות! 🐾');return;}
+  playScene('בלה: אני בלה. הייתי מלכת הרחוב פעם...\nבלה: כנופיית "כלבי הגשר" שולטת בכל. כדי לנצח — אכלו, גייסו כלבים, ורק אז לחמו.\nבלה: הבנתם? אז קדימה!',
+    {onDone:()=>{setMission(1);showN('בלה: "קודם אכלו — כלב רעב לא לוחם!"');}});
 }
 function dlgRecruit(n){
   const isFemale=n.name==='פישקה'||n.name==='לולה';
-  if(n.recruited){openDlg(n.av,n.name,'אני כבר בכנופייה! יחד ננצח! 🐾',[{t:'מעולה!',fn:closeDlg}]);return;}
+  if(n.recruited){playScene(`${n.name}: אני כבר בכנופייה! יחד ננצח! 🐾`);return;}
   const isMomo=G.dog==='momo';
   const momoTxt=isFemale
-    ?`מומו! שמעתי עליך.\nאני מצטרפת — יש לי חשבון עם "כלבי הגשר"!`
-    :`מומו! שמעתי עליך.\nאני מצטרף — יש לי חשבון עם "כלבי הגשר"!`;
+    ?`${n.name}: מומו! שמעתי עליך.\n${n.name}: אני מצטרפת — יש לי חשבון עם "כלבי הגשר"!`
+    :`${n.name}: מומו! שמעתי עליך.\n${n.name}: אני מצטרף — יש לי חשבון עם "כלבי הגשר"!`;
   const otherTxt=isFemale
-    ?`אולי אצטרף...\nאבל שלחו את מומו. היא יודעת לדבר. אני לא הולכת עם כל אחד.`
-    :`אולי אצטרף...\nאבל שלחו את מומו. היא יודעת לדבר. אני לא הולך עם כל אחד.`;
-  const welcomeBtn=isFemale?`ברוכה הבאה, ${n.name}! 🐾`:`ברוך הבא, ${n.name}! 🐾`;
-  const cowardBtn=isFemale?'פחדנית! 😤':'פחדן! 😤';
+    ?`${n.name}: אולי אצטרף...\n${n.name}: אבל שלחו את מומו. היא יודעת לדבר. אני לא הולכת עם כל אחד.`
+    :`${n.name}: אולי אצטרף...\n${n.name}: אבל שלחו את מומו. היא יודעת לדבר. אני לא הולך עם כל אחד.`;
   const bringMomoMsg=isFemale?`${n.name}: "תביאי את מומו."` :`${n.name}: "תביא את מומו."`;
-  openDlg(n.av,n.name,isMomo?momoTxt:otherTxt,
-    isMomo?[{t:welcomeBtn,fn:()=>{recruitDog(n);closeDlg();}}]:[{t:'אחזור עם מומו',fn:closeDlg},{t:cowardBtn,fn:()=>{closeDlg();showN(bringMomoMsg);}},]);
+  playScene(isMomo?momoTxt:otherTxt,{onDone:()=>{
+    if(isMomo)recruitDog(n);
+    else showN(bringMomoMsg);
+  }});
 }
 function recruitDog(n){
   const isFemale=n.name==='פישקה'||n.name==='לולה';

@@ -145,129 +145,141 @@ function _directorTryNext(){
   if(_director.active)return; // מישהו כבר על המסך
   if(!_director.cutQueue.length)return;
   const item=_director.cutQueue.shift();
-  if(item.type==='cut')_renderCut(item);
-  else _renderDlg(item);
+  _renderCut(item);
 }
 
-// ── showCut: מקבל key בודד או מערך מפתחות (שרשור פשוט בלי קינון callbacks) ──
+// ── זיהוי דוברים: שם דמות מוכר לפני ":" בתחילת שורה -> מוצג כתג כתובית ──
+// כל שורה אחרת (בלי "שם:" מוכר) מוצגת כנרטור (אפור, איטלי) — בלי תג דובר.
+const _KNOWN_SPK=['קולין','זיפו','מומו','רקס','בלה','שוקי','בוקסר','פישקה','ברונו',"ג'ק",
+  'טיטאן','פלטו','מפקד','כ"ץ','כץ','נירה','הצל','Z-07','Z-18','Z-01','הכלב','האדריכל','לולה',"חאג' פריד"];
+function _parseCutBeats(tx){
+  return tx.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{
+    const idx=line.indexOf(':');
+    if(idx>-1&&idx<=18){
+      const cand=line.slice(0,idx).trim();
+      const base=cand.replace(/\s*\([^)]*\)\s*$/,'');
+      if(_KNOWN_SPK.some(n=>base===n||base.startsWith(n+' ')))
+        return {spk:cand,txt:line.slice(idx+1).trim().replace(/^["׳״]+|["׳״]+$/g,'')};
+    }
+    return {spk:null,txt:line.replace(/^["׳״]+|["׳״]+$/g,'')};
+  });
+}
+
+// ── showCut: key בודד או מערך מפתחות (שרשור) — כרזת-פרק קצרה ואז כתוביות מעל הסצנה החיה ──
 function showCut(keys,onDone){
   const list=Array.isArray(keys)?keys.slice():[keys];
-  const item={type:'cut',keys:list,onDone:onDone||null};
-  if(_director.active==='cinema'){
-    // סינמה פעילה — לא מציגים כלום, נכנס לתור ויוצג בסיומה
-    _director.cutQueue.push(item);
-    return;
-  }
-  if(_director.active==='cut'){
-    // קאטסין אחר כבר מוצג — תור FIFO, לא דורסים
-    _director.cutQueue.push(item);
-    return;
-  }
+  const segs=list.map(k=>{const c=CUTS[k];return {ch:c.ch,ti:c.ti,beats:_parseCutBeats(c.tx)};});
+  const item={type:'cut',segs,onDone:onDone||null,defaultSpk:null};
+  if(_director.active){_director.cutQueue.push(item);return;}
+  _renderCut(item);
+}
+
+// ── playScene: לדיאלוגי NPC רגילים (כמו openDlg הישן) — בלי כרזת פתיחה, ישר לכתוביות, בלי בחירות ──
+// text: מחרוזת (תיפורק לפי שורות) או מערך beats מוכן [{spk,txt}]
+// opts: {sp, onDone} — sp הוא שם דובר ברירת-מחדל לשורות בלי "שם:"
+function playScene(text,opts){
+  opts=opts||{};
+  const beats=Array.isArray(text)?text:_parseCutBeats(text);
+  const item={type:'cut',segs:[{ch:null,ti:null,beats}],onDone:opts.onDone||null,defaultSpk:opts.sp||null};
+  if(_director.active){_director.cutQueue.push(item);return;}
   _renderCut(item);
 }
 
 function _renderCut(item){
   _director.active='cut';
-  const k=item.keys[0];
-  const c=CUTS[k];
-  document.getElementById('cut-ch').textContent=c.ch;
-  document.getElementById('cut-ti').textContent=c.ti;
-  document.getElementById('cut-tx').textContent='';
-  document.getElementById('cut').style.display='flex';
-  const portrait=_CUT_PORTRAITS[k]||'🐕';
-  const portEl=document.getElementById('cut-portrait');
-  if(portEl)portEl.textContent=portrait;
-  G.paused=true;G.cutOpen=true;
+  _director._currentCutItem=item;
+  item._segIdx=0;
+  G.paused=true;G.cutOpen=true;G.dlgOpen=true;
   document.getElementById('mm-wrap').style.display='none';
-  _currentCutTx=c.tx;_currentCutDone=false;
-  if(_cutTypeInterval)clearInterval(_cutTypeInterval);
+  document.getElementById('cut').style.display='flex';
+  _runSeg(item);
+}
+
+let _titleCardTimer=null;
+function _runSeg(item){
+  const seg=item.segs[item._segIdx];
+  item._beatIdx=0;
+  if(seg.ch){
+    item._titleShown=true;
+    const tc=document.getElementById('cut-titlecard');
+    document.getElementById('cut-ch').textContent=seg.ch;
+    document.getElementById('cut-ti').textContent=seg.ti;
+    tc.style.display='flex';tc.classList.remove('fade-out');
+    clearTimeout(_titleCardTimer);
+    _titleCardTimer=setTimeout(()=>_skipTitleCard(item),1400);
+  } else {
+    item._titleShown=false;
+    document.getElementById('cut-titlecard').style.display='none';
+    _showBeat(item);
+  }
+}
+
+function _skipTitleCard(item){
+  if(!item||!item._titleShown)return;
+  item._titleShown=false;
+  clearTimeout(_titleCardTimer);
+  const tc=document.getElementById('cut-titlecard');
+  tc.classList.add('fade-out');
+  setTimeout(()=>{tc.style.display='none';},280);
+  _showBeat(item);
+}
+
+function _showBeat(item){
+  const seg=item.segs[item._segIdx];
+  const beat=seg.beats[item._beatIdx];
+  const spk=beat.spk||item.defaultSpk||null;
+  const spkEl=document.getElementById('cut-spk');
+  spkEl.style.display=spk?'block':'none';
+  spkEl.textContent=spk||'';
   const txEl=document.getElementById('cut-tx');
+  txEl.classList.toggle('cut-narr',!spk);
+  txEl.textContent='';
+  _currentCutTx=beat.txt;_currentCutDone=false;
+  if(_cutTypeInterval)clearInterval(_cutTypeInterval);
   let idx=0;
   _cutTypeInterval=setInterval(()=>{
     if(idx<_currentCutTx.length){txEl.textContent+=_currentCutTx[idx];idx++;}
     else{clearInterval(_cutTypeInterval);_cutTypeInterval=null;_currentCutDone=true;}
-  },18);
-  // שמור את שאר המפתחות (אם showCut נקרא עם מערך) לקריאה הבאה ל-closeCut
-  item._remaining=item.keys.slice(1);
-  _director._currentCutItem=item;
+  },15);
 }
 
+// closeCut: גם "התקדם" וגם handler לטאפ-בכל-מקום על הסצנה הקולנועית
 function closeCut(){
-  // אם הטייפרייטר עדיין רץ — לחיצה ראשונה מסיימת אותו
-  if(_cutTypeInterval&&!_currentCutDone){skipTypewriter();return;}
-  if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
   const item=_director._currentCutItem;
-  _director._currentCutItem=null;
-  // עוד מפתחות בשרשור הזה? הצג את הבא בלי לעבור דרך התור (אותה "בקשה" לוגית)
-  if(item&&item._remaining&&item._remaining.length){
-    const next={type:'cut',keys:item._remaining,onDone:item.onDone};
-    _renderCut(next);
-    return;
-  }
+  if(!item)return;
+  if(item._titleShown){_skipTitleCard(item);return;}
+  if(_cutTypeInterval&&!_currentCutDone){skipTypewriter();return;}
+  const seg=item.segs[item._segIdx];
+  if(item._beatIdx<seg.beats.length-1){item._beatIdx++;_showBeat(item);return;}
+  if(item._segIdx<item.segs.length-1){item._segIdx++;_runSeg(item);return;}
   document.getElementById('cut').style.display='none';
-  G.paused=false;G.cutOpen=false;
+  document.getElementById('cut-titlecard').style.display='none';
+  G.paused=false;G.cutOpen=false;G.dlgOpen=false;
   document.getElementById('mm-wrap').style.display='block';
   _director.active=null;
-  if(item&&item.onDone)item.onDone();
+  _director._currentCutItem=null;
+  if(item.onDone)item.onDone();
   _directorTryNext(); // יש עוד בתור? תציג את הבא
 }
 
-// ── openDlg: דיאלוג עם בחירות, אותה רמת עדיפות כמו cut ──
-function openDlg(av,sp,tx,choices){
-  const item={type:'dlg',av,sp,tx,choices};
-  if(_director.active==='cinema'||_director.active==='cut'){
-    _director.cutQueue.push(item);
-    return;
-  }
-  _renderDlg(item);
-}
-
-function _renderDlg(item){
-  _director.active='cut'; // אותה רמת עדיפות כמו קאטסין
-  G.dlgOpen=true;
-  document.getElementById('mm-wrap').style.display='none';
-  document.getElementById('dlg-ov').style.display='flex';
-  document.getElementById('dlg-av').textContent=item.av+' ';
-  document.getElementById('dlg-spn').textContent=item.sp;
-  document.getElementById('dlg-tx').textContent=item.tx;
-  const ch=document.getElementById('dlg-ch');
-  ch.innerHTML='';
-  item.choices.forEach(c=>{
-    const b=document.createElement('div');
-    b.className='dc';
-    b.textContent=c.t;
-    const evtType = isMob ? 'touchstart' : 'click';
-    b.addEventListener(evtType, e => { e.preventDefault(); c.fn(e); });
-    ch.appendChild(b);
-  });
-}
-
-function closeDlg(){
-  G.dlgOpen=false;
-  document.getElementById('mm-wrap').style.display='block';
-  document.getElementById('dlg-ov').style.display='none';
-  _director.active=null;
-  _directorTryNext();
-}
+// תאימות לאחור: קריאות ישנות ל-closeDlg() (אם נשארו במקום כלשהו) — מתנהגות כהמשך כתובית רגיל
+function closeDlg(){closeCut();}
 
 // ── _cinemaInterrupt: קוראת לה _playCinema לפני שהיא מתחילה ──
 // סוגרת בעדינות כל cut/dlg פתוח כרגע (בלי להריץ onDone!) ומחזירה אותו לראש
 // התור כדי שיוצג מיד כש-_cinemaResume נקראת.
 function _cinemaInterrupt(){
   if(_director.active!=='cut')return;
-  const wasCutVisible=document.getElementById('cut').style.display==='flex';
-  if(wasCutVisible&&_director._currentCutItem){
-    // הקפא את הטייפרייטר במקום בו הוא נמצא, נחזיר את ה-key הנוכחי בראש התור
+  const item=_director._currentCutItem;
+  if(item){
+    // הקפא והחזר את הסצנה הזו לראש התור — תוצג מההתחלה כש-_cinemaResume נקראת
     if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
+    clearTimeout(_titleCardTimer);
     document.getElementById('cut').style.display='none';
-    const item=_director._currentCutItem;
-    item.keys=[item.keys[0],...item._remaining]; // התחל את הסצנה הזו מחדש כשנחזור
+    document.getElementById('cut-titlecard').style.display='none';
+    item._segIdx=0;item._beatIdx=0;item._titleShown=false;
     _director.cutQueue.unshift(item);
     _director._currentCutItem=null;
-  } else if(document.getElementById('dlg-ov').style.display==='flex'){
-    document.getElementById('dlg-ov').style.display='none';
-    G.dlgOpen=false;
-    // לדיאלוג עם בחירות אין onDone לשרשר — פשוט נסגר; השחקן יכול לפתוח אותו שוב
   }
   _director.active=null;
 }

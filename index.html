@@ -60,14 +60,26 @@
   <button id="st-btn" onclick="nextStory()">המשך ▶</button>
 </div>
 
-<!-- CUTSCENE -->
-<div id="cut" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
-  <div id="cut-portrait">🐕</div>
-  <div class="cut-ch" id="cut-ch"></div>
-  <div class="cut-ti" id="cut-ti"></div>
-  <div class="cut-tx" id="cut-tx"></div>
-  <button id="cut-btn" onclick="closeCut()">המשך ▶</button>
-  <div id="cut-skip" onclick="skipTypewriter()">דלג על טקסט ◀◀</div>
+<!-- CINEMATIC SCENE — letterbox + כתוביות (כמו סרט/MGS/RDR). טאפ בכל מקום = המשך -->
+<div id="cut" ontouchstart="event.stopPropagation()" onclick="closeCut()">
+  <div id="cut-bar-top" class="cut-bar"></div>
+
+  <!-- כרזת פתיחה לסצנה (פרק + כותרת) — מוצגת קצרות ונמחקת -->
+  <div id="cut-titlecard">
+    <div class="cut-ch" id="cut-ch"></div>
+    <div class="cut-ti" id="cut-ti"></div>
+  </div>
+
+  <!-- כתובית: שם דובר + שורת טקסט (טייפרייטר) -->
+  <div id="cut-caption">
+    <div id="cut-spk"></div>
+    <div class="cut-tx" id="cut-tx"></div>
+  </div>
+
+  <div id="cut-bar-bot" class="cut-bar">
+    <div id="cut-skip" onclick="event.stopPropagation();skipTypewriter()">דלג על טקסט ◀◀</div>
+    <div id="cut-advance-hint">לחיצה להמשך ▶</div>
+  </div>
 </div>
 
 <!-- LEVEL UP -->
@@ -222,14 +234,8 @@
 <!-- COLLECTIBLES COUNTER -->
 <div id="coll-hud">⭐ קולקטיבלס<br><span id="coll-count">0</span>/<span id="coll-total">0</span></div>
 
-<!-- DIALOG -->
-<div id="dlg-ov" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
-  <div id="dlg-box" ontouchstart="event.stopPropagation()" onclick="event.stopPropagation()">
-    <div id="dlg-hdr"><span id="dlg-av"></span><span id="dlg-sp"><span id="dlg-spn"></span></span></div>
-    <div id="dlg-tx"></div>
-    <div id="dlg-ch"></div>
-  </div>
-</div>
+<!-- DIALOG: דיאלוגי NPC עוברים כעת דרך מנוע #cut הקולנועי (playScene) -->
+
 
 
 

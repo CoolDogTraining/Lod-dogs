@@ -1532,21 +1532,10 @@ function updBldCapture(dt){
 // ════════════════════════════════════════════════
 // ██ קאטסצין מונפש ██
 // ════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// ██ קאטסצין מונפש — כתוביות (טייפרייטר) ██
+// ════════════════════════════════════════════════
 let _cutTypeInterval=null,_currentCutTx='',_currentCutDone=false;
-const _CUT_PORTRAITS={
-  intro:'🐕',ch2:'🐾',ch3:'🏴',boss:'👹',win:'🏆',
-  ch2_open:'🐕‍🦺',ch2_stealth:'⚡',ch2_momo:'👑',ch2_boss:'🦮',win2:'🐕‍🦺',
-  ch3_open:'😰',bella_dead:'💔',fishka_reveal:'🔪',kikar_battle:'⚔️',
-  fishka_caught:'😤',guards_arrive:'🚨',ch4_open:'🌙',ch4_boss:'🏛️',
-  reks_choice:'💙',final_broadcast:'📡',
-  // ── פרק ה׳ ──
-  ch5_open:'🌅',reks_joins:'🫡',new_threat:'⚠️',titan_reveal:'💀',
-  ch5_boss:'🔥',ch5_finale:'🏙️',true_ending:'🐾',
-  // ── פרק ו׳ ──
-  ch6_open:'💔',ch6_reks_dead:'😶',ch6_shadow_seen:'👁️',
-  ch6_shadow_zippo:'⚡',ch6_lab_found:'🔬',ch6_recording:'🎙️',
-  ch6_shadow_fight:'⚔️',ch6_factory:'😱',ch6_fire:'🔥',ch6_ending:'🌆',
-};
 function skipTypewriter(){
   if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
   document.getElementById('cut-tx').textContent=_currentCutTx;
