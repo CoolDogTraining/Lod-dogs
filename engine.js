@@ -4752,8 +4752,11 @@ function mAtk(){
       sBark();PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
     }
   } else if(PORT_WH.inWH||RABIN_SQ.inRabin){
-    const _c=G.dog==='zippo'?0.28:0.5;
-    if(G.atkCD<=0){G.atkCD=_c;G.keys['KeyF']=true;setTimeout(()=>{G.keys['KeyF']=false;},100);}
+    // תיקון באג: לא קובעים G.atkCD כאן — זה "תופס" את ה-cooldown לפני שהלולאה הפנימית
+    // של החדר (updPortWH/updRabinSq) מספיקה לבדוק אותו, ולכן תקיפה במגע לא נרשמה אף פעם.
+    // במקום זה — פשוט "לוחצים" F לרגע, בדיוק כמו מקלדת, והחדר עצמו מנהל את ה-cooldown.
+    G.keys['KeyF']=true;setTimeout(()=>{G.keys['KeyF']=false;},150);
+    PB.rotation.z=.22;setTimeout(()=>PB.rotation.z=0,180);
   } else if(TA.inTA){
     const _c=G.dog==='zippo'?0.28:0.5;
     if(G.atkCD<=0){G.atkCD=_c;doAtk();}
@@ -4824,7 +4827,9 @@ function updateNavDirection(){
   const lbl=document.getElementById('nav-edge-lbl');
   if(!el||!lbl)return;
   // TA — השתמש במיקום TA ובתargetFn ישירות
-  if(typeof TA!=='undefined'&&TA.inTA){
+  // שדרוג: לא כשנמצאים בחדר פנימי של ת"א (APEX/נמל/רבין) — שם יש מערכת קואורדינטות מקומית נפרדת
+  const _inTARoom=APEX_LAB.inLab||PORT_WH.inWH||RABIN_SQ.inRabin;
+  if(typeof TA!=='undefined'&&TA.inTA&&!_inTARoom){
     const px=TA.playerX,pz=TA.playerZ;
     const tgt=m.targetFn?m.targetFn():null;if(!tgt)return;
     const tx=tgt.x||0,tz=tgt.z||0;
@@ -4885,6 +4890,20 @@ function updateNavDirection(){
         const le=nearestOf(labEnemies,o=>({x:o.x,z:o.z}));
         if(le){tx=le.x;tz=le.z;}
       }
+    }
+  }
+  else if(_inTARoom){
+    // שדרוג: בתוך חדר פנימי של ת"א — הוביל למטרה הרלוונטית בקואורדינטות המקומיות של החדר (PB.position כבר מקומי)
+    if(APEX_LAB.inLab){
+      if(_apexKatzMesh){tx=_apexKatzMesh.position.x;tz=_apexKatzMesh.position.z;}
+      else{tx=0;tz=9;}
+    } else if(PORT_WH.inWH){
+      const liveP=(_portEnemies||[]).filter(e=>!e.dead);
+      if(liveP.length>0){const ne=nearestOf(liveP,o=>({x:o.x,z:o.z}));if(ne){tx=ne.x;tz=ne.z;}else{tx=0;tz=0;}}
+      else{tx=0;tz=0;}
+    } else if(RABIN_SQ.inRabin){
+      if(_rabinBoss&&!_rabinBoss.dead){tx=_rabinBoss.x;tz=_rabinBoss.z;}
+      else{tx=0;tz=-5;}
     }
   }
   else if(G.mission===23||G.mission===24){
@@ -5935,7 +5954,9 @@ function isBlockedByWall(ax,az,bx,bz,walls){
   }
   return false;
 }
-function canSeePlayer(e,px,pz){
+function canSeePlayer(e,px,pz,walls){
+  // שדרוג: פרמטר walls אופציונלי — מאפשר שימוש גם באזורים אחרי לוד (כמו ת"א) עם רשימת מבנים שונה
+  walls=walls||blds;
   const ex=e.mesh.position.x,ez=e.mesh.position.z;
   const dd=d2(ex,ez,px,pz);
   if(dd>e.alert)return false;
@@ -5947,11 +5968,12 @@ function canSeePlayer(e,px,pz){
   const fov=dd<5?Math.PI:Math.PI*(2/3);
   if(angleDiff>=fov/2)return false;
   // בדיקת חסימת קיר — לא רואים דרך בניינים
-  if(dd>4&&isBlockedByWall(ex,ez,px,pz,blds))return false;
+  if(dd>4&&isBlockedByWall(ex,ez,px,pz,walls))return false;
   return true;
 }
-function alertNearby(e,px,pz){
-  G.enemies.forEach(other=>{
+function alertNearby(e,px,pz,list){
+  // שדרוג: פרמטר list אופציונלי — מאפשר alert גם ברשימת אויבים אחרת (למשל taEnemies)
+  (list||G.enemies).forEach(other=>{
     if(other===e||other.hp<=0||!other.mesh.visible)return;
     if(d2(other.mesh.position.x,other.mesh.position.z,e.mesh.position.x,e.mesh.position.z)<20){
       other.state='chase';other.lastSeenX=px;other.lastSeenZ=pz;other.searchT=5;
@@ -13438,7 +13460,7 @@ let _apexLabScene=null,_apexLabCam=null,_apexLabObjs=[];
 let _portWHScene =null,_portWHCam =null,_portWHObjs=[];
 let _rabinScene  =null,_rabinCam  =null,_rabinObjs=[];
 let _apexLabFlicker=[],_apexKatzMesh=null,_apexLabT=0;
-let _portEnemies=[],_rabinBoss=null;
+let _portEnemies=[],_rabinBoss=null,_portColliders=[];
 
 // ════════════════════
 // APEX LAB
@@ -13608,6 +13630,8 @@ function buildPortWHScene(){
     _box(2.4,1.2,2.4,[0x3d2e1c,0x2e2218,0x4a3825][Math.floor(Math.random()*3)],0,x,y,z);
     _box(2.42,.15,2.42,0x002266,0x004499,x,y+.55,z);
   });
+  // שדרוג: רשימת מכשולים (תיבות) שאויבים ינווטו סביבן בלי להיתקע — רק תיבות ברצפה (y<1.5) נחשבות
+  _portColliders=[[-10,4],[-10,-5],[-5,0],[6,8],[10,3],[10,-8],[2,10],[-3,-9]].map(([x,z])=>({x,z,w:2.6,d:2.6}));
   _box(.4,9,.4,0x1a1610,0,-14,4.5,-10);_box(.4,9,.4,0x1a1610,0,-14,4.5,10);
   _box(14,.4,.4,0x1a1610,0,-7,9,-10);_box(14,.4,.4,0x1a1610,0,-7,9,10);
   _box(.4,.4,20,0x1a1610,0,-14,9,0);_box(.2,1.5,.2,0x334455,0,-14,7.5,-3);
@@ -13669,7 +13693,20 @@ function updPortWH(dt){
   _portEnemies.forEach(e=>{
     if(e.dead)return;const dd=Math.hypot(e.x-nx,e.z-nz);
     if(dd<18)e.alert=true;
-    if(e.alert&&dd>1.8){const ang=Math.atan2(nx-e.x,nz-e.z);e.x+=Math.sin(ang)*e.spd*dt;e.z+=Math.cos(ang)*e.spd*dt;e.mesh.position.set(e.x,0,e.z);e.mesh.rotation.y=ang;}
+    if(e.alert&&dd>1.8){
+      const ang=Math.atan2(nx-e.x,nz-e.z);
+      let enx=e.x+Math.sin(ang)*e.spd*dt,enz=e.z+Math.cos(ang)*e.spd*dt;
+      // שדרוג: התחמקות מתיבות — לא נותנים לאויב להיתקע בתוך מכשול
+      let blkX=false,blkZ=false;
+      for(const c of _portColliders){
+        const hw=c.w/2+.7,hd=c.d/2+.7;
+        if(enx>c.x-hw&&enx<c.x+hw&&e.z>c.z-hd&&e.z<c.z+hd)blkX=true;
+        if(e.x>c.x-hw&&e.x<c.x+hw&&enz>c.z-hd&&enz<c.z+hd)blkZ=true;
+      }
+      if(!blkX)e.x=enx;
+      if(!blkZ)e.z=enz;
+      e.mesh.position.set(e.x,0,e.z);e.mesh.rotation.y=ang;
+    }
     e.atkT=Math.max(0,e.atkT-dt);if(dd<2.2&&e.atkT<=0){dmgPlayer(e.atk);e.atkT=1.2;haptic([25,10,25]);}
     if(G._portAtk&&dd<3.5){G._portAtk=false;const dog=G.dogs[G.dog];const dmg=Math.round(dog.pow*10*(1+dog.lv*.1));e.hp-=dmg;spawnBlood(e.x,1,e.z,6);showDmg(e.x,2,e.z,dmg);haptic(18);if(e.hp<=0){e.dead=true;e.mesh.visible=false;addXP(30);G.coins+=15;updCoins();sCapture();}}
   });
@@ -13723,7 +13760,7 @@ function _spawnRabinBoss(){
   const barBG=new THREE.Mesh(new THREE.PlaneGeometry(2,.25),new THREE.MeshLambertMaterial({color:0x330000}));barBG.position.set(0,3.2,0);barBG.rotation.x=-Math.PI/6;g.add(barBG);
   const fill=new THREE.Mesh(new THREE.PlaneGeometry(2,.22),new THREE.MeshLambertMaterial({color:0xff2200,emissive:0x660000}));fill.position.set(0,3.21,0);fill.rotation.x=-Math.PI/6;g.add(fill);
   g.position.set(0,0,-5);_rabinScene.add(g);_rabinObjs.push(g);
-  _rabinBoss={mesh:g,x:0,z:-5,hp:600,mhp:600,spd:4.2,atk:22,atkT:0,dead:false,bar:fill};
+  _rabinBoss={mesh:g,x:0,z:-5,hp:600,mhp:600,spd:4.2,atk:22,atkT:0,dead:false,bar:fill,phase:1};
 }
 function enterRabinSq(){
   G.paused=true;
@@ -13767,8 +13804,9 @@ function updRabinSq(dt){
   if(_rabinCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=10,ch=5+G.pitch*7;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_rabinCam.position.lerp(_vCamTarget,.09);_rabinCam.lookAt(nx,1.1*sz+.7,nz);}
   if(_rabinBoss&&!_rabinBoss.dead){
     const b=_rabinBoss,dd=Math.hypot(b.x-nx,b.z-nz);
+    if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=5.8;showN('⚠️ מפקד APEX זועם!');}
     if(dd>2){const ang=Math.atan2(nx-b.x,nz-b.z);b.x+=Math.sin(ang)*b.spd*dt;b.z+=Math.cos(ang)*b.spd*dt;b.mesh.position.set(b.x,0,b.z);b.mesh.rotation.y=ang;}
-    b.atkT=Math.max(0,b.atkT-dt);if(dd<2.8&&b.atkT<=0){dmgPlayer(b.atk);b.atkT=1.1;haptic([40,20,40]);}
+    b.atkT=Math.max(0,b.atkT-dt);if(dd<2.8&&b.atkT<=0){dmgPlayer(b.atk);b.atkT=b.phase===2?.85:1.1;haptic([40,20,40]);}
     if(G.atkCD<=0&&G.keys['KeyF']&&dd<4){
       G.atkCD=G.dog==='zippo'?.28:.5;const dog=G.dogs[G.dog];const dmg=Math.round(dog.pow*12*(1+dog.lv*.1));
       b.hp-=dmg;spawnBlood(b.x,1.5,b.z,10);showDmg(b.x,2.5,b.z,dmg);haptic(25);
@@ -14492,37 +14530,73 @@ function _spawnTAEnemy(x,z){
   bg.position.set(0,2.4,0);mesh.add(bg);
   const fill=new THREE.Mesh(new THREE.BoxGeometry(2,.14,.06),new THREE.MeshLambertMaterial({color:0xff3300}));
   fill.position.set(0,2.4,.01);mesh.add(fill);
-  const e={mesh,bar:fill,hp:55,mhp:55,spd:5.8,atk:12,atkT:0,state:'patrol',homeX:x,homeZ:z,_alertT:0};
+  // שדרוג: state machine מלא (patrol/chase/search) + alert radius + שדות לסיור חלק — בדיוק כמו אויבי לוד
+  const e={mesh,bar:fill,hp:55,mhp:55,spd:5.8,atk:12,atkT:0,alert:18,state:'patrol',
+    homeX:x,homeZ:z,patAng:Math.random()*Math.PI*2,patT:2+Math.random()*3,
+    lastSeenX:x,lastSeenZ:z,searchT:0,_wallT:0};
   taEnemies.push(e);return e;
 }
 
 function _updTAEnemies(dt){
   if(!TA.inTA)return;
   const px=TA.playerX,pz=TA.playerZ;
-  const dog=G.dogs[G.dog];
   taEnemies.forEach(e=>{
     if(e.hp<=0||!e.mesh||!e.mesh.visible)return;
     const ex=e.mesh.position.x,ez=e.mesh.position.z;
     const dd=d2(ex,ez,px,pz);
     e.atkT=Math.max(0,e.atkT-dt);
-    if(dd<22)e.state='chase';else if(dd>38)e.state='patrol';
-    if(e.state==='chase'){
-      const ang=Math.atan2(px-ex,pz-ez);
-      e.mesh.position.x+=Math.sin(ang)*e.spd*dt;
-      e.mesh.position.z+=Math.cos(ang)*e.spd*dt;
-      e.mesh.rotation.y=ang;
-      if(dd<2.2&&e.atkT<=0){
-        e.atkT=1.1;
-        const _dog=G.dogs[G.dog];
-        _dog.hp=Math.max(0,_dog.hp-e.atk);haptic(25);
-        e.mesh.rotation.z=.3;setTimeout(()=>{if(e.mesh)e.mesh.rotation.z=0;},200);
-        if(_dog.hp<=0)playerDeath();
-      }
-    } else {
-      e._alertT=(e._alertT||0)+dt;
-      if(e._alertT>2.5){e._alertT=0;const a=Math.random()*Math.PI*2;e.mesh.position.x=e.homeX+Math.cos(a)*4;e.mesh.position.z=e.homeZ+Math.sin(a)*4;}
+    // ── זיהוי: קו-ראייה + זווית, בדיוק כמו אויבי לוד (canSeePlayer מקבל את _taBldList) ──
+    const sees=canSeePlayer(e,px,pz,_taBldList)||dd<6;
+    if(sees){
+      if(e.state!=='chase'){alertNearby(e,px,pz,taEnemies);if(e.state==='patrol')showN('👁️ גילו אותך!');}
+      e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=6;
+    } else if(e.state==='chase'){
+      e.searchT-=dt;
+      if(e.searchT<=0){e.state='search';e.searchT=4;}
     }
-
+    if(e.state==='chase'||e.state==='search'){
+      const tx=e.state==='chase'?px:e.lastSeenX;
+      const tz=e.state==='chase'?pz:e.lastSeenZ;
+      const dx=tx-ex,dz=tz-ez,l=Math.sqrt(dx*dx+dz*dz)||1;
+      const spd=e.state==='search'?e.spd*.5:e.spd;
+      // ── התחמקות מבניינים — בדיוק כמו updEnemies בלוד ──
+      const enx=ex+dx/l*spd*dt;
+      const enz=ez+dz/l*spd*dt;
+      let eblkX=false,eblkZ=false;
+      for(const b of _taBldList){
+        if(Math.abs(b.x-ex)>b.w/2+16||Math.abs(b.z-ez)>b.d/2+16)continue;
+        const hw=b.w/2+.95,hd=b.d/2+.95;
+        if(enx>b.x-hw&&enx<b.x+hw&&ez>b.z-hd&&ez<b.z+hd)eblkX=true;
+        if(ex>b.x-hw&&ex<b.x+hw&&enz>b.z-hd&&enz<b.z+hd)eblkZ=true;
+      }
+      if(!eblkX)e.mesh.position.x=enx;
+      else if(!eblkZ){e.mesh.position.z+=dz/l*spd*dt*1.35;e._wallT=(e._wallT||0)+dt;}
+      if(!eblkZ)e.mesh.position.z=enz;
+      else if(!eblkX){e.mesh.position.x+=dx/l*spd*dt*1.35;e._wallT=(e._wallT||0)+dt;}
+      if(eblkX&&eblkZ){
+        e._wallT=(e._wallT||0)+dt;
+        if(e._wallT>1.5){e._wallT=0;e.patAng=(e.patAng||0)+Math.PI*.5+Math.random()*.4;e.state='patrol';e.patT=0.8;}
+      } else e._wallT=Math.max(0,(e._wallT||0)-dt*2);
+      e.mesh.rotation.y=Math.atan2(dx,dz);
+      if(dd<2.2&&e.state==='chase'&&e.atkT<=0){
+        e.atkT=1.1;
+        dmgPlayer(e.atk);haptic(25);
+        e.mesh.rotation.z=.3;setTimeout(()=>{if(e.mesh)e.mesh.rotation.z=0;},200);
+      }
+      if(e.state==='search'){e.searchT-=dt;if(e.searchT<=0){e.state='patrol';e.patT=0;}}
+    } else {
+      // ── סיור — תנועה אקראית חלקה (לא "קפיצה" כמו קודם) ──
+      e.patT-=dt;
+      if(e.patT<=0){e.patAng=Math.random()*Math.PI*2;e.patT=2+Math.random()*3;}
+      const patX=e.homeX+Math.sin(e.patAng)*7,patZ=e.homeZ+Math.cos(e.patAng)*7;
+      const dx=patX-ex,dz=patZ-ez,l=Math.sqrt(dx*dx+dz*dz)||1;
+      if(l>1.2){
+        e.mesh.position.x+=dx/l*(e.spd*.32)*dt;
+        e.mesh.position.z+=dz/l*(e.spd*.32)*dt;
+        e.mesh.rotation.y+=(Math.atan2(dx,dz)-e.mesh.rotation.y)*.08;
+      }
+    }
+    if(e.bar)e.bar.scale.x=Math.max(0,e.hp/e.mhp);
   });
   // עדכן בוס
   if(G._taBossMgr&&!G._taBossMgr.dead&&G._taBossMgr.mesh){
@@ -14532,11 +14606,11 @@ function _updTAEnemies(dt){
       const bd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
       b.atkT=Math.max(0,b.atkT-dt);
       if(bd<25){const ang=Math.atan2(px-b.mesh.position.x,pz-b.mesh.position.z);b.mesh.position.x+=Math.sin(ang)*b.spd*dt;b.mesh.position.z+=Math.cos(ang)*b.spd*dt;}
-      if(bd<2.5&&b.atkT<=0){b.atkT=1.4;const _dog=G.dogs[G.dog];_dog.hp=Math.max(0,_dog.hp-b.atk);haptic(40);if(_dog.hp<=0)playerDeath();}
-
+      if(bd<2.5&&b.atkT<=0){b.atkT=1.4;dmgPlayer(b.atk);haptic(40);}
     }
   }
 }
+
 
 function _spawnTARabinFight(){
   if(!taScene)return;
