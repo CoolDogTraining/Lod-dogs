@@ -4996,14 +4996,14 @@ function loop(){
     updHUD();return;
   }
   if(TA.inTA){
-    // קדם זמן יום גם בתל אביב (השעון מתעדכן ב-updHUD)
     G.dayTime=(G.dayTime+dt/600)%1;
-    // כבה גשם לוד אם פעיל
     if(G.rainOn){G.rainOn=false;const rov=document.getElementById('rain-ov');if(rov)rov.style.opacity='0';setRainVolume(0);if(_rainPoints)_rainPoints.visible=false;}
+    // ── guard: אם taCamera עדיין null (בנייה לא סיימה) — fallback render ──
+    if(!taCamera||!taScene){renderer.render(scene,camera);updHUD();return;}
     updTelAviv(dt);updPfx(dt);_updLightBudget(dt,taScene);
     updateNavDirection();
     drawMM();
-    if(taCamera)renderer.render(taScene,taCamera);
+    renderer.render(taScene,taCamera);
     updHUD();
     return;
   }
@@ -13785,12 +13785,21 @@ function enterTelAviv(){
   G.paused=true;
   fadeOut(()=>{
     if(!taScene)buildTelAvivScene();
+    // ── guard: buildTelAvivScene אמור להיות סינכרוני, אבל נוודא ──
+    if(!taCamera){
+      console.error('enterTelAviv: taCamera still null after build!');
+      taCamera=new THREE.PerspectiveCamera(62,window.innerWidth/window.innerHeight,.1,550);
+      taCamera.position.set(0,7,126);taCamera.lookAt(0,1,115);
+      if(taScene)taScene.add(taCamera);
+    }
     TA.inTA=true;
     TA.playerX=0;TA.playerZ=110;
     TA.playerYaw=Math.PI;G.yaw=Math.PI;
     TA.enterGrace=3.0;
     if(taCamera){taCamera.position.set(0,7,126);taCamera.lookAt(0,1,115);}
-    scene.remove(PB);taScene.add(PB);
+    // העבר PB בבטחה — הסר מכל scene קודם
+    if(PB.parent)PB.parent.remove(PB);
+    taScene.add(PB);
     // ── כבה PointLights של main scene — מונע חריגת MAX_LIGHTS ב-WebGL shader ──
     _mainPLights.forEach(l=>{ if(l&&l.isLight){l._savedI=l.intensity;l.intensity=0;} });
     PB.position.set(TA.playerX,0,TA.playerZ);
