@@ -60,31 +60,36 @@
   <button id="st-btn" onclick="nextStory()">המשך ▶</button>
 </div>
 
-<!-- CINEMATIC SCENE — letterbox + כתוביות סינמטיות. טאפ בכל מקום = המשך -->
+<!-- CINEMATIC SCENE — film-style dialog. tap anywhere = advance -->
 <div id="cut" ontouchstart="event.stopPropagation()" onclick="closeCut()">
   <div id="cut-bar-top" class="cut-bar"></div>
-  <!-- tint overlay — צבע עדין לפי דמות -->
+
+  <!-- atmosphere layers -->
+  <div id="cut-vignette"></div>
+  <div id="cut-grain"></div>
   <div id="cut-tint"></div>
 
-  <!-- כרזת פתיחה לסצנה (פרק + כותרת) -->
+  <!-- chapter title card -->
   <div id="cut-titlecard">
     <div class="cut-ch" id="cut-ch"></div>
     <div class="cut-ti" id="cut-ti"></div>
     <div id="cut-titlecard-line"></div>
   </div>
 
-  <!-- כתובית: badge דובר + שורת טקסט (טייפרייטר) -->
+  <!-- character portrait -->
+  <div id="cut-portrait"><canvas id="cut-portrait-canvas" width="120" height="120"></canvas></div>
+
+  <!-- dialogue caption -->
   <div id="cut-caption">
     <div id="cut-spk-wrap">
-      <div id="cut-spk-icon"></div>
       <div id="cut-spk"></div>
+      <div id="cut-spk-bar"></div>
     </div>
     <div class="cut-tx" id="cut-tx"></div>
   </div>
 
   <div id="cut-bar-bot" class="cut-bar">
-    <div id="cut-skip" onclick="event.stopPropagation();skipTypewriter()">דלג ◀◀</div>
-    <div id="cut-advance-hint">◆ לחיצה להמשך</div>
+    <div id="cut-advance-hint">◆ המשך</div>
   </div>
 </div>
 

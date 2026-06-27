@@ -1535,12 +1535,8 @@ function updBldCapture(dt){
 // ════════════════════════════════════════════════
 // ██ קאטסצין מונפש — כתוביות (טייפרייטר) ██
 // ════════════════════════════════════════════════
-let _cutTypeInterval=null,_currentCutTx='',_currentCutDone=false;
-function skipTypewriter(){
-  if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
-  document.getElementById('cut-tx').textContent=_currentCutTx;
-  _currentCutDone=true;
-}
+// dialog state
+let _cutTypeInterval=null,_currentCutTx='',_currentCutDone=false,_lastSpk=null;
 
 // ════════════════════════════════════════════════
 // ██ פרק ה׳ — שחר ██

@@ -258,58 +258,88 @@ function _skipTitleCard(item){
   _showBeat(item);
 }
 
+// ── Portrait generator — draws a simple character avatar per speaker ──
+function _drawPortrait(spk,data,canvas){
+  if(!canvas||!data)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+  ctx.clearRect(0,0,W,H);
+  // background gradient
+  const bg=ctx.createRadialGradient(cx,cy*.8,0,cx,cy,W*.6);
+  bg.addColorStop(0,data.color+'55');
+  bg.addColorStop(1,'rgba(0,0,0,.9)');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  // icon text centered
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`${Math.round(W*.42)}px serif`;
+  ctx.fillText(data.icon,cx,cy*.95);
+  // subtle rim light
+  const rim=ctx.createRadialGradient(cx,cy,W*.28,cx,cy,W*.5);
+  rim.addColorStop(0,'transparent');
+  rim.addColorStop(1,data.color+'33');
+  ctx.fillStyle=rim;ctx.fillRect(0,0,W,H);
+}
+
+
+let _lastSpk=null; // track speaker change for portrait transition
+
 function _showBeat(item){
   const seg=item.segs[item._segIdx];
   const beat=seg.beats[item._beatIdx];
   const spk=beat.spk||item.defaultSpk||null;
   const data=_spkData(spk);
+  const spkChanged=spk!==_lastSpk;
+  _lastSpk=spk;
 
-  // ── speaker badge ──
+  // ── tint mood ──
+  const tintEl=document.getElementById('cut-tint');
+  if(tintEl){
+    tintEl.style.background=data&&spk?data.tint:'transparent';
+    tintEl.style.opacity=spk?'1':'0';
+  }
+
+  // ── portrait ──
+  const portEl=document.getElementById('cut-portrait');
+  const portCanvas=document.getElementById('cut-portrait-canvas');
+  if(spk&&data&&portEl&&portCanvas){
+    if(spkChanged){
+      portEl.style.display='block';
+      portEl.style.borderColor=data.color+'88';
+      portEl.style.animation='none';
+      void portEl.offsetWidth;
+      portEl.style.animation='cutPortraitIn .3s ease both';
+      _drawPortrait(spk,data,portCanvas);
+    }
+  } else if(portEl){
+    portEl.style.display='none';
+  }
+
+  // ── speaker name + color bar ──
   const spkWrap=document.getElementById('cut-spk-wrap');
-  const spkIcon=document.getElementById('cut-spk-icon');
   const spkEl=document.getElementById('cut-spk');
+  const spkBar=document.getElementById('cut-spk-bar');
   if(spk&&data){
     spkWrap.style.display='flex';
-    spkIcon.textContent=data.icon;
-    spkIcon.style.background=data.color+'22';
-    spkIcon.style.borderColor=data.color+'66';
     spkEl.textContent=spk;
     spkEl.style.color=data.color;
-    // restart badge animation
-    spkWrap.style.animation='none';
-    void spkWrap.offsetWidth;
-    spkWrap.style.animation='cutSpkIn .25s ease both';
+    if(spkBar){spkBar.style.background=data.color;spkBar.style.animation='none';void spkBar.offsetWidth;spkBar.style.animation='cutSpkBarGrow .3s ease .1s both';}
+    if(spkChanged){spkWrap.style.animation='none';void spkWrap.offsetWidth;spkWrap.style.animation='cutSpkSlide .28s cubic-bezier(.2,0,.2,1) both';}
   } else {
     spkWrap.style.display='none';
   }
 
-  // ── tint overlay ──
-  const tintEl=document.getElementById('cut-tint');
-  if(tintEl){
-    tintEl.style.background=data?data.tint:'transparent';
-    tintEl.style.opacity=spk?'1':'0';
-  }
-
-  // ── text ──
+  // ── dialogue text ──
   const txEl=document.getElementById('cut-tx');
   txEl.classList.toggle('cut-narr',!spk);
-  if(spk&&data) txEl.style.color='#fff';
-  else txEl.style.color='';
-  txEl.textContent='';
-  // restart text animation
-  txEl.style.animation='none';
-  void txEl.offsetWidth;
-  txEl.style.animation='cutBeatIn .3s ease both';
+  txEl.style.animation='none';void txEl.offsetWidth;
+  txEl.style.animation='cutBeatIn .25s ease both';
 
-  // hide advance hint until text done
   const hintEl=document.getElementById('cut-advance-hint');
-  if(hintEl) hintEl.classList.remove('visible');
+  if(hintEl)hintEl.classList.remove('visible');
 
   _currentCutTx=beat.txt;_currentCutDone=true;
-  if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
-  txEl.textContent=_currentCutTx;
-  // show advance hint immediately (no typewriter)
-  if(hintEl) hintEl.classList.add('visible');
+  txEl.textContent=beat.txt;
+  if(hintEl)hintEl.classList.add('visible');
 }
 
 // closeCut: גם "התקדם" וגם handler לטאפ-בכל-מקום על הסצנה הקולנועית
@@ -317,15 +347,18 @@ function closeCut(){
   const item=_director._currentCutItem;
   if(!item)return;
   if(item._titleShown){_skipTitleCard(item);return;}
-  if(_cutTypeInterval&&!_currentCutDone){skipTypewriter();return;}
+
   const seg=item.segs[item._segIdx];
   if(item._beatIdx<seg.beats.length-1){item._beatIdx++;_showBeat(item);return;}
   if(item._segIdx<item.segs.length-1){item._segIdx++;_runSeg(item);return;}
   document.getElementById('cut').style.display='none';
   document.getElementById('cut-titlecard').style.display='none';
   // reset tint + hint
+  _lastSpk=null;
   const _tintEl=document.getElementById('cut-tint');
   if(_tintEl){_tintEl.style.opacity='0';_tintEl.style.background='transparent';}
+  const _portEl=document.getElementById('cut-portrait');
+  if(_portEl)_portEl.style.display='none';
   const _hintEl=document.getElementById('cut-advance-hint');
   if(_hintEl)_hintEl.classList.remove('visible');
   G.paused=false;G.cutOpen=false;G.dlgOpen=false;
@@ -347,7 +380,7 @@ function _cinemaInterrupt(){
   const item=_director._currentCutItem;
   if(item){
     // הקפא והחזר את הסצנה הזו לראש התור — תוצג מההתחלה כש-_cinemaResume נקראת
-    if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
+    _currentCutDone=true;
     clearTimeout(_titleCardTimer);
     document.getElementById('cut').style.display='none';
     document.getElementById('cut-titlecard').style.display='none';
