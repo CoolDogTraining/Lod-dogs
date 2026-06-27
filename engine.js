@@ -3595,7 +3595,7 @@ function enterCityHall(){
     scene.remove(PB);cityScene.add(PB);
     PB.position.set(CITY.playerX,0,CITY.playerZ);
     
-    showN('🏛️ נכנסתם לעיריית לוד.\nהכספת בקומה ג׳. שמרו על עצמכם.');
+    playScene('נכנסתם לעיריית לוד.\nהכספת בקומה ג׳. שמרו על עצמכם.');
     G.paused=false;fadeIn();
   });
 }
@@ -3634,7 +3634,7 @@ function spawnPaltoInCity(){
   const pl=new THREE.PointLight(0x4488ff,4,18);pl.position.set(0,6,-38);cityScene.add(pl);cityObjects.push(pl);
   const rl=new THREE.PointLight(0xddaa33,2,10);rl.position.set(6,5,-38);cityScene.add(rl);cityObjects.push(rl);
 
-  showN('💙 ד״ר פלטו: "ציפיתי לכם. לוד שלי — לעד."\n🟡 רקס עומד לצדו — קפוא.');
+  playScene('פלטו: "ציפיתי לכם. לוד שלי — לעד."\nרקס עומד לצדו — קפוא.');
 }
 
 function spawnCityVFX(x,y,z,col,n=8){
@@ -3707,7 +3707,7 @@ function updCityHall(dt){
     if(d2(CITY.playerX,CITY.playerZ,G._citySafePos.x,G._citySafePos.z)<5){
       citySafeFound=true;
       spawnCityVFX(G._citySafePos.x,2,G._citySafePos.z,0x00ff44,14);
-      showN('🗂️ הכספת פתוחה! הראיות בידיכם!\nפישקה: "קוד — תאריך הקמת לוד. פלטו אוהב רומנטיקה."');
+      playScene('הכספת פתוחה!\nפישקה: "קוד — תאריך הקמת לוד. פלטו אוהב רומנטיקה."');
       setTimeout(()=>setMission(17),1000);
     }
   }
@@ -3720,7 +3720,7 @@ function updCityHall(dt){
     b.mesh.rotation.y+=dt*(b.phase===2?.8:.35);
     if(b.hp<b.mhp*.5&&b.phase===1){
       b.phase=2;
-      showN('💙 פלטו: "רקס! פקד!"\n🟡 רקס: "...אני לא יכול."');
+      playScene('פלטו: "רקס! פקד!"\nרקס: "...אני לא יכול."');
       haptic([40,20,40,20,60]);
       // רקס מסתובב ומתרחק
       if(G._cityReks)G._cityReks.mesh.rotation.y=Math.PI*.5;
@@ -4376,7 +4376,7 @@ function enterMosque(){
     mosqueScene.add(PB);
     PB.position.set(VILLA.playerX,0,VILLA.playerZ);
     
-    showN('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."');
+    playScene('זיפו: "בסדר. קל. מסתנן, מוצא את מומו, יוצאים.\nמה יכול להשתבש."');
     G.paused=false;
     fadeIn();
   });
@@ -4490,8 +4490,8 @@ function updVilla(dt){
 
   // יציאה דרך השער דרום — רק אם הדלת לא נעולה
   if(VILLA.playerZ>45){
-    if(G.mission===9&&!G.momoFreed){if(!G._zippoExitWarned){G._zippoExitWarned=true;showN('זיפו: "אני לא יכול לעזוב בלי מומו!"');}}
-    else if(mosqueDoorLocked)showN('🔒 הדלת נעולה! הבס את ברונו כדי לפתוח!');
+    if(G.mission===9&&!G.momoFreed){if(!G._zippoExitWarned){G._zippoExitWarned=true;playScene('זיפו: "אני לא יכול לעזוב בלי מומו!"');}}
+    else if(mosqueDoorLocked)showN('🔒 הדלת נעולה!');
     else exitMosque(G.momoFreed);
     return;
   }
@@ -4504,7 +4504,7 @@ function updVilla(dt){
       if(G.momoModel){G.momoModel.visible=false;}
       addXP(60);G.score+=200;sCapture();
       spawnVFX(G.cagePos.x,2,G.cagePos.z,0xff69b4,20);
-      showN('🔓 מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
+      playScene('מומו שוחררה!\nמומו: "ידעתי שתגיעו!"\nזיפו: "כמעט לא."\nברונו מרים את הראש...');
       // נעל את הדלת — הוסף חסימה קולקטורית ועדכן צבע
       setTimeout(()=>{
         mosqueDoorLocked=true;
@@ -4516,7 +4516,7 @@ function updVilla(dt){
         lockBar.position.set(-2,3.6,15.6);mosqueScene.add(lockBar);mosqueObjects.push(lockBar);
         // הוסף את הדלת לcollision
         mosqueBlds.push({x:-2,z:15.8,w:3.2,d:.5});
-        showN('🔒 הדלת ננעלה!\nברונו: "אַנְتُمْ مَحَاصِرُونَ!" (אתם לכודים!)');
+        playScene('הדלת ננעלה!\nברונו: "אתם לכודים!"');
       },800);
       setTimeout(()=>{
         mosqueAlerted=true;
@@ -4781,7 +4781,7 @@ function setMission(idx){
   MISSIONS[idx].unlock();
   updateMissionHUD();
   updateNavArrow();
-  if(idx>0){showN(`📋 ${MISSIONS[idx].txt}`);saveGame();}
+  if(idx>0){saveGame();}
 }
 
 function updateMissionHUD(){
@@ -5354,7 +5354,7 @@ function doAtk(){
         mosqueDoorLocked=false;
         if(mosqueDoorMesh){mosqueDoorMesh.material.color.setHex(0x3a2010);}
         mosqueBlds=mosqueBlds.filter(b=>!(Math.abs(b.x+2)<1&&Math.abs(b.z-15.8)<1));
-        showN('🔓 הדלת נפתחה! ברח מהמסגד!');
+        showN('🔓 הדלת נפתחה!');
         setTimeout(()=>showCut('win2',()=>{exitMosque(true);setTimeout(()=>showCut('ch2_plato_hint',()=>setMission(11)),800);}),1200);
       }
     }
@@ -6687,17 +6687,23 @@ let NT=null;
 let _notifQueue=[];
 let _notifActive=false;
 function showN(t,force){
+  // ── סנן הודעות נרטיביות ארוכות שנראות יותר כמו כתובית דיאלוג ──
+  // force=true תמיד עובר (הערות קולנועיות מ-_playCinema)
+  if(!force){
+    const txt=String(t);
+    // suppress if cut/cinema is active
+    if(_director&&(_director.active==='cinema'||_director.active==='cut'||G._grabPaused))return;
+    // suppress mission text blurbs (long lines with character names or navigation)
+    if(txt.startsWith('📋'))return;
+  }
   _notifQueue.push({t,force:!!force});
   if(!_notifActive) _processNotifQueue();
 }
 function _processNotifQueue(){
   if(!_notifQueue.length){_notifActive=false;return;}
   const next=_notifQueue[0];
-  // ── עדיפות לסצנות סינמטיות/קאטסינים: דוחים הודעות רגילות, אבל מציגים
-  //    הערות שמגיעות מתוך הסינמה עצמה (force=true, למשל s.note ב-_playCinema) ──
-  if(!next.force&&(_director.active==='cinema'||_director.active==='cut'||G._grabPaused)){
-    setTimeout(_processNotifQueue,400);
-    return;
+  if(!next.force&&(_director&&(_director.active==='cinema'||_director.active==='cut')||G._grabPaused)){
+    _notifQueue=[];_notifActive=false;return; // flush queue if scene started
   }
   _notifQueue.shift();
   _notifActive=true;
@@ -6705,13 +6711,14 @@ function _processNotifQueue(){
   el.textContent=next.t;
   el.style.display='block';
   el.style.animation='none';
-  void el.offsetWidth; // force reflow לאנימציה
+  void el.offsetWidth;
   el.style.animation='notifSlide .3s ease-out';
   if(NT)clearTimeout(NT);
   NT=setTimeout(()=>{
     el.style.display='none';
-    _processNotifQueue(); // הצג את הבאה
-  }, _notifQueue.length > 0 ? 2000 : 3500); // קצר יותר אם יש עוד בתור
+    _notifActive=false;
+    _processNotifQueue();
+  }, _notifQueue.length > 0 ? 1800 : 2800);
 }
 
 // ════════════════════════════════════════════════
@@ -6902,7 +6909,7 @@ function spawnFishkaHostile(){
   });
 
   G._kikarArrived=false;
-  showN('🔴 פישקה בוגדת! רצה לכיכר הכדורים!\nרדוף אחריה!');
+  playScene('פישקה: רצה לכיכר הכדורים!\nרדוף אחריה!');
 }
 
 // ── שומרי דרך לפרק ב׳ — כלבי חאג׳ פריד על הדרך למסגד ──
