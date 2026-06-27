@@ -1536,7 +1536,7 @@ function updBldCapture(dt){
 // ██ קאטסצין מונפש — כתוביות (טייפרייטר) ██
 // ════════════════════════════════════════════════
 // dialog state
-let _cutTypeInterval=null,_currentCutTx='',_currentCutDone=false,_lastSpk=null;
+let _cutTypeInterval=null,_currentCutTx='',_currentCutDone=false;
 
 // ════════════════════════════════════════════════
 // ██ פרק ה׳ — שחר ██
