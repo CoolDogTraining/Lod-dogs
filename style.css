@@ -208,24 +208,48 @@ canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(
 #sq-btn.has-done{background:rgba(46,204,113,.85);border-color:#2ecc71;}
 #sq-btn-mob.has-done{background:rgba(46,204,113,.85);border-color:#2ecc71;}
 
-/* ── DIALOG ── */
-/* ── CINEMATIC SCENE — letterbox + כתוביות (MGS/RDR/GTA style) ── */
-#cut{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;justify-content:space-between;cursor:pointer;pointer-events:all;}
-.cut-bar{background:#000;flex-shrink:0;height:clamp(34px,8vh,64px);width:100%;box-sizing:border-box;}
-#cut-bar-bot{display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
-#cut-skip{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:1px;cursor:pointer;}
-#cut-skip:hover{color:rgba(255,255,255,.7);}
-#cut-advance-hint{font-size:11px;color:rgba(255,255,255,.32);letter-spacing:1px;animation:hintPulse 1.8s ease-in-out infinite;}
-#cut-caption{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 8vw 16px;text-align:center;}
+/* ── DIALOG / CINEMATIC SCENE — cinematic upgrade ── */
+@keyframes cutBeatIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes cutSpkIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+@keyframes cutAdvPulse{0%,100%{opacity:.25;transform:translateY(0);}50%{opacity:.75;transform:translateY(-2px);}}
+@keyframes cutTitleReveal{0%{opacity:0;letter-spacing:12px;}100%{opacity:1;letter-spacing:4px;}}
+@keyframes cutTitleSlide{0%{opacity:0;transform:translateY(16px);}100%{opacity:1;transform:translateY(0);}}
+@keyframes cutLineExpand{from{width:0;}to{width:clamp(60px,20vw,140px);}}
+@keyframes cutTint{from{opacity:0;}to{opacity:1;}}
 
-/* ── CUTSCENE ── */
-#cut-titlecard{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.55);text-align:center;padding:24px;box-sizing:border-box;opacity:1;transition:opacity .3s ease;}
+/* ── Main overlay ── */
+#cut{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;justify-content:space-between;cursor:pointer;pointer-events:all;background:transparent;}
+.cut-bar{background:linear-gradient(to bottom,#000 60%,rgba(0,0,0,.0));flex-shrink:0;height:clamp(40px,9vh,70px);width:100%;box-sizing:border-box;}
+#cut-bar-top.cut-bar{background:linear-gradient(to bottom,#000 70%,rgba(0,0,0,0));}
+#cut-bar-bot.cut-bar{background:linear-gradient(to top,#000 70%,rgba(0,0,0,0));}
+
+/* ── Speaker tint overlay — subtle color per character ── */
+#cut-tint{position:absolute;inset:0;pointer-events:none;z-index:1;opacity:0;transition:opacity .5s ease,background .5s ease;}
+
+/* ── Bottom caption area ── */
+#cut-bar-bot{display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+#cut-skip{font-size:11px;color:rgba(255,255,255,.32);letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;}
+#cut-skip:hover{color:rgba(255,255,255,.65);}
+#cut-advance-hint{font-size:12px;color:rgba(255,255,255,.0);letter-spacing:1px;animation:cutAdvPulse 1.6s ease-in-out infinite;transition:color .4s;}
+#cut-advance-hint.visible{color:rgba(255,255,255,.55);}
+#cut-caption{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 8vw 18px;text-align:center;position:relative;z-index:2;}
+
+/* ── Speaker badge ── */
+#cut-spk-wrap{display:none;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;animation:cutSpkIn .25s ease both;}
+#cut-spk-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;border:1.5px solid rgba(255,255,255,.3);}
+#cut-spk{color:#fff;font-size:clamp(11px,2.4vw,13px);font-weight:bold;letter-spacing:2px;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.9);}
+#cut-spk-line{height:1.5px;background:currentColor;animation:cutLineExpand .3s ease both;flex-shrink:0;align-self:center;opacity:.5;margin-right:4px;}
+
+/* ── Dialogue text ── */
+.cut-tx{color:#fff;font-size:clamp(15px,3.4vw,21px);line-height:1.6;max-width:640px;white-space:pre-wrap;text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 18px rgba(0,0,0,.7);animation:cutBeatIn .3s ease both;}
+.cut-tx.cut-narr{color:#ccc8c0;font-style:italic;font-size:clamp(13px,3vw,18px);}
+
+/* ── TITLE CARD ── */
+#cut-titlecard{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(3px);text-align:center;padding:24px;box-sizing:border-box;opacity:1;transition:opacity .35s ease;z-index:10;}
 #cut-titlecard.fade-out{opacity:0;}
-.cut-ch{color:#f5c518;font-size:clamp(11px,3vw,14px);letter-spacing:4px;margin-bottom:10px;opacity:.85;}
-.cut-ti{color:#fff;font-size:clamp(18px,5vw,30px);font-weight:bold;text-shadow:0 0 18px rgba(255,255,255,.3);}
-.cut-tx{color:#fff;font-size:clamp(14px,3.2vw,19px);line-height:1.5;max-width:640px;white-space:pre-wrap;text-shadow:0 1px 4px rgba(0,0,0,.95),0 0 14px rgba(0,0,0,.65);}
-.cut-tx.cut-narr{color:#d8d8d8;font-style:italic;}
-#cut-spk{display:none;color:#f5c518;font-size:clamp(11px,2.4vw,13px);font-weight:bold;letter-spacing:1px;margin-bottom:6px;text-shadow:0 1px 3px rgba(0,0,0,.9);}
+.cut-ch{color:#f5c518;font-size:clamp(10px,2.6vw,13px);letter-spacing:4px;margin-bottom:14px;opacity:.9;text-transform:uppercase;animation:cutTitleReveal .6s ease both;}
+.cut-ti{color:#fff;font-size:clamp(20px,5.5vw,34px);font-weight:bold;text-shadow:0 0 28px rgba(255,255,255,.35),0 2px 8px rgba(0,0,0,.9);animation:cutTitleSlide .5s ease .15s both;letter-spacing:.5px;}
+#cut-titlecard-line{width:clamp(50px,15vw,100px);height:1.5px;background:#f5c518;margin:14px auto 0;opacity:.6;animation:cutLineExpand .5s ease .3s both;}
 
 /* ── STORY ── */
 #story{position:fixed;inset:0;background:#000;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;}
@@ -311,12 +335,14 @@ canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(
   }
 
   /* ── CINEMATIC SCENE ── */
-  .cut-bar{height:clamp(26px,7vh,46px);}
-  .cut-ch{font-size:9px;letter-spacing:2px;margin-bottom:5px;}
-  .cut-ti{font-size:clamp(13px,2.8vw,18px);}
-  .cut-tx{font-size:clamp(12px,2.6vw,15px);line-height:1.4;max-width:82vw;}
-  #cut-caption{padding:0 6vw 10px;}
+  .cut-bar{height:clamp(28px,7vh,50px);}
+  .cut-ch{font-size:9px;letter-spacing:2px;margin-bottom:6px;}
+  .cut-ti{font-size:clamp(16px,4.5vw,24px);}
+  .cut-tx{font-size:clamp(13px,3.8vw,17px);line-height:1.5;max-width:88vw;}
+  #cut-caption{padding:0 5vw 12px;}
   #cut-skip,#cut-advance-hint{font-size:9px;}
+  #cut-spk-icon{width:22px;height:22px;font-size:11px;}
+  #cut-spk{font-size:10px;letter-spacing:1.5px;}
 
   /* ── LEVEL UP ── */
   #lu{

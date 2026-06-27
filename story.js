@@ -152,6 +152,40 @@ function _directorTryNext(){
 // כל שורה אחרת (בלי "שם:" מוכר) מוצגת כנרטור (אפור, איטלי) — בלי תג דובר.
 const _KNOWN_SPK=['קולין','זיפו','מומו','רקס','בלה','שוקי','בוקסר','פישקה','ברונו',"ג'ק",
   'טיטאן','פלטו','מפקד','כ"ץ','כץ','נירה','הצל','Z-07','Z-18','Z-01','הכלב','האדריכל','לולה',"חאג' פריד"];
+
+// ── מפת דמויות: צבע badge, אייקון, tint רקע ──
+const _SPK_DATA={
+  'קולין':  {color:'#5b9bd5',icon:'🐕',tint:'rgba(40,80,140,.10)'},
+  'זיפו':   {color:'#e8a040',icon:'🔥',tint:'rgba(160,90,20,.10)'},
+  'מומו':   {color:'#b07ad8',icon:'🌸',tint:'rgba(120,60,180,.10)'},
+  'רקס':    {color:'#4db87a',icon:'🐾',tint:'rgba(30,120,70,.10)'},
+  'בלה':    {color:'#e8c040',icon:'🌟',tint:'rgba(160,140,0,.08)'},
+  'שוקי':   {color:'#7ab8e8',icon:'💧',tint:'rgba(30,100,170,.08)'},
+  'בוקסר':  {color:'#c87a50',icon:'💪',tint:'rgba(140,70,30,.08)'},
+  'פישקה':  {color:'#d05858',icon:'🔪',tint:'rgba(160,20,20,.10)'},
+  'ברונו':  {color:'#888',   icon:'🐩',tint:'rgba(60,60,60,.08)'},
+  "ג'ק":    {color:'#c05050',icon:'⚔️', tint:'rgba(140,20,20,.10)'},
+  'טיטאן':  {color:'#e05030',icon:'💀',tint:'rgba(160,30,10,.12)'},
+  'פלטו':   {color:'#a0b0c8',icon:'🏛️', tint:'rgba(60,80,120,.08)'},
+  'מפקד':   {color:'#c03030',icon:'🎖️', tint:'rgba(140,10,10,.10)'},
+  'כ"ץ':    {color:'#80c8c8',icon:'🔬',tint:'rgba(0,120,120,.10)'},
+  'כץ':     {color:'#80c8c8',icon:'🔬',tint:'rgba(0,120,120,.10)'},
+  'נירה':   {color:'#d4b060',icon:'🦴',tint:'rgba(140,100,0,.08)'},
+  'הצל':    {color:'#888080',icon:'👁️', tint:'rgba(40,40,60,.10)'},
+  'Z-07':   {color:'#e04040',icon:'🤖',tint:'rgba(160,10,10,.12)'},
+  'Z-18':   {color:'#d040c0',icon:'🌹',tint:'rgba(140,0,130,.12)'},
+  'Z-01':   {color:'#e8a040',icon:'⚡',tint:'rgba(160,90,20,.10)'},
+  'הכלב':   {color:'#b0b0b0',icon:'🐶',tint:'rgba(80,80,80,.07)'},
+  'האדריכל':{color:'#f0e0a0',icon:'🏗️', tint:'rgba(150,130,30,.08)'},
+  'לולה':   {color:'#f08080',icon:'🌺',tint:'rgba(160,40,40,.08)'},
+  "חאג' פריד":{color:'#a08060',icon:'🕌',tint:'rgba(100,70,20,.08)'},
+};
+function _spkData(name){
+  if(!name)return null;
+  const base=name.replace(/\s*\([^)]*\)\s*$/,'');
+  return _SPK_DATA[base]||_SPK_DATA[name]||{color:'#f5c518',icon:'💬',tint:'rgba(120,100,0,.07)'};
+}
+
 function _parseCutBeats(tx){
   return tx.split('\n').map(s=>s.trim()).filter(Boolean).map(line=>{
     const idx=line.indexOf(':');
@@ -206,7 +240,7 @@ function _runSeg(item){
     document.getElementById('cut-ti').textContent=seg.ti;
     tc.style.display='flex';tc.classList.remove('fade-out');
     clearTimeout(_titleCardTimer);
-    _titleCardTimer=setTimeout(()=>_skipTitleCard(item),1400);
+    _titleCardTimer=setTimeout(()=>_skipTitleCard(item),2000);
   } else {
     item._titleShown=false;
     document.getElementById('cut-titlecard').style.display='none';
@@ -228,19 +262,54 @@ function _showBeat(item){
   const seg=item.segs[item._segIdx];
   const beat=seg.beats[item._beatIdx];
   const spk=beat.spk||item.defaultSpk||null;
+  const data=_spkData(spk);
+
+  // ── speaker badge ──
+  const spkWrap=document.getElementById('cut-spk-wrap');
+  const spkIcon=document.getElementById('cut-spk-icon');
   const spkEl=document.getElementById('cut-spk');
-  spkEl.style.display=spk?'block':'none';
-  spkEl.textContent=spk||'';
+  if(spk&&data){
+    spkWrap.style.display='flex';
+    spkIcon.textContent=data.icon;
+    spkIcon.style.background=data.color+'22';
+    spkIcon.style.borderColor=data.color+'66';
+    spkEl.textContent=spk;
+    spkEl.style.color=data.color;
+    // restart badge animation
+    spkWrap.style.animation='none';
+    void spkWrap.offsetWidth;
+    spkWrap.style.animation='cutSpkIn .25s ease both';
+  } else {
+    spkWrap.style.display='none';
+  }
+
+  // ── tint overlay ──
+  const tintEl=document.getElementById('cut-tint');
+  if(tintEl){
+    tintEl.style.background=data?data.tint:'transparent';
+    tintEl.style.opacity=spk?'1':'0';
+  }
+
+  // ── text ──
   const txEl=document.getElementById('cut-tx');
   txEl.classList.toggle('cut-narr',!spk);
+  if(spk&&data) txEl.style.color='#fff';
+  else txEl.style.color='';
   txEl.textContent='';
-  _currentCutTx=beat.txt;_currentCutDone=false;
-  if(_cutTypeInterval)clearInterval(_cutTypeInterval);
-  let idx=0;
-  _cutTypeInterval=setInterval(()=>{
-    if(idx<_currentCutTx.length){txEl.textContent+=_currentCutTx[idx];idx++;}
-    else{clearInterval(_cutTypeInterval);_cutTypeInterval=null;_currentCutDone=true;}
-  },15);
+  // restart text animation
+  txEl.style.animation='none';
+  void txEl.offsetWidth;
+  txEl.style.animation='cutBeatIn .3s ease both';
+
+  // hide advance hint until text done
+  const hintEl=document.getElementById('cut-advance-hint');
+  if(hintEl) hintEl.classList.remove('visible');
+
+  _currentCutTx=beat.txt;_currentCutDone=true;
+  if(_cutTypeInterval){clearInterval(_cutTypeInterval);_cutTypeInterval=null;}
+  txEl.textContent=_currentCutTx;
+  // show advance hint immediately (no typewriter)
+  if(hintEl) hintEl.classList.add('visible');
 }
 
 // closeCut: גם "התקדם" וגם handler לטאפ-בכל-מקום על הסצנה הקולנועית
@@ -254,6 +323,11 @@ function closeCut(){
   if(item._segIdx<item.segs.length-1){item._segIdx++;_runSeg(item);return;}
   document.getElementById('cut').style.display='none';
   document.getElementById('cut-titlecard').style.display='none';
+  // reset tint + hint
+  const _tintEl=document.getElementById('cut-tint');
+  if(_tintEl){_tintEl.style.opacity='0';_tintEl.style.background='transparent';}
+  const _hintEl=document.getElementById('cut-advance-hint');
+  if(_hintEl)_hintEl.classList.remove('visible');
   G.paused=false;G.cutOpen=false;G.dlgOpen=false;
   document.getElementById('mm-wrap').style.display='block';
   _director.active=null;
