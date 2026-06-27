@@ -790,13 +790,59 @@ function updHumanNPCs(dt){
 
     const distToPlayer=d2(n.x,n.z,px,pz);
 
-    // ── בריחה מנביחה/קרב ──
-    if(distToPlayer<5&&G.atkCD<0.4&&G.atkCD>0&&n.state!=='flee'){
+    // ── תגובה לקרב / אויבים בסביבה ──
+    const inCombat=G.enemies&&G.enemies.some(e=>!e.dead&&e.mesh&&e.mesh.visible&&d2(e.mesh.position.x,e.mesh.position.z,px,pz)<20);
+    const nearFight=distToPlayer<8&&G.atkCD<0.4&&G.atkCD>0;
+    const nearExplosion=G._lastBoomPos&&d2(n.x,n.z,G._lastBoomPos.x,G._lastBoomPos.z)<12;
+
+    if((nearFight||nearExplosion)&&n.state!=='flee'&&n.state!=='panic'){
+      // בריחה מיידית
+      n.state='panic';
+      n._panicT=3+Math.random()*2;
+      const ang=Math.atan2(n.x-px,n.z-pz)+(Math.random()-.5)*.8;
+      n.targetX=Math.max(-130,Math.min(130,n.x+Math.sin(ang)*22));
+      n.targetZ=Math.max(-130,Math.min(130,n.z+Math.cos(ang)*22));
+      n.waitT=0;
+      // צעקה ויזואלית — בלון טקסט
+      if(!n._panicBubble&&Math.random()<0.5){
+        const bubble=document.createElement('div');
+        const phrases=['!','😱','אוי!','ברח!','עזרה!','מה זה?!'];
+        bubble.textContent=phrases[Math.floor(Math.random()*phrases.length)];
+        bubble.style.cssText='position:fixed;background:rgba(255,255,255,.92);color:#111;border-radius:8px;padding:2px 7px;font-size:12px;font-weight:bold;pointer-events:none;z-index:25;animation:npcBubblePop .4s ease both;';
+        document.body.appendChild(bubble);
+        n._panicBubble=bubble;
+        n._panicBubbleT=2;
+      }
+    } else if(inCombat&&distToPlayer<25&&n.state==='walk'&&Math.random()<0.015){
+      // קרב רחוק יותר — הליכה זהירה / עצירה להסתכל
+      n.state='idle';
+      n.waitT=1.5+Math.random()*2;
+      if(n.mesh._head){
+        const ang=Math.atan2(px-n.x,pz-n.z);
+        n.mesh._head.rotation.y=ang-n.mesh.rotation.y;
+      }
+    } else if(n.state==='panic'){
+      n._panicT-=dt;
+      if(n._panicT<=0)n.state='flee';
+    } else if(distToPlayer<5&&G.atkCD<0.4&&G.atkCD>0&&n.state!=='flee'){
       n.state='flee';
       const ang=Math.atan2(n.x-px,n.z-pz);
       n.targetX=Math.max(-130,Math.min(130,n.x+Math.sin(ang)*18));
       n.targetZ=Math.max(-130,Math.min(130,n.z+Math.cos(ang)*18));
       n.waitT=0;
+    }
+
+    // ── עדכון בלון פאניקה ──
+    if(n._panicBubble){
+      n._panicBubbleT-=dt;
+      // מיקום בלון מעל הדמות
+      const nPos=n.mesh.position.clone().project(camera);
+      if(nPos.z<1){
+        n._panicBubble.style.left=`${(nPos.x*.5+.5)*window.innerWidth-20}px`;
+        n._panicBubble.style.top=`${(-.5*nPos.y+.5)*window.innerHeight-60}px`;
+        n._panicBubble.style.display='block';
+      } else {n._panicBubble.style.display='none';}
+      if(n._panicBubbleT<=0){n._panicBubble.remove();n._panicBubble=null;}
     }
 
     // ── גשם — למקלט ──
@@ -864,7 +910,10 @@ function updHumanNPCs(dt){
         // סיים חצייה — המשך ללכת על המדרכה
         n.state='walk';
       }
-      if(n.state==='flee'){n.state='idle';}
+      if(n.state==='panic'){
+      n.spd=n.type.spd*2.2; // ריצה פאניקה
+    } else if(n.state==='flee'){
+      n.spd=n.type.spd*1.6;n.state='idle';}
       if(n.state==='shelter'){n.waitT=isRaining?99:2;}
       else {
         // בחר יעד חדש על המדרכה

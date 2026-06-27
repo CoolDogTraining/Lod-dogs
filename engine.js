@@ -3373,7 +3373,7 @@ function buildBoss(){
   // ג'ק הרוטווילר — ענק עם כולר קוצים
   const bg=mkJack(1.7);bg.position.set(25,0,18);scene.add(bg);
   const bar=hpBar(bg,2.4,3.9);
-  G.bosses.push({mesh:bg,hp:200,mhp:200,spd:4,alert:22,atk:3.2,atkT:0,bar,dead:false,phase:1,dashT:4,dashOn:false,dvx:0,dvz:0});
+  G.bosses.push({mesh:bg,hp:700,mhp:700,spd:4,alert:22,atk:3.2,atkT:0,bar,dead:false,phase:1,dashT:4,dashOn:false,dvx:0,dvz:0});
 }
 
 // ════════════════════════════════════════════════
@@ -3622,7 +3622,7 @@ function spawnPaltoInCity(){
   const pm=mkPalto(1.1);pm.position.set(0,0,-38);cityScene.add(pm);cityObjects.push(pm);
   const barBg=new THREE.Mesh(new THREE.BoxGeometry(2.5,.2,.1),new THREE.MeshLambertMaterial({color:0x220033}));barBg.position.set(0,3.2,0);pm.add(barBg);
   const barFg=new THREE.Mesh(new THREE.BoxGeometry(2.5,.18,.12),new THREE.MeshLambertMaterial({color:0x2255cc}));barFg.position.set(0,3.2,.01);pm.add(barFg);
-  cityPalto={mesh:pm,bar:barFg,x:0,z:-38,hp:300,mhp:300,dead:false,phase:1,_atkT:0,_hitT:0};
+  cityPalto={mesh:pm,bar:barFg,x:0,z:-38,hp:900,mhp:900,dead:false,phase:1,_atkT:0,_hitT:0};
 
   // רקס — עומד לצד פלטו (אחי מומו)
   const rm=mkCommander(1.0);rm.position.set(6,0,-38);cityScene.add(rm);cityObjects.push(rm);
@@ -3729,6 +3729,7 @@ function updCityHall(dt){
     if(!b._hitCD)b._hitCD=0;b._hitCD=Math.max(0,b._hitCD-dt);
     if(dd<5.5&&G._atkFrame&&b._hitT<=0&&b._hitCD<=0){
       const dmg=Math.round(dog.pow*11*(1+dog.lv*.1));b.hp-=dmg;sHit();haptic(25);
+      screenShake(0.18,0.15);
       if(b.mesh.children[0])flash(b.mesh.children[0]);
       spawnCityVFX(b.x,2,b.z,0xe74c3c,7);b._hitT=0.5;b._hitCD=0.5;
       if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
@@ -4336,7 +4337,7 @@ function buildMosqueGuards(){
   const chain=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,6,12),new THREE.MeshLambertMaterial({color:0x888888}));
   chain.position.set(0,1.35*1.9,.4*1.9);chain.rotation.x=Math.PI/2;brunoMesh.add(chain);
   const brunoBar=new THREE.Mesh(new THREE.BoxGeometry(2.8,.18,.01),new THREE.MeshBasicMaterial({color:0xe74c3c}));brunoBar.position.set(0,4.5,0);brunoMesh.add(brunoBar);
-  G.bruno={mesh:brunoMesh,hp:320,mhp:320,spd:5.5,alert:18,atk:3.8,atkT:0,bar:brunoBar,dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0,patrolAngle:0};
+  G.bruno={mesh:brunoMesh,hp:1000,mhp:1000,spd:5.5,alert:18,atk:3.8,atkT:0,bar:brunoBar,dead:false,phase:1,dashT:3,dashOn:false,dvx:0,dvz:0,patrolAngle:0};
   mosqueObjects.push(brunoMesh);
 }
 
@@ -5761,9 +5762,9 @@ function dmgPlayer(dmg){
   // ── lag bar: הורד מיד ──
   _lagHPTarget=dog.hp/dog.mhp*100;
   sHit();
-  if(_actual>=20)haptic([80,30,60]);
-  else if(_actual>=10)haptic([50,20,40]);
-  else haptic(25);
+  if(_actual>=20){haptic([80,30,60]);screenShake(0.55,0.4);}
+  else if(_actual>=10){haptic([50,20,40]);screenShake(0.32,0.28);}
+  else{haptic(25);screenShake(0.18,0.18);}
   const hf=document.getElementById('hf');
   hf.classList.add('on');setTimeout(()=>hf.classList.remove('on'),150);
   // ── כיוון הנזק ──
@@ -6239,12 +6240,25 @@ function _playCinema(steps, onDone, useTA, useMosque){
   doStep();
 }
 
-function updCamera(){
-  if(G._cinemaMode)return; // אנימציה סינמטית — לא נגעים במצלמה
+// ── Screen shake ──
+let _shakeT=0,_shakeMag=0;
+function screenShake(mag,dur){_shakeMag=Math.max(_shakeMag,mag);_shakeT=Math.max(_shakeT,dur||0.35);}
+
+function updCamera(dt){
+  if(G._cinemaMode)return;
   const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;
   const px=PB.position.x,py=PB.position.y+1.1*sz,pz=PB.position.z;
   _vCamTarget.set(px+Math.sin(G.yaw)*cd,py+ch,pz+Math.cos(G.yaw)*cd);
   camera.position.lerp(_vCamTarget,.1);
+  // shake
+  if(_shakeT>0){
+    const s=_shakeMag*(_shakeT>0.1?1:_shakeT/.1);
+    camera.position.x+=(Math.random()-.5)*s;
+    camera.position.y+=(Math.random()-.5)*s*.5;
+    camera.position.z+=(Math.random()-.5)*s;
+    _shakeT-=dt||.016;
+    if(_shakeT<=0){_shakeT=0;_shakeMag=0;}
+  }
   camera.lookAt(px,py+.7,pz);
 }
 
@@ -6951,7 +6965,7 @@ function spawnGuardDogs(){
   const rm=mkCommander(.85);rm.position.set(40,-0,-18);scene.add(rm);
   const rind=new THREE.Mesh(new THREE.SphereGeometry(.32,7,7),new THREE.MeshLambertMaterial({color:0xddaa33,emissive:0x332200}));rind.position.set(0,2.7,0);rm.add(rind);
   const rbar=hpBar(rm,1.5,2.5);
-  G.reks={mesh:rm,ind:rind,bar:rbar,x:40,z:-18,hp:200,mhp:200,hostile:false,turned:false};
+  G.reks={mesh:rm,ind:rind,bar:rbar,x:40,z:-18,hp:600,mhp:600,hostile:false,turned:false};
   showN('🚨 כלבי ביטחון עירוניים הגיעו! המפקד רקס מוביל אותם.');
 }
 
@@ -6987,7 +7001,7 @@ function spawnCityHallGuards(){
     G.cityHallGuards.push({
       mesh:gd,ind,
       x:wps[0][0],z:wps[0][1],
-      hp:110,mhp:110,
+      hp:320,mhp:320,
       waypoints:wps,wpIdx:0,
       state:'patrol', // 'patrol'|'chase'|'return'
       atkT:0,_hitT:0,
@@ -7002,7 +7016,7 @@ function spawnPalto(){
   // HP bar
   const barBg=new THREE.Mesh(new THREE.BoxGeometry(2.5,.2,.1),new THREE.MeshLambertMaterial({color:0x330000}));barBg.position.set(0,3.2,0);pm.add(barBg);
   const barFg=new THREE.Mesh(new THREE.BoxGeometry(2.5,.18,.12),new THREE.MeshLambertMaterial({color:0x2255cc}));barFg.position.set(0,3.2,.01);pm.add(barFg);
-  G.palto={mesh:pm,bar:barFg,x:80,z:-80,hp:300,mhp:300,dead:false,phase:1};
+  G.palto={mesh:pm,bar:barFg,x:80,z:-80,hp:900,mhp:900,dead:false,phase:1};
   G._paltoPos={x:80,z:-80};
   // Light on palto
   // removed extra PointLight
@@ -7884,7 +7898,7 @@ function _spawnShadowInLab(){
   labScene.add(grp);
   G._shadowEnemy={
     mesh:grp,x:0,z:13,
-    hp:320,mhp:320,pow:14,spd:4.5,
+    hp:800,mhp:800,pow:14,spd:4.5,
     dead:false,_atkT:0,_hitT:0,isShadow:true,name:'הצל',
     _inLab:true,
   };
@@ -9300,9 +9314,9 @@ const OWE_TYPES=[
     id:'lost_dog',
     emoji:'🐕',
     title:'כלב אבוד!',
-    desc:'כלב קטן מסתובב ומחפש בעלים. עזור לו!',
+    desc:'כלב קטן מסתובב ומחפש בעלים.',
     action:'E — החזר את הכלב',
-    reward:()=>({coins:40,xp:30,msg:'🐕 כלב הוחזר! +40💰 +30XP'}),
+    reward:()=>({coins:50,xp:40,msg:'🐕 כלב הוחזר! +50💰 +40XP'}),
     color:0xffaa00,
     minMission:1,
   },
@@ -9310,9 +9324,9 @@ const OWE_TYPES=[
     id:'street_fight',
     emoji:'⚔️',
     title:'קטטה ברחוב!',
-    desc:'שני כלבים ריבים ליד הכביש. עצור את זה!',
+    desc:'שני כלבים ריבים. עצור את זה!',
     action:'E — הפרד את הקטטה',
-    reward:()=>({coins:60,xp:40,msg:'✊ קטטה הופסקה! +60💰 +40XP'}),
+    reward:()=>({coins:80,xp:55,msg:'✊ קטטה הופסקה! +80💰 +55XP'}),
     color:0xff4400,
     minMission:2,
   },
@@ -9322,7 +9336,7 @@ const OWE_TYPES=[
     title:'שוד בחנות!',
     desc:'כלב חשוד בורח עם אוכל. תפוס אותו!',
     action:'E — עצור את הגנב',
-    reward:()=>({coins:80,xp:50,msg:'🏪 גנב נעצר! +80💰 +50XP'}),
+    reward:()=>({coins:100,xp:65,msg:'🏪 גנב נעצר! +100💰 +65XP'}),
     color:0xff0066,
     minMission:3,
   },
@@ -9332,7 +9346,7 @@ const OWE_TYPES=[
     title:'כלב פצוע!',
     desc:'כלב שכב בצד הדרך — פצוע ובצרה.',
     action:'E — עזור לכלב',
-    reward:()=>({coins:30,xp:25,hp:20,msg:'🩹 כלב טופל! +30💰 +25XP +20HP'}),
+    reward:()=>({coins:40,xp:30,hp:30,msg:'🩹 כלב טופל! +40💰 +30XP +30HP'}),
     color:0x00ccff,
     minMission:1,
   },
@@ -9340,11 +9354,51 @@ const OWE_TYPES=[
     id:'cat_chase',
     emoji:'🐈',
     title:'חתול על הגג!',
-    desc:'חתול בורח ומפיל זבל. תרדוף!',
-    action:'E — בתר את החתול',
-    reward:()=>({coins:50,xp:35,msg:'🐈 חתול הוכנע! +50💰 +35XP'}),
+    desc:'חתול בורח ומפיל זבל.',
+    action:'E — רדוף אחר החתול',
+    reward:()=>({coins:60,xp:45,msg:'🐈 חתול הוכנע! +60💰 +45XP'}),
     color:0xaa44ff,
     minMission:2,
+  },
+  {
+    id:'fire',
+    emoji:'🔥',
+    title:'שריפה קטנה!',
+    desc:'פח אשפה עולה באש. כבה לפני שזה מתפשט!',
+    action:'E — כבה את השריפה',
+    reward:()=>({coins:90,xp:60,msg:'🔥 שריפה כובתה! +90💰 +60XP'}),
+    color:0xff6600,
+    minMission:4,
+  },
+  {
+    id:'runaway_scooter',
+    emoji:'🛵',
+    title:'קטנוע בורח!',
+    desc:'קטנוע גנוב רץ בכיוונך. עצור אותו!',
+    action:'E — עצור את הקטנוע',
+    reward:()=>({coins:120,xp:75,msg:'🛵 קטנוע נעצר! +120💰 +75XP'}),
+    color:0x44ddff,
+    minMission:5,
+  },
+  {
+    id:'missing_bone',
+    emoji:'🦴',
+    title:'מטמון עצמות!',
+    desc:'עצם ענקית נחפרה ליד הפארק. מהר לפני שאחר מגיע!',
+    action:'E — אסוף את העצם',
+    reward:()=>({coins:70,xp:50,bones:3,msg:'🦴 מטמון נמצא! +70💰 +50XP +3עצמות'}),
+    color:0xeedd88,
+    minMission:2,
+  },
+  {
+    id:'patrol_escape',
+    emoji:'🚨',
+    title:'כלב מתגנב!',
+    desc:'כלב APEX מחפש ריגול. אל תתן לו להתקשר!',
+    action:'E — נטרל אותו',
+    reward:()=>({coins:110,xp:80,msg:'🚨 סוכן נוטרל! +110💰 +80XP'}),
+    color:0xff2222,
+    minMission:8,
   },
 ];
 
@@ -9352,6 +9406,8 @@ const OWE_TYPES=[
 const OWE_SPOTS=[
   [20,30],[40,-10],[-30,20],[0,-40],[50,40],[-50,10],
   [10,60],[60,-30],[-20,-30],[30,-60],[70,20],[-10,50],
+  [80,10],[-70,30],[15,-80],[55,-55],[-40,65],[0,75],
+  [35,55],[-25,45],[65,50],[-60,-20],[45,-35],[-15,15],
 ];
 
 function _owe_spawn(){
@@ -9394,8 +9450,8 @@ function updOWE(dt){
   if(!OWE.active){
     OWE.cooldown=Math.max(0,(OWE.cooldown||120)-dt);
     if(OWE.cooldown<=0){
-      OWE.cooldown=90+Math.random()*60; // 90-150 שניות עד אירוע הבא
-      if(Math.random()<0.7)_owe_spawn(); // 70% סיכוי
+      OWE.cooldown=55+Math.random()*45; // 55-100 שניות עד אירוע הבא
+      if(Math.random()<0.85)_owe_spawn(); // 85% סיכוי
     }
     return;
   }
@@ -9432,9 +9488,11 @@ function _owe_complete(ev){
   const r=ev.type.reward();
   G.coins+=r.coins||0;
   if(r.xp)addXP(r.xp);
-  if(r.hp){const d=G.dogs[G.dog];d.hp=Math.min(d.mhp,d.hp+(r.hp||0));}
+  if(r.hp){const d=G.dogs[G.dog];d.hp=Math.min(d.mhp,d.hp+(r.hp||0));updHP();}
+  if(r.bones){G.bones=(G.bones||0)+r.bones;}
   showN(r.msg);
   haptic([40,20,60]);
+  screenShake(0.2,0.2);
   updCoins();
   // אתגר יומי — ספור אירועי עולם פתוח
   if(G.daily){G.daily.worldEvents=(G.daily.worldEvents||0)+1;_daily_check();}
@@ -13766,7 +13824,7 @@ function _spawnRabinBoss(){
   const barBG=new THREE.Mesh(new THREE.PlaneGeometry(2,.25),new THREE.MeshLambertMaterial({color:0x330000}));barBG.position.set(0,3.2,0);barBG.rotation.x=-Math.PI/6;g.add(barBG);
   const fill=new THREE.Mesh(new THREE.PlaneGeometry(2,.22),new THREE.MeshLambertMaterial({color:0xff2200,emissive:0x660000}));fill.position.set(0,3.21,0);fill.rotation.x=-Math.PI/6;g.add(fill);
   g.position.set(0,0,-5);_rabinScene.add(g);_rabinObjs.push(g);
-  _rabinBoss={mesh:g,x:0,z:-5,hp:600,mhp:600,spd:4.2,atk:22,atkT:0,dead:false,bar:fill,phase:1};
+  _rabinBoss={mesh:g,x:0,z:-5,hp:1800,mhp:1800,spd:4.2,atk:22,atkT:0,dead:false,bar:fill,phase:1};
 }
 function enterRabinSq(){
   G.paused=true;
