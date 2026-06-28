@@ -1466,6 +1466,57 @@ const _COLL_TYPES=[
   {name:'ספר מוסתר',col:0x2255aa,xp:22,coins:18,ico:'📚'},
   {name:'מפתח ישן',col:0xaaaaaa,xp:15,coins:12,ico:'🔑'},
 ];
+// ════════════════════════════════════════════════
+// SECRET AREAS — 4 מיקומים נסתרים עם תגמול מיוחד
+// ════════════════════════════════════════════════
+const _SECRET_SPOTS=[
+  {x:-108,z:-88, hint:'מאחורי הכנסייה הישנה',reward:{coins:200,xp:150,msg:'🔮 סוד נמצא! +200💰 +150XP'}},
+  {x:105, z:130, hint:'פינת הגג של קרית בית הכנסת',reward:{coins:180,xp:120,msg:'📜 מסמך סודי! +180💰 +120XP'}},
+  {x:-35, z:-130,hint:'ביוב מתחת לשכונת המסגד',reward:{coins:220,xp:160,msg:'💎 אוצר נסתר! +220💰 +160XP'}},
+  {x:175, z:-90, hint:'מחסן נסתר באזור APEX',reward:{coins:300,xp:200,msg:'🗝️ קוד APEX נחשף! +300💰 +200XP'}},
+];
+let _secretFound=0;
+function buildSecretAreas(){
+  if(!scene)return;
+  _SECRET_SPOTS.forEach((sp,i)=>{
+    if(isInBuilding(sp.x,sp.z,1))return;
+    // glow orb
+    const g=new THREE.Group();
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(.15,8,8),
+      new THREE.MeshLambertMaterial({color:0xaa44ff,emissive:new THREE.Color(0x661188),transparent:true,opacity:.7}));
+    g.add(orb);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.28,.04,6,16),
+      new THREE.MeshLambertMaterial({color:0xcc66ff,emissive:new THREE.Color(0x440066)}));
+    ring.rotation.x=Math.PI/2;g.add(ring);
+    const light=new THREE.PointLight(0xaa44ff,1.5,5);g.add(light);
+    g.position.set(sp.x,.5,sp.z);
+    scene.add(g);
+    sp._mesh=g;sp._ring=ring;sp._found=false;sp._t=Math.random()*Math.PI*2;
+  });
+}
+function updSecretAreas(dt){
+  if(!PB||!scene)return;
+  const px=PB.position.x,pz=PB.position.z;
+  _SECRET_SPOTS.forEach(sp=>{
+    if(sp._found||!sp._mesh)return;
+    sp._t+=dt;
+    sp._mesh.position.y=.5+Math.sin(sp._t*1.8)*.15;
+    sp._mesh.rotation.y+=dt*.8;
+    if(sp._ring)sp._ring.rotation.z+=dt*1.2;
+    const dd=Math.hypot(sp.x-px,sp.z-pz);
+    if(dd<2.5){
+      sp._found=true;_secretFound++;
+      scene.remove(sp._mesh);
+      const r=sp.reward;
+      G.coins+=r.coins;updCoins();addXP(r.xp);
+      showN(r.msg);haptic([80,30,80,30,100]);
+      if(typeof screenShake==='function')screenShake(0.4,0.4);
+      spawnVFX(sp.x,1,sp.z,0xaa44ff,20);
+      if(_secretFound>=_SECRET_SPOTS.length)setTimeout(()=>showN('🌟 גילית את כל הסודות! מאסטר סייר!'),1500);
+    }
+  });
+}
+
 function buildCollectibles(){
   const spots=[
     [15,35],[62,-20],[25,-100],[-30,-80],[88,50],[-55,-30],
@@ -1494,6 +1545,81 @@ function buildCollectibles(){
   });
   if(G.hud) document.getElementById('coll-hud').style.display='block';
 }
+// ════════════════════════════════════════════════
+// AMBIENT LIFE — ציפורים, חתולים, רדיו
+// ════════════════════════════════════════════════
+const _ambientBirds=[];
+const _ambientCats=[];
+let _ambientTimer=0;
+const _AMBIENT_SOUNDS=['📻 רדיו מהבניין...','☕ ריח קפה','🌿 רוח קלה','🐦 צפרים מצייצות','📺 קול טלוויזיה','🌺 ריח שיש...'];
+
+function buildAmbientLife(){
+  if(!scene)return;
+  // ── 8 ציפורים שעפות מעל הבניינים ──
+  const birdGeo=new THREE.ConeGeometry(.18,.5,4);
+  const birdMat=new THREE.MeshLambertMaterial({color:0x333322});
+  for(let i=0;i<8;i++){
+    const b=new THREE.Mesh(birdGeo,birdMat);
+    const rad=25+Math.random()*60;
+    const ang=Math.random()*Math.PI*2;
+    b.position.set(Math.cos(ang)*rad, 14+Math.random()*12, Math.sin(ang)*rad);
+    b._birdAng=ang;b._birdRad=rad;b._birdSpd=0.3+Math.random()*0.4;
+    b._birdY=b.position.y;b._birdT=Math.random()*Math.PI*2;
+    b._birdWingT=0;
+    scene.add(b);_ambientBirds.push(b);
+  }
+  // ── 4 חתולים שמסתתרים ──
+  const catSpots=[[28,-45],[-55,30],[80,88],[-30,-95]];
+  const catGeo=new THREE.BoxGeometry(.35,.28,.5);
+  const catMat=new THREE.MeshLambertMaterial({color:0x888866});
+  catSpots.forEach(([x,z])=>{
+    if(isInBuilding(x,z,1))return;
+    const c=new THREE.Mesh(catGeo,catMat.clone());
+    c.material.color.setHex([0x888866,0xccaa88,0x222222,0xcc8844][Math.floor(Math.random()*4)]);
+    c.position.set(x,.15,z);
+    const tail=new THREE.Mesh(new THREE.CylinderGeometry(.06,.04,.4,4),catMat);
+    tail.position.set(0,.1,.3);tail.rotation.x=.8;c.add(tail);
+    scene.add(c);
+    _ambientCats.push({mesh:c,x,z,state:'sit',timer:8+Math.random()*12,baseY:.15});
+  });
+}
+
+function updAmbientLife(dt){
+  if(!scene)return;
+  const t=Date.now()*.001;
+  // ── ציפורים ──
+  _ambientBirds.forEach(b=>{
+    b._birdAng+=b._birdSpd*dt;
+    b._birdT+=dt*2.5;
+    b.position.x=Math.cos(b._birdAng)*b._birdRad;
+    b.position.z=Math.sin(b._birdAng)*b._birdRad;
+    b.position.y=b._birdY+Math.sin(b._birdT)*.8;
+    b.rotation.y=-b._birdAng+Math.PI/2;
+    b.rotation.z=Math.sin(b._birdT*3)*.3; // wing flap
+  });
+  // ── חתולים ──
+  _ambientCats.forEach(c=>{
+    c.timer-=dt;
+    if(c.timer<=0){
+      c.state=c.state==='sit'?'sneak':'sit';
+      c.timer=5+Math.random()*10;
+    }
+    if(c.state==='sneak'){
+      c.mesh.position.x+=Math.sin(t*.5)*.008;
+      c.mesh.position.z+=Math.cos(t*.5)*.008;
+    }
+    c.mesh.position.y=c.baseY+(c.state==='sit'?0:Math.sin(t*3)*.03);
+  });
+  // ── ambient sound messages ──
+  _ambientTimer-=dt;
+  if(_ambientTimer<=0){
+    _ambientTimer=20+Math.random()*30;
+    if(PB&&Math.random()<0.5){
+      showN(_AMBIENT_SOUNDS[Math.floor(Math.random()*_AMBIENT_SOUNDS.length)]);
+    }
+  }
+}
+
 function updCollectibles(dt){
   const t=Date.now()*.001;
   G.collectibles.forEach(c=>{

@@ -74,6 +74,33 @@ let _currentZoneGroup=null; // ה-Group הפעיל כרגע ב-buildWorld
 // SKILLS STATE — כישורים ייחודיים לכל כלב
 // ════════════════════════════════════════════════
 let _comboCount=0, _comboTimer=0;
+let _killStreak=0, _killStreakTimer=0;
+const _STREAK_REWARDS=[
+  {n:3, msg:'🔥 רצף x3! +30💰',coins:30,heal:0},
+  {n:5, msg:'⚡ בלתי ניתן לעצירה! +60💰 +15HP',coins:60,heal:15},
+  {n:8, msg:'💀 מכונת מוות! +120💰 +30HP',coins:120,heal:30},
+  {n:12,msg:'👑 אגדה! +250💰 +50HP +200XP',coins:250,heal:50,xp:200},
+];
+function _onKill(){
+  _killStreak++;_killStreakTimer=6;
+  const r=_STREAK_REWARDS.find(r=>r.n===_killStreak);
+  if(r){
+    G.coins+=r.coins;updCoins();
+    if(r.heal){const d=G.dogs[G.dog];d.hp=Math.min(d.mhp,d.hp+r.heal);updHP();}
+    if(r.xp)addXP(r.xp);
+    showN(r.msg);haptic([60,20,80,20,60]);screenShake(0.3,0.25);
+    _showStreakPop(r.msg);
+  }
+}
+function _showStreakPop(msg){
+  let el=document.getElementById('streak-pop');
+  if(!el){el=document.createElement('div');el.id='streak-pop';
+    el.style.cssText='position:fixed;top:30%;left:50%;transform:translate(-50%,-50%);font-size:clamp(16px,4vw,24px);font-weight:bold;color:#ff6600;text-shadow:0 0 20px #ff4400,0 2px 6px #000;pointer-events:none;z-index:62;display:none;text-align:center;';
+    document.body.appendChild(el);}
+  el.textContent=msg;el.style.display='block';
+  el.style.animation='none';void el.offsetWidth;el.style.animation='floatUp 1.2s ease-out forwards';
+  setTimeout(()=>el.style.display='none',1200);
+}
 const _COMBO_WINDOW=1.4;
 let _charmedEnemy=null, _charmedTimer=0;
 const _CHARM_DUR=8;
@@ -271,12 +298,17 @@ function spawnPfx(x,y,z,col,n=8){
 }
 
 function updPfx(dt){
+  // cap: if particles > 60, evict oldest half
+  if(G.particles.length>60){
+    const toRemove=G.particles.splice(0,Math.floor(G.particles.length/2));
+    toRemove.forEach(p=>{(p.villa?mosqueScene:scene).remove(p.mesh);if(p._pool)_bloodReturn(p.mesh);});
+  }
   for(let i=G.particles.length-1;i>=0;i--){
     const p=G.particles[i];
     p.life-=dt;
     if(p.life<=0){
       (p.villa?mosqueScene:scene).remove(p.mesh);
-      _pfxReturn(p.mesh);
+      if(p._pool)_bloodReturn(p.mesh);else _pfxReturn(p.mesh);
       // swap-remove במקום splice — O(1) במקום O(n)
       G.particles[i]=G.particles[G.particles.length-1];
       G.particles.pop();
@@ -357,7 +389,7 @@ function init(){
   _buildZoned(buildLabExterior, 25, -125,  90); // מעבדה
   _buildZoned(buildHospitalExterior, 62, -118, 90); // בית חולים
   buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
-  buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();
+  buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();buildAmbientLife();buildSecretAreas();
   _buildPoolOfRest();
   setupInput();
   cacheHUD();
@@ -4821,7 +4853,10 @@ function updateNavArrow(){
   el.style.display='flex';
 }
 
+let _navFrame=0;
 function updateNavDirection(){
+  _navFrame++;
+  if(_navFrame%3!==0)return; // nav arrow: 20fps is smooth enough
   if(G.mission===7)return;
   const m=MISSIONS[G.mission];if(!m)return;
   const el=document.getElementById('nav-edge-arrow');
@@ -5088,7 +5123,7 @@ function loop(){
       if(d2(px,pz,0,-150)<10)enterTelAviv();
     }
   }
-  updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);renderer.render(scene,camera);
+  updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);_updEnemyHPBars();updAmbientLife(dt);updSecretAreas(dt);renderer.render(scene,camera);
 }
 
 // ════════════════════════════════════════════════
@@ -5162,6 +5197,7 @@ function updPlayer(dt){
   G._frameCount=(G._frameCount||0)+1; // עבור AI throttling
   // ── עדכון skills state ──
   if(_comboTimer>0){_comboTimer-=dt;if(_comboTimer<=0)_comboCount=0;}
+  if(_killStreakTimer>0){_killStreakTimer-=dt;if(_killStreakTimer<=0){if(_killStreak>=3)showN('💤 רצף נפסק — '+_killStreak+' הרוגים');_killStreak=0;}}
   if(_stunCooldown>0)_stunCooldown-=dt;
   if(_dashCooldown>0)_dashCooldown-=dt;
   if(_charmedTimer>0){_charmedTimer-=dt;if(_charmedTimer<=0){_releaseCharm();showN('💜 הקסם פג.');}}
@@ -5239,12 +5275,12 @@ function doAtk(){
       const dd=d2(e.mesh.position.x,e.mesh.position.z,px,pz);
       if(dd<4.2){
         hit=true;
-        e.hp-=dmg;
+        e.hp-=dmg;_showEnemyHPBar(e);
         if(e.bar)e.bar.scale.x=Math.max(0,e.hp/e.mhp);
         sHit();haptic(22);spawnBlood(e.mesh.position.x,1,e.mesh.position.z,8);
         showDmg(e.mesh.position.x,1.8,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
-        if(e.hp<=0){e.mesh.visible=false;sBark();addXP(30);G.coins+=15;updCoins();
+        if(e.hp<=0){e.mesh.visible=false;sBark();addXP(30);G.coins+=15;updCoins();_onKill();
           showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+15💰',true);}
       }
     });
@@ -5291,10 +5327,10 @@ function doAtk(){
         // זיפו: קריטי-היט
         const _isCrit=G.dog==='zippo'&&Math.random()<(dog._critChance||0.15);
         const dmg=(dog.pow*10*(1+dog.lv*.1))*(_isCrit?2.2:1);
-        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=8;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);
+        e.hp-=dmg;e.state='chase';e.lastSeenX=px;e.lastSeenZ=pz;e.searchT=8;sHit();haptic(22);flash(e.mesh.children[0]);spawnBlood(e.mesh.position.x,1,e.mesh.position.z);_showEnemyHPBar(e);
         showDmg(e.mesh.position.x,1,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
         if(_isCrit)haptic([80,20,80]);
-        if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;
+        if(e.hp<=0){e.hp=0;e.mesh.visible=false;sEDie();haptic([60,20,40]);addXP(20);G.score+=50;G.enemiesKilled++;G.totalKills++;_onKill();
           if(G.daily){G.daily.kills=(G.daily.kills||0)+1;_daily_check();}
           const coins=10+Math.floor(Math.random()*8);G.coins+=coins;updCoins();showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+'+coins+'💰',true);
           _ragdoll(e.mesh);
@@ -5407,8 +5443,10 @@ function _initLODStatics(){
     obj.getWorldPosition(_tmpV);
     obj._lodX=_tmpV.x;
     obj._lodZ=_tmpV.z;
+    obj.matrixAutoUpdate=false; // static — freeze matrix, Three.js won't re-compute every frame
+    obj.updateMatrix();
     _lodStaticObjs.push(obj);
-    _lodShadowObjs.push(obj); // כל mesh סטטי — לvisibility culling + shadow
+    _lodShadowObjs.push(obj);
   });
 }
 
@@ -5451,7 +5489,7 @@ function _updLOD(){
     if(!e.mesh)return;
     const dx=e.mesh.position.x-px, dz=e.mesh.position.z-pz;
     const d2=dx*dx+dz*dz;
-    e._lodSkip = d2>14400?6 : d2>4900?3 : 1;   // >120 / >70 / else
+    e._lodSkip = d2>22500?12 : d2>14400?6 : d2>4900?3 : 1;   // >150/120/70/else
   });
 
   // ── כל 10 frames (~0.16s): zone group visibility ──
@@ -5472,6 +5510,9 @@ function _updLOD(){
   }
 
   // ── כל 45 frames (~0.75s): shadow culling ──
+  // skip shadow culling entirely inside rooms (no sun visible)
+  if(APEX_LAB&&APEX_LAB.inLab){if(_sunLight)_sunLight.castShadow=false;return;}
+  else if(_sunLight&&!_sunLight.castShadow)_sunLight.castShadow=true;
   if(_lodFrame%45!==0)return;
   // ── תיקון קריטי: _initLODStatics הייתה מוגדרת אך לעולם לא נקראה — shadow culling לא פעל אף פעם ──
   if(!_lodStaticObjs)_initLODStatics();
@@ -6311,7 +6352,7 @@ function updHUD(){
   }
 
   // שאר HUD — כל 3 frames (חיסכון ב-DOM writes)
-  if(_hudFrameCount % 3 !== 0) return;
+  if(_hudFrameCount % 5 !== 0) return; // throttle: ~12fps for non-critical HUD
 
   const st=dog.stam;
   _hudST.style.width=st+'%';
@@ -6344,7 +6385,7 @@ function updHUD(){
 let _mmFrame=0;
 function drawMM(){
   _mmFrame++;
-  if(_mmFrame%3!==0) return;
+  if(_mmFrame%4!==0) return; // ~15fps minimap is plenty
   if(typeof TA!=='undefined'&&TA.inTA){drawMMTelAviv();return;}
   if(VILLA.inVilla){drawMMMosque();return;}
   const ctx=mmCtx,W=120,H=120,sc=.58;
@@ -6373,9 +6414,22 @@ function drawMM(){
   ctx.fillStyle='#00aaff';ctx.beginPath();ctx.arc(cx-120*sc,cy+130*sc,4,0,Math.PI*2);ctx.fill();
   // שטחים
   G.terrs.forEach(t=>{ctx.fillStyle=t.cap?'#f5c518':'#9b59b6';ctx.beginPath();ctx.arc(cx+t.x*sc,cy+t.z*sc,4,0,Math.PI*2);ctx.fill();});
-  // אויבים
-  if(G.mission>=3){ctx.fillStyle='#e74c3c';G.enemies.forEach(e=>{if(e.hp>0&&e.mesh.visible)ctx.fillRect(cx+e.mesh.position.x*sc-2,cy+e.mesh.position.z*sc-2,5,5);});}
-  if(G.mission===6){ctx.fillStyle='#ff6600';G.bosses.forEach(b=>{if(!b.dead)ctx.beginPath(),ctx.arc(cx+b.mesh.position.x*sc,cy+b.mesh.position.z*sc,6,0,Math.PI*2),ctx.fill();});}
+  // ── אויבים ── 
+  if(G.mission>=3){
+    G.enemies.forEach(e=>{
+      if(e.hp<=0||!e.mesh.visible)return;
+      const ex=cx+e.mesh.position.x*sc,ez=cy+e.mesh.position.z*sc;
+      ctx.fillStyle='#ff3333';ctx.beginPath();ctx.arc(ex,ez,3.5,0,Math.PI*2);ctx.fill();
+    });
+    G.bosses.forEach(b=>{
+      if(b.dead)return;
+      const bx=cx+b.mesh.position.x*sc,bz=cy+b.mesh.position.z*sc;
+      const blink=Math.sin(Date.now()*.01)>.0;
+      ctx.fillStyle=blink?'#ff4400':'#ff0000';
+      ctx.beginPath();ctx.arc(bx,bz,5.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#ffcc00';ctx.lineWidth=1.5;ctx.stroke();
+    });
+  }
   // NPCs — אייקון '!' לניתן לשיחה, ★ לגיוס
   G.npcs.forEach(n=>{
     if(n._dead)return;
@@ -6412,9 +6466,25 @@ function drawMM(){
       ctx.beginPath();ctx.arc(tx2,tz2,r+2,0,Math.PI*2);ctx.stroke();
     }
   }
-  // שחקן — עם חץ כיוון
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(cx+px*sc,cy+pz*sc,5,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle='#f5c518';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx+px*sc,cy+pz*sc);ctx.lineTo(cx+px*sc-Math.sin(G.yaw)*8,cy+pz*sc-Math.cos(G.yaw)*8);ctx.stroke();
+  // ── OWE event blink ──
+  if(OWE&&OWE.active&&OWE.ev&&Math.sin(Date.now()*.008)>.1){
+    const ox=cx+OWE.ev.x*sc,oz=cy+OWE.ev.z*sc;
+    ctx.fillStyle='#ff8800';ctx.beginPath();ctx.arc(ox,oz,5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#ffcc00';ctx.lineWidth=1.5;ctx.stroke();
+  }
+  // ── FOV cone ──
+  const yaw=G.yaw,coneA=Math.PI/2.8,coneL=30;
+  const fpx=cx+px*sc,fpz=cy+pz*sc;
+  const grad=ctx.createRadialGradient(fpx,fpz,0,fpx,fpz,coneL);
+  grad.addColorStop(0,'rgba(255,255,255,.15)');grad.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.save();ctx.translate(fpx,fpz);ctx.rotate(-yaw+Math.PI);
+  ctx.fillStyle=grad;ctx.beginPath();ctx.moveTo(0,0);
+  ctx.arc(0,0,coneL,-coneA/2,coneA/2);ctx.closePath();ctx.fill();ctx.restore();
+  // ── Player triangle ──
+  ctx.save();ctx.translate(fpx,fpz);ctx.rotate(-yaw);
+  ctx.fillStyle='#fff';ctx.strokeStyle='#f5c518';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(-4,5);ctx.lineTo(4,5);ctx.closePath();
+  ctx.fill();ctx.stroke();ctx.restore();
   ctx.strokeRect(0,0,W,H);
 }
 
@@ -9142,58 +9212,108 @@ function flash(mesh){
 // ════════════════════════════════════════════════
 // BLOOD PARTICLES
 // ════════════════════════════════════════════════
-function spawnBlood(x,y,z,n=10){
+// ── Blood particle pool — shared geometry/material, no GC spikes ──
+const _BLOOD_MAT_R=new THREE.MeshBasicMaterial({color:0xcc0000,transparent:true});
+const _BLOOD_MAT_D=new THREE.MeshBasicMaterial({color:0x880000,transparent:true});
+const _BLOOD_SPLAT_MAT=new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false});
+const _BLOOD_GEO=new THREE.SphereGeometry(.07,4,4);
+const _BLOOD_SPLAT_GEO=new THREE.CircleGeometry(.12,6);
+const _bloodPool=[],_bloodPoolMax=48;
+function _bloodGet(){
+  if(_bloodPool.length)return _bloodPool.pop();
+  const m=new THREE.Mesh(_BLOOD_GEO,_BLOOD_MAT_R.clone());
+  m._pooled=true;return m;
+}
+function _bloodReturn(m){if(_bloodPool.length<_bloodPoolMax){m.visible=false;_bloodPool.push(m);}
+else{if(m.parent)m.parent.remove(m);}}
+function spawnBlood(x,y,z,n=8){
   if(!scene)return;
-  for(let i=0;i<n;i++){
-    const sz=.05+Math.random()*.1;
-    const m=new THREE.Mesh(new THREE.SphereGeometry(sz,4,4),
-      new THREE.MeshBasicMaterial({color:Math.random()<.6?0xcc0000:0x880000,transparent:true}));
+  const cnt=Math.min(n,6); // cap at 6 particles
+  for(let i=0;i<cnt;i++){
+    const m=_bloodGet();
+    m.material.color.setHex(Math.random()<.6?0xcc0000:0x880000);
+    m.material.opacity=1;m.visible=true;
     m.position.set(x+(Math.random()-.5)*.2,y,z+(Math.random()-.5)*.2);
+    m.scale.setScalar(.6+Math.random()*.8);
     scene.add(m);
-    const spd=2.5+Math.random()*5,ang=Math.random()*Math.PI*2;
-    G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3.5,vz:Math.sin(ang)*spd,life:.5+Math.random()*.35});
-  }
-  // splat שטוח על הקרקע
-  for(let i=0;i<3;i++){
-    const r=.08+Math.random()*.16;
-    const m=new THREE.Mesh(new THREE.CircleGeometry(r,6),
-      new THREE.MeshBasicMaterial({color:0x660000,transparent:true,opacity:.65,depthWrite:false}));
-    m.rotation.x=-Math.PI/2;
-    m.position.set(x+(Math.random()-.5)*1.8,.03,z+(Math.random()-.5)*1.8);
-    scene.add(m);
-    G.particles.push({mesh:m,vx:0,vy:0,vz:0,life:5+Math.random()*3});
+    const spd=2+Math.random()*4,ang=Math.random()*Math.PI*2;
+    G.particles.push({mesh:m,vx:Math.cos(ang)*spd,vy:.5+Math.random()*3,vz:Math.sin(ang)*spd,life:.45+Math.random()*.3,_pool:true});
   }
 }
 
 // ════════════════════════════════════════════════
-// DAMAGE NUMBERS
+// DAMAGE NUMBERS — pooled DOM elements
 // ════════════════════════════════════════════════
-function showDmg(wx,wy,wz,txt,colorOrCoin){
-  // project 3D position to screen
+const _dmgPool=[],_dmgPoolMax=16;
+
+// ── Enemy HP bar pool ──
+const _ehpPool=[],_ehpActive=[];
+function _ehpGet(){
+  if(_ehpPool.length){const el=_ehpPool.pop();el.style.display='block';return el;}
+  const el=document.createElement('div');el.className='enemy-hp-bar';
+  el.innerHTML='<div class="ehp-fill"></div>';
+  document.body.appendChild(el);return el;
+}
+function _showEnemyHPBar(enemy){
+  if(!enemy.mesh||!camera||!renderer)return;
+  // find or create bar for this enemy
+  let entry=_ehpActive.find(e=>e.enemy===enemy);
+  if(!entry){
+    const el=_ehpGet();
+    entry={enemy,el,timer:0};
+    _ehpActive.push(entry);
+  }
+  entry.timer=2.0; // show for 2s after last hit
+  const pct=Math.max(0,enemy.hp/(enemy.mhp||enemy.hp||1));
+  const fill=entry.el.querySelector('.ehp-fill');
+  if(fill)fill.style.width=(pct*100)+'%';
+}
+function _updEnemyHPBars(){
   if(!camera||!renderer)return;
-  const v=new THREE.Vector3(wx,wy+.5,wz);
-  v.project(camera);
+  const dt2=0.016;
+  for(let i=_ehpActive.length-1;i>=0;i--){
+    const e=_ehpActive[i];
+    e.timer-=dt2;
+    if(e.timer<=0||!e.enemy.mesh||e.enemy.hp<=0){
+      e.el.style.display='none';_ehpPool.push(e.el);
+      _ehpActive.splice(i,1);continue;
+    }
+    // project to screen
+    const pos=e.enemy.mesh.position.clone();pos.y+=2.5;
+    pos.project(camera);
+    const sw=renderer.domElement.clientWidth,sh=renderer.domElement.clientHeight;
+    const sx=(pos.x*.5+.5)*sw,sy=(-.5*pos.y+.5)*sh;
+    if(pos.z>1||sx<0||sx>sw||sy<0){e.el.style.display='none';continue;}
+    e.el.style.display='block';
+    e.el.style.left=(sx-24)+'px';e.el.style.top=(sy-6)+'px';
+    e.el.style.opacity=Math.min(1,e.timer);
+  }
+}
+const _v3Proj=new THREE.Vector3();
+function _dmgGet(){
+  if(_dmgPool.length){const el=_dmgPool.pop();el.style.display='block';return el;}
+  const el=document.createElement('div');el.className='dmg-num';document.body.appendChild(el);return el;
+}
+function _dmgReturn(el){el.style.display='none';if(_dmgPool.length<_dmgPoolMax)_dmgPool.push(el);else el.remove();}
+function showDmg(wx,wy,wz,txt,colorOrCoin){
+  if(!camera||!renderer)return;
+  _v3Proj.set(wx,wy+.5,wz).project(camera);
   const sw=renderer.domElement.clientWidth,sh=renderer.domElement.clientHeight;
-  const sx=(v.x*.5+.5)*sw,sy=(-.5*v.y+.5)*sh;
-  if(sx<0||sx>sw||sy<0||sy>sh)return;
-  const el=document.createElement('div');
-  el.className='dmg-num';
-  el.textContent=txt;
-  el.style.left=sx+'px';el.style.top=sy+'px';
+  const sx=(_v3Proj.x*.5+.5)*sw,sy=(-.5*_v3Proj.y+.5)*sh;
+  if(sx<-30||sx>sw+30||sy<-30||sy>sh+30)return;
+  const el=_dmgGet();
+  el.textContent=txt;el.style.left=sx+'px';el.style.top=sy+'px';
   el.style.color=colorOrCoin===true?'#f5c518':typeof colorOrCoin==='string'?colorOrCoin:'#ff4444';
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(),1000);
+  el.style.animation='none';void el.offsetWidth;el.style.animation='floatUp 0.85s ease-out forwards';
+  setTimeout(()=>_dmgReturn(el),900);
 }
 function showDmgVilla(dmg){
-  // inside mosque — simple screen-center flash
-  const el=document.createElement('div');
-  el.className='dmg-num';
+  const el=_dmgGet();
   el.textContent=dmg;
-  el.style.left=(50+Math.random()*20-10)+'%';
-  el.style.top=(45+Math.random()*10-5)+'%';
+  el.style.left=(50+Math.random()*20-10)+'%';el.style.top=(45+Math.random()*10-5)+'%';
   el.style.color='#ff4444';
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(),1000);
+  el.style.animation='none';void el.offsetWidth;el.style.animation='floatUp 0.85s ease-out forwards';
+  setTimeout(()=>_dmgReturn(el),900);
 }
 
 // ════════════════════════════════════════════════

@@ -593,3 +593,30 @@ canvas#cv{display:block;width:100vw;height:100vh;filter:contrast(1.06) saturate(
 
 /* ── NPC panic bubble ── */
 @keyframes npcBubblePop{0%{opacity:0;transform:scale(.5) translateY(6px);}60%{transform:scale(1.1);}100%{opacity:1;transform:scale(1) translateY(0);}}
+
+/* ══════════════════════════════════════════════
+   ENEMY HP BARS
+   ══════════════════════════════════════════════ */
+.enemy-hp-bar{
+  position:fixed;width:48px;height:5px;
+  background:rgba(0,0,0,.65);border-radius:3px;
+  pointer-events:none;z-index:30;
+  border:1px solid rgba(255,255,255,.15);
+  overflow:hidden;
+}
+.ehp-fill{
+  height:100%;width:100%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);
+  border-radius:2px;transition:width .12s ease;
+}
+
+/* ══════════════════════════════════════════════
+   KILL STREAK POP
+   ══════════════════════════════════════════════ */
+#streak-pop{
+  position:fixed;top:30%;left:50%;
+  transform:translate(-50%,-50%);
+  font-size:clamp(16px,4vw,24px);font-weight:bold;
+  color:#ff6600;
+  text-shadow:0 0 20px #ff4400,0 2px 6px #000;
+  pointer-events:none;z-index:62;display:none;text-align:center;
+}
