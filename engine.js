@@ -5009,15 +5009,26 @@ function loop(){
     if(_portWHCam)renderer.render(_portWHScene,_portWHCam);
     updHUD();return;
   }
-  if(RABIN_SQ.inRabin){
-    if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updRabinSq(dt);
-    updPfx(dt);updateNavDirection();
-    if(_rabinCam)renderer.render(_rabinScene,_rabinCam);
-    updHUD();return;
-  }
+  // RABIN_SQ room removed — now open-world boss in TA
   if(TA.inTA){
     G.dayTime=(G.dayTime+dt/600)%1;
     if(G.rainOn){G.rainOn=false;const rov=document.getElementById('rain-ov');if(rov)rov.style.opacity='0';setRainVolume(0);if(_rainPoints)_rainPoints.visible=false;}
+    // ── day/night sky in TA ──
+    if(taScene){
+      const _t=G.dayTime;
+      const _night=_t>0.72||_t<0.28;
+      const _dusk=(_t>0.62&&_t<0.72)||(_t>0.28&&_t<0.36);
+      let _skyR,_skyG,_skyB;
+      if(_night){_skyR=0.04;_skyG=0.05;_skyB=0.12;}
+      else if(_dusk){_skyR=0.7;_skyG=0.4;_skyB=0.25;}
+      else{_skyR=0.53;_skyG=0.75;_skyB=0.85;}
+      if(!taScene._skyR||Math.abs(taScene._skyR-_skyR)>0.005){
+        taScene._skyR=_skyR;
+        const col=new THREE.Color(_skyR,_skyG,_skyB);
+        taScene.background=col;
+        taScene.fog.color=col;
+      }
+    }
     // ── guard: אם taCamera עדיין null (בנייה לא סיימה) — fallback render ──
     if(!taCamera||!taScene){renderer.render(scene,camera);updHUD();return;}
     updTelAviv(dt);updPfx(dt);_updLightBudget(dt,taScene);
@@ -12928,9 +12939,9 @@ function _taBuildZone_North(){
   const N_SHUT=[0x444466,0x224466,0x446688];
 
   // בין בן יהודה(-80) לפינסקר(-130): z=-105
-  for(let bx=-170;bx<=120;bx+=42){
-    if(_taFarFromRoad(bx,-105)){
-      _taZBld(bx,-105, 18+Math.random()*8, 12, 12+Math.random()*16, N_COLS, N_SHUT, 'mod');
+  for(let bx=-160;bx<=110;bx+=46){
+    if(_taFarFromRoad(bx,-105)&&!_taInBld(bx,-105,4)){
+      _taZBld(bx,-105, 18+Math.random()*6, 11, 12+Math.random()*14, N_COLS, N_SHUT, 'mod');
     }
   }
   // בין פינסקר(-130) ל-z=-175
@@ -13519,7 +13530,7 @@ function _taBuildDizengoffHQ(){
 // ════════════════════════════════════════════════════════════════════
 const APEX_LAB={inLab:false,playerX:0,playerZ:8,enterGrace:0};
 const PORT_WH ={inWH:false, playerX:0,playerZ:8,enterGrace:0};
-const RABIN_SQ={inRabin:false,playerX:0,playerZ:8,enterGrace:0};
+const RABIN_SQ={inRabin:false,playerX:0,playerZ:8,enterGrace:0}; // room disabled — boss is open-world
 let _apexLabScene=null,_apexLabCam=null,_apexLabObjs=[];
 let _portWHScene =null,_portWHCam =null,_portWHObjs=[];
 let _rabinScene  =null,_rabinCam  =null,_rabinObjs=[];
@@ -13642,8 +13653,10 @@ function updApexLab(dt){
   if(G.joy.on){ix+=_vFwd.x*(-G.joy.dy)+_vRgt.x*G.joy.dx;iz+=_vFwd.z*(-G.joy.dy)+_vRgt.z*G.joy.dx;}
   const iln=Math.hypot(ix,iz)||1;
   let nx=APEX_LAB.playerX+(ix/iln)*spd*dt,nz=APEX_LAB.playerZ+(iz/iln)*spd*dt;
-  nx=Math.max(-13.5,Math.min(13.5,nx));nz=Math.max(-13.5,Math.min(13.5,nz));
-  if(nx>6&&nz>-9&&nz<9)nx=Math.min(nx,6);
+  nx=Math.max(-12,Math.min(12,nx));nz=Math.max(-12,Math.min(12,nz));
+  // קיר מזרחי — שולחן כץ (אל תחסום לגמרי — רק הצד הפנוי)
+  if(nx>11.5)nx=11.5;
+  if(nx<-11.5)nx=-11.5;
   APEX_LAB.playerX=nx;APEX_LAB.playerZ=nz;PB.position.set(nx,0,nz);
   if(Math.abs(ix)>.01||Math.abs(iz)>.01){walkT+=dt*8;dogLegs.forEach(lg=>{lg.node.rotation.x=Math.sin(walkT+lg.ph)*.38;});if(dogModel){const b=dogModel._baseY||.25;dogModel.position.y=b+Math.abs(Math.sin(walkT))*.09;}PB.rotation.y=Math.atan2(-ix,-iz);}
   if(_apexLabCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_apexLabCam.position.lerp(_vCamTarget,.1);_apexLabCam.lookAt(nx,1.1*sz+.7,nz);}
@@ -13918,10 +13931,12 @@ function enterTelAviv(){
     setTimeout(()=>_initTACrowd(),100);
     // mission 54: הסינמה תופעל מ-_checkTAMissionTriggers כשמגיעים לשוק הכרמל
     if(G.mission===54){
+      G._taNiraPos={x:-118,z:112};
+      G._taMarketPos={x:-100,z:120};
       updateMissionHUD();updateNavArrow();
-      showN('🌆 תל אביב. מצאו את שוק הכרמל.');
     }
-    showN('🌆 תל אביב.\nזיפו: "אני יודע לאן ללכת."');
+    if(G.mission===55&&!G._taNiraPos)G._taNiraPos={x:-118,z:112};
+    updateMissionHUD();updateNavArrow();
     G.paused=false;fadeIn();
   });
 }
@@ -14015,6 +14030,7 @@ function updTelAviv(dt){
   }
   // LOD zones + פנסים + אויבים + triggers
   _taUpdZones();
+  _updTABossOpenWorld(dt);
   _taUpdLamps();
   _updTAEnemies(dt);
   _checkTAMissionTriggers();
@@ -14551,21 +14567,22 @@ function _checkTAMissionTriggers(){
     }
     return;
   }
-  // 61 → כיכר רבין → כניסה לכיכר (arena חדר)
+  // 61 → כיכר רבין → בוס נולד בעולם הפתוח של TA (לא חדר)
   if(G.mission===61&&!G._ta61done){
-    const rp=G._taRabinPos||{x:30,z:-30};
-    if(d2(px,pz,rp.x,rp.z)<20){
+    const rp=G._taRabinPos||{x:0,z:-60};
+    if(d2(px,pz,rp.x,rp.z)<22){
       G._ta61done=true;
       forceDog('zippo','זיפו מוביל');
       showCut('ch9_rabin_square',()=>{
-        G.mission=62;updateMissionHUD();updateNavArrow();saveGame();showN('📋 '+MISSIONS[62].txt);
-        setTimeout(()=>enterRabinSq(),400);
+        G.mission=62;updateMissionHUD();updateNavArrow();saveGame();
+        // spawn boss directly in TA world at Rabin square
+        _spawnTABossOpenWorld(rp.x,rp.z);
       });
     }
     return;
   }
   // 62 → בוס מת → סיום
-  if(G.mission===62&&G._taBossMgr&&G._taBossMgr.dead&&!G._taKatzSacDone){
+  if(G.mission===62&&((G._taBossMgr&&G._taBossMgr.dead)||(G._taBossOpenWorld&&G._taBossOpenWorld.dead))&&!G._taKatzSacDone){
     G._taKatzSacDone=true;
     showCut('ch9_katz_sacrifice',()=>{
       showCut('ch9_ending',()=>{
@@ -14573,6 +14590,69 @@ function _checkTAMissionTriggers(){
         exitTelAviv();
       });
     });
+  }
+}
+
+// ════════════════════════════════════════════════
+// RABIN SQUARE OPEN-WORLD BOSS
+// ════════════════════════════════════════════════
+function _spawnTABossOpenWorld(cx,cz){
+  if(!taScene)return;
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.6,2,.9),new THREE.MeshLambertMaterial({color:0x0d0f1e,emissive:new THREE.Color(0x001133)}));
+  body.position.y=1;g.add(body);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(1,.95,.95),new THREE.MeshLambertMaterial({color:0x0d0f1e,emissive:new THREE.Color(0x001133)}));
+  head.position.y=2.45;g.add(head);
+  const visor=new THREE.Mesh(new THREE.BoxGeometry(.96,.22,.12),new THREE.MeshLambertMaterial({color:0xff0000,emissive:new THREE.Color(0xcc0000)}));
+  visor.position.set(0,2.45,.5);g.add(visor);
+  [-1,1].forEach(ox=>{
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(.65,.45,.65),new THREE.MeshLambertMaterial({color:0x111330,emissive:new THREE.Color(0x001144)}));
+    sh.position.set(ox*1.15,1.9,0);g.add(sh);
+  });
+  // HP bar
+  const barBG=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.28),new THREE.MeshLambertMaterial({color:0x330000}));
+  barBG.position.set(0,3.5,0);barBG.rotation.x=-Math.PI/6;g.add(barBG);
+  const fill=new THREE.Mesh(new THREE.PlaneGeometry(2.4,.25),new THREE.MeshLambertMaterial({color:0xff2200,emissive:new THREE.Color(0x660000)}));
+  fill.position.set(0,3.51,0);fill.rotation.x=-Math.PI/6;g.add(fill);
+  // aura light
+  const aura=new THREE.PointLight(0xff2200,4,10);aura.position.set(0,1,0);g.add(aura);
+  g.position.set(cx,0,cz-8);
+  taScene.add(g);taObjects.push(g);
+  G._taBossOpenWorld={mesh:g,x:cx,z:cz-8,hp:1800,mhp:1800,spd:4.0,atk:22,atkT:0,dead:false,bar:fill,phase:1,_aura:aura};
+  G._taBossMgr={dead:false};
+  showN('💀 מפקד APEX — כיכר רבין!');
+  screenShake(0.6,0.5);
+  // spawn 4 soldiers around
+  [[cx-12,cz-4],[cx+12,cz-4],[cx-6,cz-14],[cx+6,cz-14]].forEach(([ex,ez])=>_spawnTAEnemy(ex,ez));
+}
+
+function _updTABossOpenWorld(dt){
+  const b=G._taBossOpenWorld;
+  if(!b||b.dead||!TA.inTA)return;
+  const px=TA.playerX,pz=TA.playerZ;
+  const dd=Math.hypot(b.x-px,b.z-pz);
+  if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=5.5;showN('⚠️ מפקד APEX זועם!');screenShake(0.4,0.4);}
+  if(dd>2.5){
+    const ang=Math.atan2(px-b.x,pz-b.z);
+    b.x+=Math.sin(ang)*b.spd*dt;b.z+=Math.cos(ang)*b.spd*dt;
+    b.mesh.position.set(b.x,0,b.z);b.mesh.rotation.y=ang;
+  }
+  // aura pulse
+  if(b._aura)b._aura.intensity=3+Math.sin(Date.now()*.003)*1.5;
+  b.atkT=Math.max(0,b.atkT-dt);
+  if(dd<2.8&&b.atkT<=0){dmgPlayer(b.atk);b.atkT=b.phase===2?.8:1.0;haptic([40,20,40]);}
+  if(G.atkCD<=0&&(G.keys['KeyF']||G._atkFrame)&&dd<4.5){
+    G.atkCD=G.dog==='zippo'?.28:.5;
+    const dog=G.dogs[G.dog];
+    const dmg=Math.round(dog.pow*12*(1+dog.lv*.1));
+    b.hp-=dmg;spawnBlood(b.x,1.5,b.z,10);showDmg(b.x,2.8,b.z,dmg);haptic(25);screenShake(0.18,0.15);
+    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+    if(b.hp<=0){
+      b.dead=true;b.mesh.visible=false;sCapture();haptic([100,40,100,40,120]);
+      addXP(600);G.score+=6000;G.coins+=400;updCoins();
+      showN('🏆 מפקד APEX הובס!');G._taBossMgr={dead:true};
+      screenShake(0.8,0.7);
+    }
   }
 }
 
