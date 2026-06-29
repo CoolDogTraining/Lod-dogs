@@ -413,6 +413,11 @@ function init(){
   _buildZoned(buildLabExterior, 25, -125,  90); // מעבדה
   _buildZoned(buildHospitalExterior, 62, -118, 90); // בית חולים
   buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
+  // תיקון באג: מצלמה מתחילה ב-(0,0,0) ומתקרבת בהדרגה (lerp .1) לשחקן — גורם למסך "כחול/בלי טקסטורות" לרגע בתחילת המשחק (כמו שתועד במסך כחול ריק). קיבוע מיידי, כמו התיקון הקיים בסינמת Z18 ("אין lerp ראשוני שמרצד").
+  {const _sz0=G.dog==='momo'?.58:1,_cd0=8,_ch0=4+G.pitch*6;
+  const _px0=PB.position.x,_py0=PB.position.y+1.1*_sz0,_pz0=PB.position.z;
+  camera.position.set(_px0+Math.sin(G.yaw)*_cd0,_py0+_ch0,_pz0+Math.cos(G.yaw)*_cd0);
+  camera.lookAt(_px0,_py0+.7,_pz0);}
   buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();buildAmbientLife();buildSecretAreas();
   _buildPoolOfRest();
   setupInput();
