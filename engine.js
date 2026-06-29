@@ -5468,8 +5468,7 @@ function _initLODStatics(){
     obj.getWorldPosition(_tmpV);
     obj._lodX=_tmpV.x;
     obj._lodZ=_tmpV.z;
-    obj.matrixAutoUpdate=false; // static — freeze matrix, Three.js won't re-compute every frame
-    obj.updateMatrix();
+    // matrixAutoUpdate נשאר true — מניעת שבירת טקסטורות canvas ו-animated materials
     _lodStaticObjs.push(obj);
     _lodShadowObjs.push(obj);
   });
