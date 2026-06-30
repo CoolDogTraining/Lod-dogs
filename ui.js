@@ -325,65 +325,14 @@ function buildRain(){
   _rainPoints._puddles=puddles;
   _rainPoints._opacity=0; // target opacity, for fade
 }
-// weather overlay elements
-let _sandEl=null,_fogEl=null,_lightningEl=null;
-function _getWeatherEls(){
-  if(!_sandEl){
-    _sandEl=document.createElement('div');
-    _sandEl.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:28;opacity:0;transition:opacity 4s ease;background:linear-gradient(to top,rgba(180,130,50,.55),rgba(210,165,80,.28));display:none;';
-    document.body.appendChild(_sandEl);
-  }
-  if(!_fogEl){
-    _fogEl=document.createElement('div');
-    _fogEl.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:27;opacity:0;transition:opacity 8s ease;background:rgba(220,220,215,.38);display:none;';
-    document.body.appendChild(_fogEl);
-  }
-  if(!_lightningEl){
-    _lightningEl=document.createElement('div');
-    _lightningEl.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:29;opacity:0;background:#fff;';
-    document.body.appendChild(_lightningEl);
-  }
-}
-let _lightningTimer=0,_heavyRainTimer=0;
-function _triggerLightning(){
-  if(!_lightningEl)return;
-  _lightningEl.style.transition='none';_lightningEl.style.opacity='.7';
-  setTimeout(()=>{_lightningEl.style.transition='opacity .18s ease';_lightningEl.style.opacity='0';},60);
-  if(typeof haptic==='function')haptic([100,50,200]);
-  if(typeof screenShake==='function')screenShake(0.5,0.45);
-}
-
 function updWeather(dt){
   if(VILLA.inVilla||CITY.inCity||TA.inTA)return;
-  _getWeatherEls();
-
-  // ── morning fog: 06:00–09:00 ──
-  if(G.dayTime>0.25&&G.dayTime<0.375){
-    _fogEl.style.display='block';
-    _fogEl.style.opacity=String(Math.sin((G.dayTime-.25)/.125*Math.PI)*.38);
-    if(scene)scene.fog.far=60;
-  } else {
-    _fogEl.style.opacity='0';
-    if(scene&&G.weather!=='overcast')scene.fog.far=180;
-  }
-
   G.weatherT-=dt;
   if(G.weatherT<=0){
     const r=Math.random();
-    const hr=G.dayTime; // hour ratio
-    // sandstorm more likely midday
-    if(r<0.12&&hr>0.35&&hr<0.65&&G.weather!=='sandstorm'){
-      G.weather='sandstorm';G.weatherT=30+Math.random()*40;
-      _sandEl.style.display='block';_sandEl.style.opacity='1';
-      if(scene){scene.fog.near=15;scene.fog.far=55;scene.fog.color.setHex(0xc8a050);}
-      showN('🌪️ חולצן חול! נראות מוגבלת');
-    } else if(r<0.52){G.weather='clear';G.weatherT=80+Math.random()*100;
-      _sandEl.style.opacity='0';setTimeout(()=>_sandEl.style.display='none',4000);
-      if(scene){scene.fog.near=60;scene.fog.far=180;scene.fog.color.setHex(0x88bbdd);}
-    } else if(r<0.76){G.weather='overcast';G.weatherT=35+Math.random()*55;
-      _sandEl.style.opacity='0';setTimeout(()=>_sandEl.style.display='none',4000);
-      if(scene)scene.fog.far=120;
-    } else {G.weather='rain';G.weatherT=40+Math.random()*60;}
+    if(r<0.52){G.weather='clear';G.weatherT=80+Math.random()*100;}
+    else if(r<0.76){G.weather='overcast';G.weatherT=35+Math.random()*55;}
+    else{G.weather='rain';G.weatherT=40+Math.random()*60;} // גשם לפחות 40 שניות!
     if(G.weather==='rain'&&!G.rainOn){
       G.rainOn=true;
       if(_rainPoints){_rainPoints.visible=true;if(_rainPoints._layer2)_rainPoints._layer2.visible=true;}
@@ -391,7 +340,6 @@ function updWeather(dt){
       const rov=document.getElementById('rain-ov');if(rov)rov.style.opacity='1';
       _startRainSound();setRainVolume(1);
       showN('🌧️ החל לרדת גשם ברחובות לוד');
-      _heavyRainTimer=0;_lightningTimer=12+Math.random()*20;
       document.getElementById('weather-bar').style.display='block';
     } else if(G.weather!=='rain'&&G.rainOn){
       // fade out — לא מיידי
@@ -419,15 +367,6 @@ function updWeather(dt){
       });
     }
     if(newOp<0.01&&!G.rainOn){_rainPoints.visible=false;if(_rainPoints._layer2)_rainPoints._layer2.visible=false;G.rainFadeOut=false;}
-
-    // ── ברק בזמן גשם ──
-    if(G.rainOn&&_lightningTimer>0){
-      _lightningTimer-=dt;
-      if(_lightningTimer<=0){
-        _triggerLightning();
-        _lightningTimer=8+Math.random()*25;
-      }
-    }
 
     // עדכון particles — LOCAL space!
     if(G.rainOn&&PB){
@@ -1617,33 +1556,17 @@ const _AMBIENT_SOUNDS=['📻 רדיו מהבניין...','☕ ריח קפה','�
 function buildAmbientLife(){
   if(!scene)return;
   // ── 8 ציפורים שעפות מעל הבניינים ──
-  // כל ציפור בנויה כ-Group (כנפיים שמאל+ימין + גוף) — matrixAutoUpdate=true מפורש
+  const birdGeo=new THREE.ConeGeometry(.18,.5,4);
+  const birdMat=new THREE.MeshLambertMaterial({color:0x333322});
   for(let i=0;i<8;i++){
-    const g=new THREE.Group();
-    // גוף
-    const body=new THREE.Mesh(
-      new THREE.BoxGeometry(.32,.1,.55),
-      new THREE.MeshLambertMaterial({color:0x222211}));
-    g.add(body);
-    // כנף שמאל
-    const wL=new THREE.Mesh(
-      new THREE.BoxGeometry(.55,.05,.22),
-      new THREE.MeshLambertMaterial({color:0x333322}));
-    wL.position.set(-.38,0,.05);g.add(wL);
-    // כנף ימין
-    const wR=wL.clone();wR.position.set(.38,0,.05);g.add(wR);
-    g._wL=wL;g._wR=wR;
-    // חשוב: matrixAutoUpdate=true על כל חלק
-    g.matrixAutoUpdate=true;body.matrixAutoUpdate=true;
-    wL.matrixAutoUpdate=true;wR.matrixAutoUpdate=true;
-    g._lodExempt=true; // מנע מ-_initLODStatics לקפוא את הציפור
-    const rad=30+Math.random()*55;
+    const b=new THREE.Mesh(birdGeo,birdMat);
+    const rad=25+Math.random()*60;
     const ang=Math.random()*Math.PI*2;
-    const h=15+Math.random()*14;
-    g.position.set(Math.cos(ang)*rad,h,Math.sin(ang)*rad);
-    g._birdAng=ang;g._birdRad=rad;g._birdSpd=0.28+Math.random()*0.38;
-    g._birdBaseY=h;g._birdT=Math.random()*Math.PI*2;
-    scene.add(g);_ambientBirds.push(g);
+    b.position.set(Math.cos(ang)*rad, 14+Math.random()*12, Math.sin(ang)*rad);
+    b._birdAng=ang;b._birdRad=rad;b._birdSpd=0.3+Math.random()*0.4;
+    b._birdY=b.position.y;b._birdT=Math.random()*Math.PI*2;
+    b._birdWingT=0;
+    scene.add(b);_ambientBirds.push(b);
   }
   // ── 4 חתולים שמסתתרים ──
   const catSpots=[[28,-45],[-55,30],[80,88],[-30,-95]];
@@ -1667,16 +1590,12 @@ function updAmbientLife(dt){
   // ── ציפורים ──
   _ambientBirds.forEach(b=>{
     b._birdAng+=b._birdSpd*dt;
-    b._birdT+=dt*3.5;
+    b._birdT+=dt*2.5;
     b.position.x=Math.cos(b._birdAng)*b._birdRad;
     b.position.z=Math.sin(b._birdAng)*b._birdRad;
-    b.position.y=b._birdBaseY+Math.sin(b._birdT*.7)*.9;
+    b.position.y=b._birdY+Math.sin(b._birdT)*.8;
     b.rotation.y=-b._birdAng+Math.PI/2;
-    // wing flap
-    const flap=Math.sin(b._birdT*5)*.45;
-    if(b._wL)b._wL.rotation.z= flap;
-    if(b._wR)b._wR.rotation.z=-flap;
-    b.updateMatrix(); // כפה עדכון גם אם matrixAutoUpdate כבוי
+    b.rotation.z=Math.sin(b._birdT*3)*.3; // wing flap
   });
   // ── חתולים ──
   _ambientCats.forEach(c=>{

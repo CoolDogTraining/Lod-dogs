@@ -182,30 +182,6 @@ function _musicTick(){
   _musicInterval=setTimeout(_musicTick,nextBps*1000);
 }
 
-let _musicModeTimer=0;
-function _updDynamicMusic(dt){
-  _musicModeTimer-=dt;
-  if(_musicModeTimer>0)return;
-  _musicModeTimer=3; // check every 3s
-  const enemies=G.enemies?G.enemies.filter(e=>e.hp>0&&e.state==='chase').length:0;
-  const bossAlive=G.bosses?G.bosses.some(b=>!b.dead):false;
-  const night=G.dayTime>0.72||G.dayTime<0.28;
-  let target='explore';
-  if(bossAlive)target='boss';
-  else if(enemies>=1)target='combat';
-  else if(night)target='night';
-  if(target===_musicMode)return;
-  _musicMode=target;
-  // pitch + rate shift to signal mood — actual track switching if you have multiple
-  if(typeof _bgMusic!=='undefined'&&_bgMusic){
-    switch(target){
-      case 'combat': _bgMusic.playbackRate=1.22;_bgMusic.volume=0.55;break;
-      case 'boss':   _bgMusic.playbackRate=1.35;_bgMusic.volume=0.65;break;
-      case 'night':  _bgMusic.playbackRate=0.82;_bgMusic.volume=0.32;break;
-      default:       _bgMusic.playbackRate=1.0; _bgMusic.volume=0.42;
-    }
-  }
-}
 function startMusic(){
   if(_musicCtx)return;
   try{
@@ -5147,7 +5123,7 @@ function loop(){
       if(d2(px,pz,0,-150)<10)enterTelAviv();
     }
   }
-  updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);_updEnemyHPBars();updAmbientLife(dt);updSecretAreas(dt);_updDynamicMusic(dt);renderer.render(scene,camera);
+  updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);_updEnemyHPBars();updAmbientLife(dt);updSecretAreas(dt);renderer.render(scene,camera);
 }
 
 // ════════════════════════════════════════════════
@@ -5300,7 +5276,6 @@ function doAtk(){
       if(dd<4.2){
         hit=true;
         e.hp-=dmg;_showEnemyHPBar(e);
-        _taAddWanted(0.5);
         if(e.bar)e.bar.scale.x=Math.max(0,e.hp/e.mhp);
         sHit();haptic(22);spawnBlood(e.mesh.position.x,1,e.mesh.position.z,8);
         showDmg(e.mesh.position.x,1.8,e.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
@@ -6396,19 +6371,6 @@ function updHUD(){
   }
 
   // ── שעון יום/לילה — עובד בלוד וגם בתל אביב ──
-  // ── ability cooldown ring on TAB button ──
-  const tabBtn=document.getElementById('tab-btn-mob');
-  if(tabBtn&&isMob){
-    const cd=G.dog==='colin'?_stunCooldown:G.dog==='zippo'?_dashCooldown:_charmedTimer>0?_charmedTimer:0;
-    const maxCd=G.dog==='colin'?8:G.dog==='zippo'?3:6;
-    const pct=Math.max(0,cd/maxCd);
-    if(pct>0){
-      tabBtn.style.background=`conic-gradient(rgba(255,255,255,.15) ${(1-pct)*360}deg,rgba(80,80,80,.6) 0deg)`;
-      tabBtn.style.opacity='0.65';
-    } else {
-      tabBtn.style.background='';tabBtn.style.opacity='1';
-    }
-  }
   const _clk=document.getElementById('day-clock');
   if(_clk){
     const _ch=Math.floor(G.dayTime*24),_cm=Math.floor((G.dayTime*24-_ch)*60);
@@ -12957,8 +12919,6 @@ function buildTelAvivScene(){
   // ── pool פנסים ──
   _taLampPool.length=0;
   for(let i=0;i<8;i++){const pl=new THREE.PointLight(0xffd97a,0,22);taScene.add(pl);_taLampPool.push(pl);}
-  // ── ים + שחפים ──
-  setTimeout(()=>_buildTASea(),0);
 }
 
 // ════════════════════════════════════════════════
@@ -13166,31 +13126,6 @@ function _taBuildZone_Tayelet(){
   // טיילת
   const prom=new THREE.Mesh(new THREE.BoxGeometry(20,.22,300),new THREE.MeshStandardMaterial({color:0xd0c8b2,roughness:.9}));
   prom.position.set(143,.11,45);_taAddZ(prom);
-  // ── חוף ים — רצועת חול ──
-  const sand=new THREE.Mesh(new THREE.BoxGeometry(35,.18,300),new THREE.MeshStandardMaterial({color:0xe8d5a0,roughness:.98}));
-  sand.position.set(170,.09,45);_taAddZ(sand);
-  // ── כסאות נח + שמשיות ──
-  const chairCols=[0xee4422,0x2244ee,0x22aa44,0xffcc00,0xcc44aa];
-  for(let bz=-70;bz<=160;bz+=18){
-    const cx2=165+Math.random()*16-8,cz2=bz+Math.random()*8-4;
-    // כסא
-    const chair=new THREE.Mesh(new THREE.BoxGeometry(1.8,.12,2.6),
-      new THREE.MeshLambertMaterial({color:chairCols[Math.floor(Math.random()*chairCols.length)]}));
-    chair.position.set(cx2,.25,cz2);_taAddZ(chair);
-    // שמשייה
-    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,2.8,6),
-      new THREE.MeshLambertMaterial({color:0x888888}));
-    pole.position.set(cx2+.5,1.4,cz2-.5);_taAddZ(pole);
-    const umbrella=new THREE.Mesh(new THREE.ConeGeometry(2.2,.5,8),
-      new THREE.MeshLambertMaterial({color:chairCols[Math.floor(Math.random()*chairCols.length)],side:THREE.DoubleSide}));
-    umbrella.position.set(cx2+.5,2.85,cz2-.5);_taAddZ(umbrella);
-    // שוכב על החוף
-    if(Math.random()<0.5){
-      const towel=new THREE.Mesh(new THREE.BoxGeometry(1.8,.04,2.8),
-        new THREE.MeshLambertMaterial({color:chairCols[Math.floor(Math.random()*chairCols.length)],transparent:true,opacity:.9}));
-      towel.position.set(cx2+Math.random()*4-2,.06,cz2+Math.random()*4-2);_taAddZ(towel);
-    }
-  }
   // ספסלים לאורך
   for(let bz=-80;bz<=170;bz+=20){
     _taBench(138,bz,Math.PI/2);_taBench(150,bz,-Math.PI/2);
@@ -14085,7 +14020,6 @@ function enterTelAviv(){
   G.paused=true;
   fadeOut(()=>{
     if(!taScene)buildTelAvivScene();
-  if(taScene&&!_taSeaMesh)_buildTASea();
     // ── guard: buildTelAvivScene אמור להיות סינכרוני, אבל נוודא ──
     if(!taCamera){
       console.error('enterTelAviv: taCamera still null after build!');
@@ -14168,34 +14102,6 @@ function _taUpdLamps(){
 // ════════════════════════════════════════════════
 // UPD TEL AVIV
 // ════════════════════════════════════════════════
-function _updTAShuk(dt){
-  if(!window._taShukSellers)return;
-  const px=TA.playerX,pz=TA.playerZ;
-  window._taShukSellers.forEach(s=>{
-    s._shukT-=dt;
-    if(s._shukT<=0&&Math.hypot(px-s.position.x,pz-s.position.z)<20){
-      s._shukT=6+Math.random()*8;
-      showN('🏪 '+s._shukCall);
-    }
-  });
-}
-function _updTAJoggers(dt){
-  if(!window._taJoggers)return;
-  window._taJoggers.forEach(g=>{
-    g._jogT+=dt*3.5;
-    const spd=g._jogSpd;
-    g.position.x+=Math.sin(g._jogDir)*spd*dt;
-    g.position.z+=Math.cos(g._jogDir)*spd*dt;
-    if(Math.abs(g.position.x-g._jogX)>g._jogRange)g._jogDir=Math.PI-g._jogDir;
-    g.rotation.y=-g._jogDir;
-    const run=Math.sin(g._jogT)*.5;
-    if(g._legL)g._legL.rotation.x= run;
-    if(g._legR)g._legR.rotation.x=-run;
-    if(g._armL)g._armL.rotation.x=-run*.6;
-    if(g._armR)g._armR.rotation.x= run*.6;
-    g.updateMatrix();
-  });
-}
 function updTelAviv(dt){
   if(!TA.inTA||G.paused||G.dlgOpen)return;
   TA.enterGrace=Math.max(0,(TA.enterGrace||0)-dt);
@@ -14245,11 +14151,6 @@ function updTelAviv(dt){
   // LOD zones + פנסים + אויבים + triggers
   _taUpdZones();
   _updTABossOpenWorld(dt);
-  _updTASea(dt);
-  _updTAWanted(dt);
-  _updTADrones(dt);
-  _updTAShuk(dt);
-  _updTAJoggers(dt);
   _taUpdLamps();
   _updTAEnemies(dt);
   _checkTAMissionTriggers();
@@ -14267,158 +14168,6 @@ const _taNPCList=[];
 const _taCarList=[];
 let _taAmbientTimer=0;
 const _TA_AMBIENT_SOUNDS=['☕','🛒','📱','🎵','🗣️','👋','🐕','🌊'];
-
-// ════════════════════════════════════════════════
-// TA SEA — גלים + שחפים
-// ════════════════════════════════════════════════
-let _taSeaMesh=null,_taSeaT=0,_taSeaPos=null;
-const _taSeagulls=[];
-
-function _buildTASea(){
-  if(!taScene)return;
-  // מישור מים מונפש
-  const geo=new THREE.PlaneGeometry(320,180,32,18);
-  geo.rotateX(-Math.PI/2);
-  const mat=new THREE.MeshLambertMaterial({color:0x1a7aaa,transparent:true,opacity:.82});
-  _taSeaMesh=new THREE.Mesh(geo,mat);
-  _taSeaMesh.position.set(155,0.5,-10);
-  _taSeaMesh._lodExempt=true;
-  taScene.add(_taSeaMesh);taObjects.push(_taSeaMesh);
-  _taSeaPos=_taSeaMesh.geometry.attributes.position;
-
-  // 6 שחפים
-  const sgMat=new THREE.MeshLambertMaterial({color:0xfafafa});
-  const sgBodyGeo=new THREE.BoxGeometry(.45,.12,.6);
-  const sgWingGeo=new THREE.BoxGeometry(.9,.06,.28);
-  for(let i=0;i<6;i++){
-    const g=new THREE.Group();g._lodExempt=true;
-    const body=new THREE.Mesh(sgBodyGeo,sgMat);g.add(body);
-    const wL=new THREE.Mesh(sgWingGeo,sgMat);wL.position.set(-.65,0,.05);g.add(wL);g._wL=wL;
-    const wR=new THREE.Mesh(sgWingGeo,sgMat);wR.position.set(.65,0,.05);g.add(wR);g._wR=wR;
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.22),sgMat);head.position.set(0,.12,.32);g.add(head);
-    const beak=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.18),new THREE.MeshLambertMaterial({color:0xffaa00}));
-    beak.position.set(0,.08,.44);g.add(beak);
-    const px2=130+Math.random()*80,pz2=-50+Math.random()*160,py2=12+Math.random()*18;
-    g.position.set(px2,py2,pz2);
-    g._sgAng=Math.random()*Math.PI*2;g._sgRad=20+Math.random()*40;
-    g._sgSpd=0.22+Math.random()*0.28;g._sgT=Math.random()*Math.PI*2;
-    g._sgBaseY=py2;g.matrixAutoUpdate=true;
-    taScene.add(g);taObjects.push(g);_taSeagulls.push(g);
-  }
-}
-
-function _updTASea(dt){
-  _taSeaT+=dt*.8;
-  // animate wave vertices
-  if(_taSeaMesh&&_taSeaPos){
-    const arr=_taSeaPos.array;
-    for(let i=0;i<arr.length;i+=3){
-      const x=arr[i],z=arr[i+2];
-      arr[i+1]=Math.sin(x*.08+_taSeaT)*0.35+Math.cos(z*.06+_taSeaT*.7)*0.25;
-    }
-    _taSeaPos.needsUpdate=true;
-    _taSeaMesh.geometry.computeVertexNormals();
-  }
-  // animate seagulls
-  _taSeagulls.forEach(g=>{
-    g._sgAng+=g._sgSpd*dt;
-    g._sgT+=dt*2.8;
-    g.position.x=130+Math.cos(g._sgAng)*g._sgRad;
-    g.position.z=-10+Math.sin(g._sgAng)*g._sgRad;
-    g.position.y=g._sgBaseY+Math.sin(g._sgT*.5)*1.5;
-    g.rotation.y=-g._sgAng+Math.PI/2;
-    const flap=Math.sin(g._sgT*4)*.5;
-    if(g._wL)g._wL.rotation.z= flap;
-    if(g._wR)g._wR.rotation.z=-flap;
-    g.updateMatrix();
-  });
-}
-
-// ════════════════════════════════════════════════
-// TA WANTED SYSTEM
-// ════════════════════════════════════════════════
-let _taWanted=0,_taWantedDecayT=0,_taDroneSpawned=false;
-const _taWantedEl=null;
-
-function _taAddWanted(n){
-  if(!TA.inTA)return;
-  _taWanted=Math.min(5,_taWanted+n);
-  _taWantedDecayT=12;
-  _updWantedHUD();
-  if(_taWanted>=3&&!_taDroneSpawned){
-    _taDroneSpawned=true;
-    showN('🚨 APEX זיהו אותך — צוות סריקה בדרך!');
-    screenShake(0.3,0.3);
-    setTimeout(()=>_spawnTADrone(),2000);
-  }
-}
-
-function _updTAWanted(dt){
-  if(_taWanted<=0)return;
-  _taWantedDecayT-=dt;
-  if(_taWantedDecayT<=0&&!TA.inBuilding){
-    _taWanted=Math.max(0,_taWanted-.8*dt);
-    _updWantedHUD();
-    if(_taWanted<=0){_taDroneSpawned=false;showN('✅ APEX איבד את עקבותיך');}
-  }
-}
-
-function _updWantedHUD(){
-  let el=document.getElementById('ta-wanted');
-  if(!el){
-    el=document.createElement('div');el.id='ta-wanted';
-    el.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);border:1px solid #ff2222;border-radius:8px;padding:4px 12px;color:#fff;font-size:12px;font-weight:bold;z-index:35;display:none;letter-spacing:1px;';
-    document.body.appendChild(el);
-  }
-  if(_taWanted<=0){el.style.display='none';return;}
-  el.style.display='block';
-  const stars='★'.repeat(Math.ceil(_taWanted))+'☆'.repeat(5-Math.ceil(_taWanted));
-  el.textContent='APEX '+stars;
-  el.style.color=_taWanted>=4?'#ff2222':_taWanted>=2?'#ff8800':'#ffcc00';
-}
-
-function _spawnTADrone(){
-  if(!taScene||!PB)return;
-  const g=new THREE.Group();g._lodExempt=true;
-  // גוף
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.8,.22,.8),new THREE.MeshLambertMaterial({color:0x111111,emissive:new THREE.Color(0x110011)}));
-  body.position.y=0;g.add(body);
-  // 4 פרופלרים
-  [[.5,0,.5],[-.5,0,.5],[.5,0,-.5],[-.5,0,-.5]].forEach(([px2,py2,pz2])=>{
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.45),new THREE.MeshLambertMaterial({color:0x222222}));
-    arm.position.set(px2*.55,0,pz2*.55);arm.rotation.y=Math.PI/4;g.add(arm);
-    const prop=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,.03,6),new THREE.MeshLambertMaterial({color:0x444444,transparent:true,opacity:.55}));
-    prop.position.set(px2,0.08,pz2);g.add(prop);
-  });
-  const light=new THREE.PointLight(0xff0000,3,8);light.position.y=-.2;g.add(light);
-  const px3=PB.position.x+20*(Math.random()-.5),pz3=PB.position.z+20*(Math.random()-.5);
-  g.position.set(px3,18,pz3);g.matrixAutoUpdate=true;
-  taScene.add(g);taObjects.push(g);
-  g._droneT=0;g._droneTarget=PB;
-  g._droneLife=20;
-  if(!window._taDrones)window._taDrones=[];
-  window._taDrones.push(g);
-}
-
-function _updTADrones(dt){
-  if(!window._taDrones||!PB)return;
-  const px=TA.playerX,pz=TA.playerZ;
-  for(let i=window._taDrones.length-1;i>=0;i--){
-    const d=window._taDrones[i];
-    d._droneLife-=dt;
-    if(d._droneLife<=0||_taWanted<=0){taScene.remove(d);window._taDrones.splice(i,1);continue;}
-    d._droneT+=dt;
-    const tx=px,tz=pz,th=16+Math.sin(d._droneT*.5)*3;
-    d.position.x+=(tx-d.position.x)*dt*1.2;
-    d.position.z+=(tz-d.position.z)*dt*1.2;
-    d.position.y+=(th-d.position.y)*dt*1.5;
-    d.rotation.y+=dt*2;d.updateMatrix();
-    // drone spots player → add wanted
-    if(Math.hypot(px-d.position.x,pz-d.position.z)<8&&!d._spotted){
-      d._spotted=true;_taAddWanted(1);showN('👁️ הדרון ראה אותך!');
-    }
-  }
-}
 
 function _initTACrowd(){
   if(_taNPCList.length)return;
@@ -14531,61 +14280,6 @@ function _initTACrowd(){
 
 function _updTANPCs(dt){
   if(!TA.inTA||!taScene)return;
-  // ── שוק הכרמל — דוכנים חיים ──
-  if(!window._taShukBuilt){
-    window._taShukBuilt=true;
-    const MX=G._taMarketPos?G._taMarketPos.x:-100;
-    const MZ=G._taMarketPos?G._taMarketPos.z:120;
-    const shukCalls=['ירקות טריים!','מציאות! מציאות!','ביצים! שלוש בעשר!','תות שדה!','פלאפל!','חומוס!','ריהאן!'];
-    const stallCols=[0xee4422,0x22aa44,0xffcc00,0x2244ee,0xee8822,0x44aacc,0xcc44aa];
-    for(let i=0;i<6;i++){
-      const sx=MX+(i%3-1)*18,sz=MZ+Math.floor(i/3)*14;
-      // דוכן
-      const stall=new THREE.Mesh(new THREE.BoxGeometry(5,.08,2.5),
-        new THREE.MeshLambertMaterial({color:stallCols[i%stallCols.length]}));
-      stall.position.set(sx,.85,sz);stall._lodExempt=true;taScene.add(stall);taObjects.push(stall);
-      // מכסה
-      const canopy=new THREE.Mesh(new THREE.BoxGeometry(5.4,.06,3),
-        new THREE.MeshLambertMaterial({color:stallCols[(i+2)%stallCols.length],transparent:true,opacity:.8}));
-      canopy.position.set(sx,2.3,sz);taScene.add(canopy);taObjects.push(canopy);
-      // מוכר
-      const sg=new THREE.Group();sg._lodExempt=true;
-      const sm=new THREE.MeshLambertMaterial({color:0xd4956a});
-      const sb=new THREE.Mesh(new THREE.BoxGeometry(.46,.78,.26),new THREE.MeshLambertMaterial({color:stallCols[i%stallCols.length]}));
-      sb.position.y=.89;sg.add(sb);
-      const sh=new THREE.Mesh(new THREE.BoxGeometry(.36,.36,.36),sm);sh.position.y=1.47;sg.add(sh);
-      sg.position.set(sx,0,sz-1.8);sg.matrixAutoUpdate=true;
-      taScene.add(sg);taObjects.push(sg);
-      sg._shukCall=shukCalls[i%shukCalls.length];
-      sg._shukT=Math.random()*8;
-      if(!window._taShukSellers)window._taShukSellers=[];
-      window._taShukSellers.push(sg);
-    }
-  }
-
-  // ── ריצות בוקר — arlozorov joggers ──
-  if(!window._taJoggers&&taScene){
-    window._taJoggers=[];
-    for(let i=0;i<4;i++){
-      const g=new THREE.Group();g._lodExempt=true;
-      const c=new THREE.MeshLambertMaterial({color:[0xe74c3c,0x3498db,0x2ecc71,0xf39c12][i]});
-      const sm2=new THREE.MeshLambertMaterial({color:0xffe0bd});
-      const b2=new THREE.Mesh(new THREE.BoxGeometry(.42,.76,.24),c);b2.position.y=.88;g.add(b2);
-      const h2=new THREE.Mesh(new THREE.BoxGeometry(.34,.34,.34),sm2);h2.position.y=1.44;g.add(h2);
-      const lL2=new THREE.Mesh(new THREE.BoxGeometry(.19,.66,.19),new THREE.MeshLambertMaterial({color:0x222244}));
-      lL2.position.set(-.12,.33,0);g.add(lL2);g._legL=lL2;
-      const lR2=lL2.clone();lR2.position.set(.12,.33,0);g.add(lR2);g._legR=lR2;
-      const aL2=new THREE.Mesh(new THREE.BoxGeometry(.16,.55,.16),c);
-      aL2.position.set(-.3,.82,0);g.add(aL2);g._armL=aL2;
-      const aR2=aL2.clone();aR2.position.set(.3,.82,0);g.add(aR2);g._armR=aR2;
-      const jogX=-55+i*10, jogZ=-50+Math.random()*20-10;
-      g.position.set(jogX,0,jogZ);g.matrixAutoUpdate=true;
-      g._jogDir=Math.PI/2;g._jogT=Math.random()*Math.PI*2;g._jogSpd=4.5+Math.random()*2;
-      g._jogX=jogX;g._jogZ=jogZ;g._jogRange=60;
-      taScene.add(g);taObjects.push(g);window._taJoggers.push(g);
-    }
-  }
-
   if(!_taNPCList.length)_initTACrowd();
   const px=TA.playerX,pz=TA.playerZ;
   _taNPCList.forEach(n=>{
