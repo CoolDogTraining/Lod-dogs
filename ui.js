@@ -2731,17 +2731,7 @@ function loadGame(){
   _daily_init();
     init();
     // אחרי init — שחזר מיקום (init מאפס ל-0,0,60)
-    if(s.pos&&PB){
-      PB.position.set(s.pos.x,0,s.pos.z);
-      // תיקון באג: לקבע גם את המצלמה למיקום החדש — אחרת היא ממשיכה ב-lerp מהמיקום
-      // הישן (0,0,60) למיקום השמור, וגורם למסך כחול/ריק לרגע בטעינת שמירה
-      if(typeof camera!=='undefined'&&camera){
-        const _sz0=G.dog==='momo'?.58:1,_cd0=8,_ch0=4+G.pitch*6;
-        const _px0=PB.position.x,_py0=PB.position.y+1.1*_sz0,_pz0=PB.position.z;
-        camera.position.set(_px0+Math.sin(G.yaw)*_cd0,_py0+_ch0,_pz0+Math.cos(G.yaw)*_cd0);
-        camera.lookAt(_px0,_py0+.7,_pz0);
-      }
-    }
+    if(s.pos&&PB){PB.position.set(s.pos.x,0,s.pos.z);}
     // שחזר mission — init קרא setMission(0), נדרוס בלי לקרוא unlock() (כדי לא לפתוח קאטסינים שוב)
     G.mission=s.mission;
     // סדר את העולם לפי ה-mission שנשמר

@@ -413,11 +413,6 @@ function init(){
   _buildZoned(buildLabExterior, 25, -125,  90); // מעבדה
   _buildZoned(buildHospitalExterior, 62, -118, 90); // בית חולים
   buildPlayer();buildEnemies();buildBoss();buildPickups();buildBones();buildNPCs();
-  // תיקון באג: מצלמה מתחילה ב-(0,0,0) ומתקרבת בהדרגה (lerp .1) לשחקן — גורם למסך "כחול/בלי טקסטורות" לרגע בתחילת המשחק (כמו שתועד במסך כחול ריק). קיבוע מיידי, כמו התיקון הקיים בסינמת Z18 ("אין lerp ראשוני שמרצד").
-  {const _sz0=G.dog==='momo'?.58:1,_cd0=8,_ch0=4+G.pitch*6;
-  const _px0=PB.position.x,_py0=PB.position.y+1.1*_sz0,_pz0=PB.position.z;
-  camera.position.set(_px0+Math.sin(G.yaw)*_cd0,_py0+_ch0,_pz0+Math.cos(G.yaw)*_cd0);
-  camera.lookAt(_px0,_py0+.7,_pz0);}
   buildRain();buildCars();buildHumanNPCs();buildCollectibles();buildBldCapture();buildAmbientLife();buildSecretAreas();
   _buildPoolOfRest();
   setupInput();
@@ -5153,12 +5148,6 @@ function loop(){
     }
   }
   updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);_updEnemyHPBars();updAmbientLife(dt);updSecretAreas(dt);_updDynamicMusic(dt);renderer.render(scene,camera);
-  // ── DIAG זמני: דיבוג מצלמה/שחקן בעת הצגת מסך כחול בהתחלת המשחק (פעיל רק עם ?debug ב-URL) ──
-  if(location.search.includes('debug')){
-    let dbg=document.getElementById('_camDbg');
-    if(!dbg){dbg=document.createElement('div');dbg.id='_camDbg';dbg.style.cssText='position:fixed;bottom:4px;left:4px;z-index:99999;background:rgba(0,0,0,.85);color:#0f0;font:11px monospace;padding:4px 8px;border-radius:6px;white-space:pre;pointer-events:none;direction:ltr;text-align:left;';document.body.appendChild(dbg);}
-    dbg.textContent=`PB: ${PB.position.x.toFixed(1)},${PB.position.y.toFixed(1)},${PB.position.z.toFixed(1)}\ncam: ${camera.position.x.toFixed(1)},${camera.position.y.toFixed(1)},${camera.position.z.toFixed(1)}\nyaw:${G.yaw.toFixed(2)} pitch:${G.pitch.toFixed(2)}\ncanvas: ${renderer.domElement.width}x${renderer.domElement.height} fov:${camera.fov}\npaused:${G.paused} cut:${G.cutOpen} dlg:${G.dlgOpen}`;
-  }
 }
 
 // ════════════════════════════════════════════════
@@ -5479,7 +5468,8 @@ function _initLODStatics(){
     obj.getWorldPosition(_tmpV);
     obj._lodX=_tmpV.x;
     obj._lodZ=_tmpV.z;
-    // matrixAutoUpdate נשאר true — מניעת שבירת טקסטורות canvas ו-animated materials
+    obj.matrixAutoUpdate=false; // static — freeze matrix, Three.js won't re-compute every frame
+    obj.updateMatrix();
     _lodStaticObjs.push(obj);
     _lodShadowObjs.push(obj);
   });
