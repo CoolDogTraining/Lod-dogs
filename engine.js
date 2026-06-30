@@ -5153,6 +5153,12 @@ function loop(){
     }
   }
   updCamera();updHUD();drawMM();_updLOD();_updLightBudget(dt);_updEnemyHPBars();updAmbientLife(dt);updSecretAreas(dt);_updDynamicMusic(dt);renderer.render(scene,camera);
+  // ── DIAG זמני: דיבוג מצלמה/שחקן בעת הצגת מסך כחול בהתחלת המשחק (פעיל רק עם ?debug ב-URL) ──
+  if(location.search.includes('debug')){
+    let dbg=document.getElementById('_camDbg');
+    if(!dbg){dbg=document.createElement('div');dbg.id='_camDbg';dbg.style.cssText='position:fixed;bottom:4px;left:4px;z-index:99999;background:rgba(0,0,0,.85);color:#0f0;font:11px monospace;padding:4px 8px;border-radius:6px;white-space:pre;pointer-events:none;direction:ltr;text-align:left;';document.body.appendChild(dbg);}
+    dbg.textContent=`PB: ${PB.position.x.toFixed(1)},${PB.position.y.toFixed(1)},${PB.position.z.toFixed(1)}\ncam: ${camera.position.x.toFixed(1)},${camera.position.y.toFixed(1)},${camera.position.z.toFixed(1)}\nyaw:${G.yaw.toFixed(2)} pitch:${G.pitch.toFixed(2)}\ncanvas: ${renderer.domElement.width}x${renderer.domElement.height} fov:${camera.fov}\npaused:${G.paused} cut:${G.cutOpen} dlg:${G.dlgOpen}`;
+  }
 }
 
 // ════════════════════════════════════════════════
