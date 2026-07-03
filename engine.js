@@ -13465,71 +13465,12 @@ function _taBuildApex(){
 }
 
 function _taBuildApexLab(LX,LZ){
-  // ── רצפת מעבדה ראשית ──
-  const labFloor=new THREE.Mesh(new THREE.PlaneGeometry(24,22),new THREE.MeshStandardMaterial({color:0x1a1a20,roughness:.98}));
-  labFloor.rotation.x=-Math.PI/2;labFloor.position.set(LX,.02,LZ);labFloor._isGround=true;_taAddZ(labFloor);
-  // קירות מעבדה
-  [[0,-11,24,.4,4],[0,11,24,.4,4],[-12,0,.4,22,4],[12,0,.4,22,4]].forEach(([ox,oz,w,d,h])=>{
-    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x1e1e28}));
-    wall.position.set(LX+ox,h/2,LZ+oz);_taAddZ(wall);
-  });
-  // תאורת מעבדה
-  for(let i=-6;i<=6;i+=6){
-    const labL=new THREE.PointLight(0xb0d8ff,1.5,15);labL.position.set(LX+i,4,LZ);_taAddZ(labL);
-    const lb=new THREE.Mesh(new THREE.BoxGeometry(3,.2,1.5),new THREE.MeshStandardMaterial({color:0x333355,roughness:.4,metalness:.8}));
-    lb.position.set(LX+i,4.1,LZ);_taAddZ(lb);
-  }
-  // שולחנות עם מסכים
-  [[LX-7,LZ-4],[LX,LZ-4],[LX+7,LZ-4]].forEach(([cx,cz])=>{
-    const desk=new THREE.Mesh(new THREE.BoxGeometry(3,.08,1.2),new THREE.MeshLambertMaterial({color:0x2a2a30}));
-    desk.position.set(cx,.8,cz);_taAddZ(desk);
-    const screen=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,.05),new THREE.MeshStandardMaterial({color:0x001830,emissive:0x003366,emissiveIntensity:.8}));
-    screen.position.set(cx,1.5,cz-.6);_taAddZ(screen);
-    const sc2=document.createElement('canvas');sc2.width=180;sc2.height=120;
-    const stx=sc2.getContext('2d');stx.fillStyle='#001830';stx.fillRect(0,0,180,120);
-    stx.fillStyle='#00ff88';stx.font='10px monospace';
-    ['APEX://Z-01','STATUS:ACTIVE','LAT:32.08','LON:34.78','DNA:▓▓▓▓░░'].forEach((t,i)=>stx.fillText(t,6,16+i*16));
-    screen.material.map=new THREE.CanvasTexture(sc2);screen.material.needsUpdate=true;
-  });
-  // כלובי כלבים
-  for(let i=-7;i<=7;i+=7){
-    const cage=new THREE.Mesh(new THREE.BoxGeometry(2.5,2,2.2),new THREE.MeshStandardMaterial({color:0x333338,wireframe:true}));
-    cage.position.set(LX+i,1,LZ+4);_taAddZ(cage);
-  }
-  // ── חדר חקירה (מוסיפים מצד שמאל) ──
-  const intRoom=new THREE.Mesh(new THREE.PlaneGeometry(12,10),new THREE.MeshLambertMaterial({color:0x111118}));
-  intRoom.rotation.x=-Math.PI/2;intRoom.position.set(LX-18,.02,LZ-2);intRoom._isGround=true;_taAddZ(intRoom);
-  [[0,-5,12,.3,4],[0,5,12,.3,4],[-6,0,.3,10,4]].forEach(([ox,oz,w,d,h])=>{
-    const w2=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x18181e}));
-    w2.position.set(LX-18+ox,h/2,LZ-2+oz);_taAddZ(w2);
-  });
-  // כיסא חקירה במרכז
-  const chair=new THREE.Mesh(new THREE.BoxGeometry(1,.6,1),new THREE.MeshLambertMaterial({color:0x444444}));
-  chair.position.set(LX-18,.3,LZ-2);_taAddZ(chair);
-  const chairBack=new THREE.Mesh(new THREE.BoxGeometry(1,1.4,.15),new THREE.MeshLambertMaterial({color:0x444444}));
-  chairBack.position.set(LX-18,.9,LZ-2+.4);_taAddZ(chairBack);
-  const lamp=new THREE.PointLight(0xffcc66,2,8);lamp.position.set(LX-18,3.5,LZ-2);_taAddZ(lamp);
-  const lampMesh=new THREE.Mesh(new THREE.ConeGeometry(.5,.6,8),new THREE.MeshLambertMaterial({color:0xcc9922}));
-  lampMesh.position.set(LX-18,3.8,LZ-2);lampMesh.rotation.x=Math.PI;_taAddZ(lampMesh);
-  // ── חדר שרת (מצד ימין) ──
-  const srvRoom=new THREE.Mesh(new THREE.PlaneGeometry(10,12),new THREE.MeshLambertMaterial({color:0x101018}));
-  srvRoom.rotation.x=-Math.PI/2;srvRoom.position.set(LX+18,.02,LZ-2);srvRoom._isGround=true;_taAddZ(srvRoom);
-  [[0,-6,10,.3,4],[0,6,10,.3,4],[5,0,.3,12,4]].forEach(([ox,oz,w,d,h])=>{
-    const w3=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x18181e}));
-    w3.position.set(LX+18+ox,h/2,LZ-2+oz);_taAddZ(w3);
-  });
-  // שרתים
-  for(let si=0;si<4;si++){
-    const srv=new THREE.Mesh(new THREE.BoxGeometry(1.5,3.5,1),new THREE.MeshLambertMaterial({color:0x1a1a22}));
-    srv.position.set(LX+22,1.75,LZ-6+si*3);_taAddZ(srv);
-    const sled=new THREE.Mesh(new THREE.BoxGeometry(1.5,.2,.95),new THREE.MeshStandardMaterial({color:0x002255,emissive:0x001133}));
-    sled.position.set(LX+22,si*.5+.5,LZ-6+si*3-.46);_taAddZ(sled);
-    const sLight=new THREE.PointLight(0x0033ff,.5,4);sLight.position.set(LX+22,2,LZ-6+si*3);_taAddZ(sLight);
-  }
-  // ── שמירת מיקום ──
+  // הגאומטריה הפיזית של המעבדה (רצפה/קירות/שולחנות/כלובים/חדר חקירה/חדר שרת)
+  // הוסרה מהעולם הפתוח — הייתה שארית מלפני המעבר לתבנית "חדר" מבודד,
+  // וגרמה למבנים "רפאים" מפוזרים בתל אביב שהפריעו לתנועה/לתצוגה.
+  // המעבדה האמיתית נבנית ב-_apexLabScene (ר' buildApexLabScene/enterApexLab).
+  // כאן נשמר רק המיקום הלוגי, לצורך סמן ה-GPS.
   G._taLabInteriorPos={x:LX,z:LZ};
-  G._taInterrogationRoom={x:LX-18,z:LZ-2};
-  G._taServerRoom={x:LX+18,z:LZ-2};
 }
 
 
@@ -13640,34 +13581,11 @@ function _taBuildPort(){
 // מחסן נמל — חדר פנימי (כמו עירייה/מסגד בלוד)
 // ════════════════════════════════════════════════
 function _taBuildPortWarehouse(WX,WZ){
-  // רצפה ייחודית — מחסן
-  const fl=new THREE.Mesh(new THREE.PlaneGeometry(22,12),new THREE.MeshLambertMaterial({color:0x3a3a34}));
-  fl.rotation.x=-Math.PI/2;fl.position.set(WX,.05,WZ);fl._isGround=true;_taAddZ(fl);
-  // קירות
-  [[0,-6,22,.3,5],[0,6,22,.3,5],[-11,0,.3,12,5],[11,0,.3,12,5]].forEach(([ox,oz,w,d,h])=>{
-    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x9a9a8c}));
-    wall.position.set(WX+ox,h/2,WZ+oz);_taAddZ(wall);
-  });
-  // תאורת מחסן — צהובה תעשייתית
-  [-7,7].forEach(ox=>{
-    const l=new THREE.PointLight(0xffcc66,2,14);l.position.set(WX+ox,4,WZ);_taAddZ(l);
-    const bulb=new THREE.Mesh(new THREE.SphereGeometry(.3,6,4),new THREE.MeshLambertMaterial({color:0xffee88,emissive:0xffaa00}));
-    bulb.position.set(WX+ox,4.5,WZ);_taAddZ(bulb);
-  });
-  // ארגזי מטען — כיסוי
-  [[WX-7,WZ-3,1.5,1.5,2],[WX-7,WZ,1.5,1.5,2],[WX+5,WZ-3,2,1.2,1.8],[WX+5,WZ+2,2,1.2,1.8]].forEach(([cx,cz,w,d,h])=>{
-    const box=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshLambertMaterial({color:0x8a8040}));
-    box.position.set(cx,h/2,cz);_taAddZ(box);
-    const stripe=new THREE.Mesh(new THREE.BoxGeometry(w+.05,.1,d+.05),new THREE.MeshLambertMaterial({color:0xcc8800}));
-    stripe.position.set(cx,h*.6,cz);_taAddZ(stripe);
-  });
-  // שלט APEX CLASSIFIED
-  const sgnC=document.createElement('canvas');sgnC.width=300;sgnC.height=80;
-  const stx=sgnC.getContext('2d');stx.fillStyle='#1a0000';stx.fillRect(0,0,300,80);
-  stx.fillStyle='#ff3300';stx.font='bold 28px Arial';stx.textAlign='center';stx.textBaseline='middle';
-  stx.fillText('APEX — CLASSIFIED',150,40);
-  const sign=new THREE.Mesh(new THREE.BoxGeometry(6,1.6,.1),new THREE.MeshStandardMaterial({map:new THREE.CanvasTexture(sgnC),side:THREE.DoubleSide}));
-  sign.position.set(WX,3.5,WZ-5.8);_taAddZ(sign);
+  // הגאומטריה הפיזית של המחסן (רצפה/קירות/תאורה/ארגזים/שלט) הוסרה מהעולם הפתוח —
+  // היא נבנתה באותם קואורדינטות בדיוק כמו קופסת המחסן החיצונית ב-_taBuildPort,
+  // כך שממש חפפה אותה (וגרמה לקרעי-Z ולהתנגשויות מיותרות). המחסן האמיתי
+  // נבנה ב-_portWHScene (ר' buildPortWHScene/enterPortWH).
+  // כאן נשמר רק המיקום הלוגי.
   G._taPortWarehousePos={x:WX,z:WZ};
 }
 
