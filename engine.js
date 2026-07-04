@@ -5058,13 +5058,13 @@ function loop(){
   }
   if(APEX_LAB.inLab){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updApexLab(dt);
-    updPfx(dt);updateNavDirection();
+    updPfx(dt);updateNavDirection();_updLightBudget(dt,_apexLabScene);
     if(_apexLabCam)renderer.render(_apexLabScene,_apexLabCam);
     updHUD();return;
   }
   if(PORT_WH.inWH){
     if(!G.paused&&!G.dlgOpen&&!G.cutOpen)updPortWH(dt);
-    updPfx(dt);updateNavDirection();
+    updPfx(dt);updateNavDirection();_updLightBudget(dt,_portWHScene);
     if(_portWHCam)renderer.render(_portWHScene,_portWHCam);
     updHUD();return;
   }
@@ -13726,7 +13726,18 @@ function exitApexLab(){
     if(_apexLabScene)_apexLabScene.remove(PB);
     if(taScene)taScene.add(PB);else scene.add(PB);
     PB.position.set((G._taApexBldPos||{x:70}).x,(G._taApexBldPos||{z:-112}).z||-112,0);
-    _apexLabObjs.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
+    // תיקון: dispose() על material לא משחרר את הטקסטורות (map/emissiveMap וכו') שלו —
+    // בלי זה, כל כניסה חוזרת למעבדה מדליפה CanvasTexture-ים ל-GPU, עד לאובדן הקשר WebGL.
+    _apexLabObjs.forEach(o=>{
+      if(o.geometry)o.geometry.dispose();
+      if(o.material){
+        const mats=Array.isArray(o.material)?o.material:[o.material];
+        mats.forEach(m=>{
+          ['map','emissiveMap','alphaMap','normalMap','roughnessMap','metalnessMap','aoMap'].forEach(k=>{if(m[k])m[k].dispose();});
+          m.dispose();
+        });
+      }
+    });
     _apexLabObjs.length=0;_apexLabFlicker.length=0;_apexLabScene=null;_apexLabCam=null;_apexKatzMesh=null;
     G.paused=false;fadeIn();
   });
@@ -13847,7 +13858,17 @@ function exitPortWH(){
     PORT_WH.inWH=false;if(_portWHScene)_portWHScene.remove(PB);
     if(taScene)taScene.add(PB);else scene.add(PB);
     const pp=G._taPortPos||{x:168,z:-155};PB.position.set(pp.x,0,pp.z+8);
-    _portWHObjs.forEach(o=>{if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose();}});
+    // תיקון: אותו דבר כמו במעבדה — dispose() ל-material בלי לשחרר את הטקסטורות שלו מדליף.
+    _portWHObjs.forEach(o=>{
+      if(o.geometry)o.geometry.dispose();
+      if(o.material){
+        const mats=Array.isArray(o.material)?o.material:[o.material];
+        mats.forEach(m=>{
+          ['map','emissiveMap','alphaMap','normalMap','roughnessMap','metalnessMap','aoMap'].forEach(k=>{if(m[k])m[k].dispose();});
+          m.dispose();
+        });
+      }
+    });
     _portWHObjs.length=0;_portEnemies=[];_portWHScene=null;_portWHCam=null;
     G.paused=false;fadeIn();
   });
