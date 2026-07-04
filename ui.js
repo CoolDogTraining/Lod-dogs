@@ -364,7 +364,8 @@ function updWeather(dt){
     // תיקון קריטי: קודם רק far הוגדר ל-60 בעוד updDayNight קובע near=70/85 —
     // כש-near>far הערפל התהפך (קרוב=כחול מלא, רחוק=ללא ערפל בכלל).
     // מגדירים גם near כדי לשמור על near<far בכל מסגרת.
-    if(scene){scene.fog.near=20;scene.fog.far=60;}
+    // (הוקל: 20/60 היה כבד מדי — עמימות בוקר קלה, לא ערפל אטום)
+    if(scene){scene.fog.near=50;scene.fog.far=150;}
   } else {
     _fogEl.style.opacity='0';
     if(scene&&G.weather!=='overcast')scene.fog.far=180;
