@@ -360,12 +360,13 @@ function updWeather(dt){
   // ── morning fog: 06:00–09:00 ──
   if(G.dayTime>0.25&&G.dayTime<0.375){
     _fogEl.style.display='block';
-    _fogEl.style.opacity=String(Math.sin((G.dayTime-.25)/.125*Math.PI)*.38);
+    // הוקל שוב: .38 היה עדיין כבד מדי בשיא (07:00-08:00) — .15 עדין יותר
+    _fogEl.style.opacity=String(Math.sin((G.dayTime-.25)/.125*Math.PI)*.15);
     // תיקון קריטי: קודם רק far הוגדר ל-60 בעוד updDayNight קובע near=70/85 —
     // כש-near>far הערפל התהפך (קרוב=כחול מלא, רחוק=ללא ערפל בכלל).
     // מגדירים גם near כדי לשמור על near<far בכל מסגרת.
-    // (הוקל: 20/60 היה כבד מדי — עמימות בוקר קלה, לא ערפל אטום)
-    if(scene){scene.fog.near=50;scene.fog.far=150;}
+    // (הוקל שוב: כמעט כמו ערפל לילה הרגיל 70/220, לא ערפל אטום)
+    if(scene){scene.fog.near=70;scene.fog.far=210;}
   } else {
     _fogEl.style.opacity='0';
     if(scene&&G.weather!=='overcast')scene.fog.far=180;
