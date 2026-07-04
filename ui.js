@@ -361,7 +361,10 @@ function updWeather(dt){
   if(G.dayTime>0.25&&G.dayTime<0.375){
     _fogEl.style.display='block';
     _fogEl.style.opacity=String(Math.sin((G.dayTime-.25)/.125*Math.PI)*.38);
-    if(scene)scene.fog.far=60;
+    // תיקון קריטי: קודם רק far הוגדר ל-60 בעוד updDayNight קובע near=70/85 —
+    // כש-near>far הערפל התהפך (קרוב=כחול מלא, רחוק=ללא ערפל בכלל).
+    // מגדירים גם near כדי לשמור על near<far בכל מסגרת.
+    if(scene){scene.fog.near=20;scene.fog.far=60;}
   } else {
     _fogEl.style.opacity='0';
     if(scene&&G.weather!=='overcast')scene.fog.far=180;
@@ -460,8 +463,10 @@ function updWeather(dt){
   // ערפל גשם — מוסיף אווירה
   if(scene&&scene.fog){
     const rainFog=G.rainOn?0.85:1.0;
-    scene.fog.far+=(G.rainOn?180:260-scene.fog.far)*dt*0.4*rainFog;
-    scene.fog.near+=(G.rainOn?50:90-scene.fog.near)*dt*0.4;
+    // תיקון: בענף הגשם חסר היה "-scene.fog.far/near" (המרחק רק תפח בלי גבול
+    // כל עוד ירד גשם, עד שהערפל בפועל נעלם). עכשיו זה מתכנס ליעד כמו בענף האחר.
+    scene.fog.far+=((G.rainOn?180:260)-scene.fog.far)*dt*0.4*rainFog;
+    scene.fog.near+=((G.rainOn?50:90)-scene.fog.near)*dt*0.4;
   }
 }
 
