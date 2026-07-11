@@ -4891,7 +4891,12 @@ function updateNavDirection(){
   const _inTARoom=APEX_LAB.inLab||PORT_WH.inWH||RABIN_SQ.inRabin;
   if(typeof TA!=='undefined'&&TA.inTA&&!_inTARoom){
     const px=TA.playerX,pz=TA.playerZ;
-    const tgt=m.targetFn?m.targetFn():null;if(!tgt)return;
+    // תיקון קריטי: משימה 54 מכוונת ל"תחנת הרכבת בלוד" (x:0,z:-150) — קואורדינטות
+    // שרלוונטיות רק לפני העלייה לרכבת. ברגע שנכנסים בפועל לתל אביב (TA.inTA=true)
+    // המשימה עדיין 54 (עד שמגיעים לשוק הכרמל), אבל היעד חייב להיות שוק הכרמל —
+    // אחרת המרחק מחושב מול קואורדינטת לוד הישנה ומציג מספרים חסרי משמעות (למשל 260מ').
+    const tgt=(G.mission===54)?(G._taMarketPos||{x:-100,z:120}):(m.targetFn?m.targetFn():null);
+    if(!tgt)return;
     const tx=tgt.x||0,tz=tgt.z||0;
     const dx=tx-px,dz=tz-pz;
     const dist=Math.round(Math.sqrt(dx*dx+dz*dz));
@@ -4905,7 +4910,8 @@ function updateNavDirection(){
     el.style.transform='translate(-50%,-50%)';el.style.display='flex';
     const icon=document.getElementById('nav-edge-icon');
     if(icon)icon.style.transform=`rotate(${Math.atan2(rx,ry)}rad)`;
-    lbl.textContent=dist<50?`📍 ${m.hint}`:`${m.hint} ${dist}מ׳`;
+    const _hintTxt=(G.mission===54)?'שוק הכרמל':m.hint;
+    lbl.textContent=dist<50?`📍 ${_hintTxt}`:`${_hintTxt} ${dist}מ׳`;
     _navTargetWorld={x:tx,z:tz};
     return;
   }
@@ -4956,7 +4962,7 @@ function updateNavDirection(){
     // שדרוג: בתוך חדר פנימי של ת"א — הוביל למטרה הרלוונטית בקואורדינטות המקומיות של החדר (PB.position כבר מקומי)
     if(APEX_LAB.inLab){
       if(_apexKatzMesh){tx=_apexKatzMesh.position.x;tz=_apexKatzMesh.position.z;}
-      else{tx=0;tz=9;}
+      else{tx=0;tz=2;}
     } else if(PORT_WH.inWH){
       const liveP=(_portEnemies||[]).filter(e=>!e.dead);
       if(liveP.length>0){const ne=nearestOf(liveP,o=>({x:o.x,z:o.z}));if(ne){tx=ne.x;tz=ne.z;}else{tx=0;tz=0;}}
@@ -5309,7 +5315,7 @@ function doAtk(){
           showDmg(e.mesh.position.x,1.5,e.mesh.position.z,'+15💰',true);}
       }
     });
-    // בוס TA
+    // בוס TA (חדר ישן/מפקד — כמעט ולא בשימוש)
     if(G._taBossMgr&&!G._taBossMgr.dead&&G._taBossMgr.mesh){
       const b=G._taBossMgr;
       const bd=d2(b.mesh.position.x,b.mesh.position.z,px,pz);
@@ -5319,6 +5325,25 @@ function doAtk(){
         if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
         sHit();haptic(28);spawnBlood(b.mesh.position.x,1.5,b.mesh.position.z,12);
         showDmg(b.mesh.position.x,2.5,b.mesh.position.z,(_isCrit?'💥 ':'')+Math.round(dmg));
+      }
+    }
+    // בוס משימה 62 — מפקד APEX בעולם הפתוח (כיכר רבין)
+    if(G._taBossOpenWorld&&!G._taBossOpenWorld.dead&&G._taBossOpenWorld.mesh){
+      const b=G._taBossOpenWorld;
+      const bd=d2(b.x,b.z,px,pz);
+      if(bd<4.5){
+        hit=true;
+        b.hp-=dmg;
+        if(b.hp<b.mhp*.5&&b.phase===1){b.phase=2;b.spd=5.5;showN('⚠️ מפקד APEX זועם!');screenShake(0.4,0.4);}
+        if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
+        sHit();haptic(28);spawnBlood(b.x,1.5,b.z,12);
+        showDmg(b.x,2.8,b.z,(_isCrit?'💥 ':'')+Math.round(dmg));
+        if(b.hp<=0){
+          b.dead=true;b.mesh.visible=false;sCapture();haptic([100,40,100,40,120]);
+          addXP(600);G.score+=6000;G.coins+=400;updCoins();
+          showN('🏆 מפקד APEX הובס!');G._taBossMgr={dead:true};
+          screenShake(0.8,0.7);
+        }
       }
     }
     if(!hit){tone(180,.07,'square',.07);PB.rotation.z=.18;setTimeout(()=>PB.rotation.z=0,90);}
@@ -5818,6 +5843,15 @@ function playerRespawn(){
   dog.hp=Math.round(dog.mhp*.35);
   // ריספאון — קרוב לנקודת התחלה או נקודה בטוחה
   if(VILLA.inVilla){VILLA.playerX=0;VILLA.playerZ=30;}
+  else if(typeof TA!=='undefined'&&TA.inTA){
+    // תיקון קריטי: לפני התיקון PB.position נקבע ישירות לקואורדינטות של לוד (0,0,60),
+    // בעוד ש-updTelAviv דורס כל frame את PB.position לפי TA.playerX/TA.playerZ —
+    // התוצאה: השחקן "נעלם" (בפועל נשאר תקוע במיקום המוות, לפעמים בתוך בניין/גיאומטריה).
+    // עכשיו קובעים גם את TA.playerX/TA.playerZ לנקודה בטוחה בתוך תל אביב.
+    const rp=G._taRabinPos||{x:30,z:-30};
+    TA.playerX=rp.x;TA.playerZ=rp.z+18;
+    PB.position.set(TA.playerX,0,TA.playerZ);
+  }
   else{PB.position.set(0,0,60);}
   // נקה overlay
   const ov=document.getElementById('death-ov');if(ov)ov.style.display='none';
@@ -13656,10 +13690,11 @@ function buildApexLabScene(){
     _apexLabFlicker.push({light:fL,base:2.5,type:'bubble',t:Math.random()*3,period:0});
     _cyl(.3,1.2,8,0x334466,0x002244,x,1.8,-3+i*6);_box(.6,.6,.3,0x223355,0x001133,x,2.6,-3+i*6);
   });
-  // תחנת כץ
-  _box(6,.4,6,0x080c20,0x001144,0,.2,8);_box(5,.9,2.5,0x0a0e22,0x0022aa,0,.65,8);
-  _box(.1,4,6,0x000311,0x001166,0,3.8,12.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,5.8,12.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,1.8,12.5);
-  const spotKatz=new THREE.PointLight(0x4488ff,4,10);spotKatz.position.set(0,5,8);_addL(spotKatz);
+  // תחנת כץ — הוזזה עמוק יותר לחדר (היתה כמעט על נקודת הכניסה של השחקן,
+  // מה שגרם לסצנת "כץ כאן" להיפעל מיד עם הכניסה בלי מרחק הליכה — מרגיש כאילו המשימה "רצה לבד")
+  _box(6,.4,6,0x080c20,0x001144,0,.2,1);_box(5,.9,2.5,0x0a0e22,0x0022aa,0,.65,1);
+  _box(.1,4,6,0x000311,0x001166,0,3.8,5.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,5.8,5.5);_box(.05,.1,6.1,0x0044ff,0x00aaff,0,1.8,5.5);
+  const spotKatz=new THREE.PointLight(0x4488ff,4,10);spotKatz.position.set(0,5,1);_addL(spotKatz);
   _apexLabFlicker.push({light:spotKatz,base:4,type:'crt',t:0,period:0});
   // כץ NPC
   const katzG=new THREE.Group();
@@ -13668,7 +13703,7 @@ function buildApexLabScene(){
   const kHair=new THREE.Mesh(new THREE.SphereGeometry(.37,8,4),new THREE.MeshLambertMaterial({color:0xf0f0f0,emissive:0x111111}));kHair.position.set(0,1.75,-.05);kHair.scale.set(1,.5,1);katzG.add(kHair);
   [-0.15,0.15].forEach(ox=>{const lens=new THREE.Mesh(new THREE.TorusGeometry(.1,.015,4,8),new THREE.MeshLambertMaterial({color:0x334466,emissive:0x002244}));lens.position.set(ox,1.6,.35);lens.rotation.y=Math.PI/2;katzG.add(lens);});
   [-0.55,0.55].forEach(ox=>{const arm=new THREE.Mesh(new THREE.BoxGeometry(.25,1,.25),new THREE.MeshLambertMaterial({color:0xe8ecf0}));arm.position.set(ox,.5,0);katzG.add(arm);});
-  katzG.position.set(0,0,9);katzG.rotation.y=Math.PI;
+  katzG.position.set(0,0,2);katzG.rotation.y=Math.PI;
   _apexLabScene.add(katzG);_apexLabObjs.push(katzG);_apexKatzMesh=katzG;
   // כלובים שמאל אחורי
   for(let i=0;i<3;i++){
@@ -13686,7 +13721,7 @@ function enterApexLab(){
   fadeOut(()=>{
     if(!_apexLabScene)buildApexLabScene();
     APEX_LAB.inLab=true;APEX_LAB.playerX=0;APEX_LAB.playerZ=10;APEX_LAB.enterGrace=2.5;
-    G.yaw=Math.PI;
+    G.yaw=0; // פונה לכיוון כץ (עומק החדר) ולא הפוך
     if(_apexLabCam){_apexLabCam.position.set(0,5,15);_apexLabCam.lookAt(0,1,0);}
     if(taScene)taScene.remove(PB);else scene.remove(PB);
     _apexLabScene.add(PB);PB.position.set(0,0,10);
@@ -13751,14 +13786,14 @@ function updApexLab(dt){
   if(_apexLabCam&&!G._cinemaMode){const sz=G.dog==='momo'?.58:1,cd=8,ch=4+G.pitch*6;_vCamTarget.set(nx+Math.sin(G.yaw)*cd,1.1*sz+ch,nz+Math.cos(G.yaw)*cd);_apexLabCam.position.lerp(_vCamTarget,.1);_apexLabCam.lookAt(nx,1.1*sz+.7,nz);}
   if(APEX_LAB.enterGrace<=0&&nz>11.5){exitApexLab();return;}
   if(G.mission===58&&!G._ta58done){
-    if(Math.hypot(nx,nz-9)<4){
+    if(Math.hypot(nx,nz-2)<4){
       G._ta58done=true;
       _playCinema([
-        {cam:[5,2,14],look:[0,1.7,9],dur:900,note:'⚗️ ד"ר כץ...'},
-        {cam:[2.5,1.9,12],look:[0,1.7,9],dur:900},
-        {cam:[-3,2,12],look:[0,1.7,9],dur:1100},
-        {cam:[-5,2.1,11],look:[0,1.7,9],dur:900},
-        {cam:[0,3.5,14],look:[0,1.5,9],dur:800}
+        {cam:[5,2,7],look:[0,1.7,2],dur:900,note:'⚗️ ד"ר כץ...'},
+        {cam:[2.5,1.9,5],look:[0,1.7,2],dur:900},
+        {cam:[-3,2,5],look:[0,1.7,2],dur:1100},
+        {cam:[-5,2.1,4],look:[0,1.7,2],dur:900},
+        {cam:[0,3.5,7],look:[0,1.5,2],dur:800}
       ],()=>{
         showCut('ch9_katz_appears',()=>{
           showCut('ch9_katz_truth',()=>{
@@ -14146,6 +14181,10 @@ function exitTelAviv(){
     G._taBossMgr=null; // ── תיקון קריטי: בלי זה, ה-mesh הישן (disposed) נשאר מקושר וגורם ל-TypeError + טקסטורות שחורות בכניסה הבאה ──
     taScene=null;taCamera=null;
     _taRoadTex=null;_taSidewalkTex=null;_taWallTex=null;_taRoofTex=null;
+    // תיקון: _taSeaMesh לא אופס — בכניסה השנייה ל-ת"א, הבדיקה "!_taSeaMesh" ב-enterTelAviv
+    // הייתה נכשלת (המצביע הישן עדיין truthy) ולכן ים הגלים המונפש לא נבנה מחדש,
+    // מה שהשאיר רק שאריות ישנות/כפילות של מישור הים.
+    _taSeaMesh=null;_taSeaPos=null;
     G.paused=false;fadeIn();
   });
 }
@@ -14370,7 +14409,9 @@ function _updWantedHUD(){
   let el=document.getElementById('ta-wanted');
   if(!el){
     el=document.createElement('div');el.id='ta-wanted';
-    el.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);border:1px solid #ff2222;border-radius:8px;padding:4px 12px;color:#fff;font-size:12px;font-weight:bold;z-index:35;display:none;letter-spacing:1px;';
+    // תיקון: top:12px התנגש עם #tb (סרגל הכותרת העליון, גם הוא top:8px, ממורכז) —
+    // שני האלמנטים הצטיירו זה על זה. הוזז מתחת לסרגל הכותרת.
+    el.style.cssText='position:fixed;top:46px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);border:1px solid #ff2222;border-radius:8px;padding:4px 12px;color:#fff;font-size:12px;font-weight:bold;z-index:35;display:none;letter-spacing:1px;';
     document.body.appendChild(el);
   }
   if(_taWanted<=0){el.style.display='none';return;}
@@ -14969,9 +15010,17 @@ function _checkTAMissionTriggers(){
   }
   // 58 → כץ מטופל בתוך updApexLab (כניסה הייתה ב-57)
   // אם עדיין בעולם הפתוח ו-58 — כנס למעבדה שוב (fallback)
-  if(G.mission===58&&!APEX_LAB.inLab&&!G._ta58done&&!G._ta57done){
+  // תיקון קריטי: התנאי הישן דרש גם !G._ta57done, אבל _ta57done כבר נקבע ל-true
+  // ברגע שהמשימה עברה ל-58 (בטריגר של 57) — כלומר התנאי הזה מעולם לא יכול היה
+  // להתקיים, וה-fallback היה קוד מת. אם השחקן יצא מהמעבדה בטעות (למשל חצה את
+  // גבול היציאה מיד עם הכניסה) הוא נשאר תקוע בעולם הפתוח בלי דרך חזרה — "רץ לבד"
+  // בלי שהמשימה מגיבה. עכשיו יש debounce קצר במקום, ובלי התנאי השגוי.
+  if(G.mission===58&&!APEX_LAB.inLab&&!G._ta58done&&!G._ta58ReenterCD){
     const rp=G._taLabRoofEntry||{x:70,z:-114};
-    if(d2(px,pz,rp.x,rp.z)<18) enterApexLab();
+    if(d2(px,pz,rp.x,rp.z)<18){
+      G._ta58ReenterCD=true;setTimeout(()=>{G._ta58ReenterCD=false;},2000);
+      enterApexLab();
+    }
     return;
   }
   // 59 → נמל תל אביב → כניסה למחסן (חדר פנים)
@@ -15069,19 +15118,9 @@ function _updTABossOpenWorld(dt){
   if(b._aura)b._aura.intensity=3+Math.sin(Date.now()*.003)*1.5;
   b.atkT=Math.max(0,b.atkT-dt);
   if(dd<2.8&&b.atkT<=0){dmgPlayer(b.atk);b.atkT=b.phase===2?.8:1.0;haptic([40,20,40]);}
-  if(G.atkCD<=0&&(G.keys['KeyF']||G._atkFrame)&&dd<4.5){
-    G.atkCD=G.dog==='zippo'?.28:.5;
-    const dog=G.dogs[G.dog];
-    const dmg=Math.round(dog.pow*12*(1+dog.lv*.1));
-    b.hp-=dmg;spawnBlood(b.x,1.5,b.z,10);showDmg(b.x,2.8,b.z,dmg);haptic(25);screenShake(0.18,0.15);
-    if(b.bar)b.bar.scale.x=Math.max(0,b.hp/b.mhp);
-    if(b.hp<=0){
-      b.dead=true;b.mesh.visible=false;sCapture();haptic([100,40,100,40,120]);
-      addXP(600);G.score+=6000;G.coins+=400;updCoins();
-      showN('🏆 מפקד APEX הובס!');G._taBossMgr={dead:true};
-      screenShake(0.8,0.7);
-    }
-  }
+  // תיקון קריטי: תקיפת השחקן על הבוס עברה ל-doAtk() (חלק TA) —
+  // הבדיקה הישנה כאן הייתה תלויה ב-G.atkCD<=0, אבל mAtk()/updTelAviv כבר קובעים
+  // את ה-atkCD לפני קריאה ל-doAtk(), כך שהתנאי כאן היה תמיד false — הבוס לא נפגע אף פעם.
 }
 
 // ════════════════════════════════════════════════
