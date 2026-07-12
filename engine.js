@@ -6313,14 +6313,17 @@ function cacheHUD(){
 //   onDone: callback אחרי כל הסצנה
 //   useTA: האם להשתמש ב-taCamera (פרק ט׳ תל אביב)
 // ══════════════════════════════════════════════════════════════
-function _playCinema(steps, onDone, useTA, useMosque){
+function _playCinema(steps, onDone, useTA, useMosque, useApexLab){
   // ── director: סינמה תמיד ראשונה. דוחפת בעדינות כל cut/dlg פתוח לתור ──
   _cinemaInterrupt();
   _director.active='cinema';
   G._cinemaMode=true;
   G.paused=true;
   G.cutOpen=false; G.dlgOpen=false;
-  const cam=useTA?taCamera:(useMosque&&mosqueCamera?mosqueCamera:camera);
+  // תיקון: useApexLab מפנה למצלמת מעבדת APEX (_apexLabCam) — היא זו שבפועל
+  // מצוירת ב-loop כש-APEX_LAB.inLab==true. בלי זה, הסינמה הזיזה את ה-camera
+  // הרגיל (לא מצויר בכלל בתוך החדר) — המסך נשאר קפוא/שחור וההערות רק "קופצות מעצמן".
+  const cam=useApexLab&&_apexLabCam?_apexLabCam:(useTA?taCamera:(useMosque&&mosqueCamera?mosqueCamera:camera));
   let i=0;
   function doStep(){
     if(i>=steps.length){
@@ -13001,7 +13004,7 @@ function buildTelAvivScene(){
 function _taBuildRoads(){
   // E-W (z קבוע)
   // הכבישים נקטמים בקצה המזרחי ב-x=122 (במקום להשתרע עד 230), כדי שלא יחתכו
-  // דרך רצועת החוף/הים (מתחילה סביב x=128 מגדלי מלון, 145 ים, 147 חול) —
+  // דרך רצועת החוף/הנמל/הים (128 מגדלי מלון, עד 208 רציף הנמל, 188-212 חול, 210+ ים) —
   // בעבר הכביש "המשיך לתוך הים" ויצר את הבאג של יבשה/כביש בתוך הים.
   {
     const EAST_EDGE=122, WEST_EDGE=-230;
@@ -13020,19 +13023,25 @@ function _taBuildRoads(){
 // ════════════════════════════════════════════════
 // ים וחוף
 // ════════════════════════════════════════════════
+// תיקון: הים היה ממורכז ב-x=210 (רוחב 130 → מתחיל ב-x=145) — זה חופף את
+// רציף הנמל של ZONE D (מגיע עד x=208, ר' _taBuildPort/PX=168) ואת הטיילת/החוף
+// של ZONE E (מגיע עד x=187.5, ר' _taBuildZone_Tayelet) — כלומר הים "בלע" קרקע
+// יבשה ממשית. הים הוזז מזרחה כך שהוא מתחיל רק אחרי קצה הרציף (x≈210), והחול
+// הוזז לגשר בין קצה חוף הטיילת (187.5) לתחילת הים החדש — סדר הגיוני: קרקע ← חוף ← ים.
+const _TA_SEA_CX=275; // היה 210 (רוחב נשאר 130 → קצה מערבי חדש: 210, היה 145)
 function _taBuildSea(){
   // ים
   const seaMat=new THREE.MeshLambertMaterial({color:0x1a70a8,transparent:true,opacity:.88});
   const sea=new THREE.Mesh(new THREE.PlaneGeometry(130,560),seaMat);
-  sea.rotation.x=-Math.PI/2;sea.position.set(210,.04,0);taScene.add(sea);taObjects.push(sea);
+  sea.rotation.x=-Math.PI/2;sea.position.set(_TA_SEA_CX,.04,0);taScene.add(sea);taObjects.push(sea);
   // גלים
   for(let i=0;i<14;i++){
     const wv=new THREE.Mesh(new THREE.PlaneGeometry(130,1.6),new THREE.MeshLambertMaterial({color:0x55c0f0,transparent:true,opacity:.28}));
-    wv.rotation.x=-Math.PI/2;wv.position.set(210,.06,-260+i*42);taScene.add(wv);taObjects.push(wv);
+    wv.rotation.x=-Math.PI/2;wv.position.set(_TA_SEA_CX,.06,-260+i*42);taScene.add(wv);taObjects.push(wv);
   }
-  // חול
-  const sand=new THREE.Mesh(new THREE.PlaneGeometry(20,560),new THREE.MeshLambertMaterial({color:0xd8c888}));
-  sand.rotation.x=-Math.PI/2;sand.position.set(157,.03,0);taScene.add(sand);taObjects.push(sand);
+  // חול — גשר בין קצה הטיילת (x=187.5) לקצה הים החדש (x=210)
+  const sand=new THREE.Mesh(new THREE.PlaneGeometry(24,560),new THREE.MeshLambertMaterial({color:0xd8c888}));
+  sand.rotation.x=-Math.PI/2;sand.position.set(200,.03,0);taScene.add(sand);taObjects.push(sand);
 }
 
 // ════════════════════════════════════════════════
@@ -13735,7 +13744,9 @@ function exitApexLab(){
     APEX_LAB.inLab=false;
     if(_apexLabScene)_apexLabScene.remove(PB);
     if(taScene)taScene.add(PB);else scene.add(PB);
-    PB.position.set((G._taApexBldPos||{x:70}).x,(G._taApexBldPos||{z:-112}).z||-112,0);
+    // תיקון: Y ו-Z היו מוחלפים — הגובה (Y) קיבל את ערך ה-z (למשל ‎-130), מה שהציב
+    // את הכלב עמוק מתחת לקרקע לרגע, ו-Z קיבל 0 קבוע במקום המיקום האמיתי.
+    PB.position.set((G._taApexBldPos||{x:70}).x,0,(G._taApexBldPos||{z:-112}).z||-112);
     // תיקון: dispose() על material לא משחרר את הטקסטורות (map/emissiveMap וכו') שלו —
     // בלי זה, כל כניסה חוזרת למעבדה מדליפה CanvasTexture-ים ל-GPU, עד לאובדן הקשר WebGL.
     _apexLabObjs.forEach(o=>{
@@ -13805,7 +13816,7 @@ function updApexLab(dt){
             },800);
           });
         });
-      });
+      },false,false,true); // useApexLab=true — תיקון: בלי זה הסינמה זזה על מצלמה שלא מוצגת, והחדר נראה קפוא/שחור
     }
   }
 }
@@ -14317,13 +14328,13 @@ const _taSeagulls=[];
 
 function _buildTASea(){
   if(!taScene)return;
-  // מישור מים מונפש — מיושר בדיוק על טביעת הים הסטטי (_taBuildSea: x=210,רוחב130,z=0,אורך560)
-  // כך שהגלים המונפשים לא "יגלשו" מעל היבשה/כבישים/בניינים מערבה לטיילת
+  // מישור מים מונפש — מיושר בדיוק על טביעת הים הסטטי (_taBuildSea: x=_TA_SEA_CX=275,רוחב130,z=0,אורך560)
+  // כך שהגלים המונפשים לא "יגלשו" מעל היבשה/כבישים/בניינים מערבה לטיילת/רציף הנמל
   const geo=new THREE.PlaneGeometry(130,560,16,28);
   geo.rotateX(-Math.PI/2);
   const mat=new THREE.MeshLambertMaterial({color:0x1a7aaa,transparent:true,opacity:.82});
   _taSeaMesh=new THREE.Mesh(geo,mat);
-  _taSeaMesh.position.set(210,0.5,0);
+  _taSeaMesh.position.set(_TA_SEA_CX,0.5,0);
   _taSeaMesh._lodExempt=true;
   taScene.add(_taSeaMesh);taObjects.push(_taSeaMesh);
   _taSeaPos=_taSeaMesh.geometry.attributes.position;
@@ -14340,7 +14351,7 @@ function _buildTASea(){
     const head=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.22),sgMat);head.position.set(0,.12,.32);g.add(head);
     const beak=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.18),new THREE.MeshLambertMaterial({color:0xffaa00}));
     beak.position.set(0,.08,.44);g.add(beak);
-    const px2=185+Math.random()*80,pz2=-50+Math.random()*160,py2=12+Math.random()*18;
+    const px2=250+Math.random()*80,pz2=-50+Math.random()*160,py2=12+Math.random()*18;
     g.position.set(px2,py2,pz2);
     g._sgAng=Math.random()*Math.PI*2;g._sgRad=20+Math.random()*40;
     g._sgSpd=0.22+Math.random()*0.28;g._sgT=Math.random()*Math.PI*2;
@@ -14365,7 +14376,7 @@ function _updTASea(dt){
   _taSeagulls.forEach(g=>{
     g._sgAng+=g._sgSpd*dt;
     g._sgT+=dt*2.8;
-    g.position.x=185+Math.cos(g._sgAng)*g._sgRad;
+    g.position.x=250+Math.cos(g._sgAng)*g._sgRad;
     g.position.z=-10+Math.sin(g._sgAng)*g._sgRad;
     g.position.y=g._sgBaseY+Math.sin(g._sgT*.5)*1.5;
     g.rotation.y=-g._sgAng+Math.PI/2;
